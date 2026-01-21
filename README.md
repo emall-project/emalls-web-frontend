@@ -23,6 +23,7 @@
 ---
 
 ## Project Structure (planned)
+```txt
 src/
   pages/        # الشاشات
   components/   # مكوّنات قابلة لإعادة الاستخدام
@@ -30,9 +31,3 @@ src/
   hooks/        # Custom hooks
   assets/       # صور/أيقونات
   styles/       # Theme / global styles
-Getting Started
-Install dependencies
-npm install
-Run the project
-npm run dev
-ملاحظة: لأننا نستخدم Vite التشغيل يكون بـ npm run dev (مش npm start).
