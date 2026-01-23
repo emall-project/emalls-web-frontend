@@ -1,4 +1,4 @@
-export function normlizeCategories(rawJson){
+export function normalizeCategories(rawJson){
   const arr = rawJson?.data || [];
   return arr.map((c)=>({
     id: String(c._id),
