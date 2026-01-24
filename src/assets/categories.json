@@ -12,7 +12,7 @@
       "name": "أزياء",
       "description": "ملابس، إكسسوارات، وأحذية لجميع الأعمار والأذواق.",
       "parentId": null,
-      "image_url": "https://images.unsplash.com/photo-1445205170230-053b830c6050?q=80&w=500"
+      "image_url": "https://images.pexels.com/photos/30900490/pexels-photo-30900490.jpeg?_gl=1*19g29r9*_ga*MTIwMDYyNzg1MS4xNzQ1MDc1NDQ0*_ga_8JE65Q40S6*czE3NjkyODA4MzMkbzEzJGcxJHQxNzY5MjgxMDE3JGoxNiRsMCRoMA.."
     },
     {
       "_id": 3,
@@ -26,7 +26,7 @@
       "name": "الرياضة والأنشطة الخارجية",
       "description": "معدات وملابس للرياضة، التخييم، والأنشطة الخارجية.",
       "parentId": null,
-      "image_url": "https://images.unsplash.com/photo-1461896704190-3213c9611d81?q=80&w=500"
+      "image_url": "https://images.pexels.com/photos/28744545/pexels-photo-28744545.jpeg?_gl=1*1xhnmbr*_ga*MTIwMDYyNzg1MS4xNzQ1MDc1NDQ0*_ga_8JE65Q40S6*czE3NjkyODA4MzMkbzEzJGcxJHQxNzY5MjgwODUwJGo0MyRsMCRoMA.."
     },
     {
       "_id": 5,
@@ -61,7 +61,7 @@
       "name": "ملابس رجالية",
       "description": "ملابس كاجوال ورسمية للرجال.",
       "parentId": 2,
-      "image_url": "https://images.unsplash.com/photo-1516257984877-a03aae3acbc8?q=80&w=500"
+      "image_url": "https://images.pexels.com/photos/9775856/pexels-photo-9775856.jpeg?_gl=1*mihwxa*_ga*MTIwMDYyNzg1MS4xNzQ1MDc1NDQ0*_ga_8JE65Q40S6*czE3NjkyODA4MzMkbzEzJGcxJHQxNzY5MjgxMTc1JGoyNiRsMCRoMA.."
     },
     {
       "_id": 10,
@@ -117,7 +117,7 @@
       "name": "مكياج",
       "description": "مستحضرات التجميل بما في ذلك الماسكارا، أحمر الشفاه، وكريم الأساس.",
       "parentId": 5,
-      "image_url": "https://images.unsplash.com/photo-1522338221030-42102726c17c?q=80&w=500"
+      "image_url": "https://images.pexels.com/photos/31154612/pexels-photo-31154612.jpeg"
     },
     {
       "_id": 18,
@@ -138,7 +138,7 @@
       "name": "نظارات شمسية",
       "description": "نظارات أنيقة وواقية لجميع المناسبات.",
       "parentId": 11,
-      "image_url": "https://images.unsplash.com/photo-1511499767390-90342f16b147?q=80&w=500"
+      "image_url": "https://images.pexels.com/photos/29538717/pexels-photo-29538717.jpeg"
     }
   ],
   "totalCategories": 20,

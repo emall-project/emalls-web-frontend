@@ -59,7 +59,7 @@ function AllCategoriesMenu({ categories, selectedCategoryId, onSelectCategory })
             "
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-3 sticky top-0 bg-white pb-2">
+            <div className="flex items-center justify-between mb-3  top-0 bg-white pb-2">
               <p className="font-extrabold text-gray-800">اختر فئة</p>
 
               <button
@@ -97,6 +97,7 @@ function AllCategoriesMenu({ categories, selectedCategoryId, onSelectCategory })
                       alt={cat.name}
                       className="w-10 h-10 rounded-full object-cover border border-gray-200 shrink-0"
                       onError={(e) => (e.currentTarget.style.display = "none")}
+                      loading="lazy"
                     />
 
                     <div className="flex-1 min-w-0">

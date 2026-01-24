@@ -162,11 +162,11 @@ function MallsAndStoresMenu({
             </section>
           </div>
 
-          {/*malls tabs (horizontal) + stores list below */}
+          {/*malls(horizontal) + stores list below */}
           <div className="md:hidden">
-            {/* malls chips */}
-            <div className="px-3 py-2 border-b bg-white">
-              <div className="flex gap-2 overflow-x-auto pb-1">
+            {/* malls  */}
+            <div className="px-3 py-2 border-b border-b-gray-100 bg-white">
+              <div className="flex gap-2 overflow-hidden pb-1">
                 {malls.map((m) => {
                   const activeMall = (selectedMallId || hoveredMallId) === m.id;
                   return (
