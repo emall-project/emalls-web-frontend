@@ -1,42 +1,49 @@
-import React, { useMemo, useState } from 'react'
-import Header from '../components/Header'
-import { normalizeCategories } from '../utils/tmpCategories'
-import rawMalls from '../assets/malls.json'
-import rawStores from '../assets/stores.json'
-import rawCategories from '../assets/categories.json'
-import CategoryBar from '../components/CategoryBar';
-import { normalizeMalls, normalizeStores } from '../utils/tmpMallsAndStores'
-import AdvSection from '../components/advSection'
-import CategoriesBanner from '../components/CategoriesBanner'
+import React, { useMemo, useState } from "react";
+import Header from "../components/Header";
+import { normalizeCategories } from "../utils/tmpCategories";
+import rawMalls from "../assets/malls.json";
+import rawStores from "../assets/stores.json";
+import rawCategories from "../assets/categories.json";
+import rawProducts from "../assets/products.json";
+import CategoryBar from "../components/CategoryBar";
+import { normalizeMalls, normalizeStores } from "../utils/tmpMallsAndStores";
+import AdvSection from "../components/AdvSection";
+import CategoriesBanner from "../components/CategoriesBanner";
+import ProductCard from "../components/ProductCard";
+import SectionHeader from "../components/SectionHeader";
+import { normalizeProducts, isDiscount } from "../utils/tmpProducts";
+import ProductsRow from "../components/ProductsRow";
+import Footer from "../components/Footer";
+
 
 const imgsUrl = [
-  {
-    id:1,
-    image:"../../public/adv4.jpg",
-    alt:"adv1"
-  },
-  {
-    id:2,
-    image:"../../public/adv1.jpg",
-    alt:"adv2"
-  },
-  {
-    id:3,
-    image:"../../public/adv3.jpg",
-    alt:"adv3"
-  },
-]
-function HomePage() {
-  const categories = useMemo(()=> normalizeCategories(rawCategories) , [rawCategories]);
-  const malls = useMemo(()=>normalizeMalls(rawMalls),[rawMalls]);
-  const stores = useMemo(()=>normalizeStores(rawStores),[rawStores]);
+  { id: 1, image: "/adv4.jpg", alt: "adv1" },
+  { id: 2, image: "/adv1.jpg", alt: "adv2" },
+  { id: 3, image: "/adv3.jpg", alt: "adv3" },
+];
 
-  const [selectedCategoryId , setSelectedCategoryId] = useState(null);
-  const [selectedMallId , setSelectedMallId] = useState(null);
-  const [selectedStoreId , setSelectedStoreId] = useState(null);
+function HomePage() {
+  const categories = useMemo(() => normalizeCategories(rawCategories), []);
+  const malls = useMemo(() => normalizeMalls(rawMalls), []);
+  const stores = useMemo(() => normalizeStores(rawStores), []);
+  const products = useMemo(() => normalizeProducts(rawProducts), []);
+
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [selectedMallId, setSelectedMallId] = useState(null);
+  const [selectedStoreId, setSelectedStoreId] = useState(null);
+
+  const deals = useMemo(() => products.filter(isDiscount).slice(0, 2), [products]);
+
+  const featured = useMemo(
+    () => products.filter((p) => (p.status || "").includes("وصل حديثاً")).slice(0, 2),
+    [products]
+  );
+  const bestSellers = useMemo(() => products.slice(0, 10), [products]);
+  const forYou = useMemo(() => products.slice(10, 20), [products]);
   return (
-    <div>
+    <div className="min-h-screen bg-[#F7F9FC]">
       <Header />
+
       <CategoryBar
         categories={categories}
         selectedCategoryId={selectedCategoryId}
@@ -48,17 +55,63 @@ function HomePage() {
         onSelectMall={setSelectedMallId}
         onSelectStore={setSelectedStoreId}
       />
-      <AdvSection
-        imgsUrl={imgsUrl}
-        intervalMs={4000}
+      <section className="min-h-[calc(100svh-120px)] flex flex-col">
+        <div className="flex-1 px-4 pt-4">
+          {/* لازم AdvSection يدعم full لتصير الصورة تملأ */}
+          <AdvSection imgsUrl={imgsUrl} intervalMs={4000} full />
+        </div>
+
+        <div className="pb-2">
+          <CategoriesBanner
+            categories={categories}
+            onSelectCategory={setSelectedCategoryId}
+            full
+          />
+        </div>
+      </section>
+
+      <section className="max-w-7xl mx-auto px-4 mt-6 pb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* أبرز المنتجات */}
+          <div className="bg-white rounded-2xl border border-gray-200  p-4">
+            <SectionHeader title="أبرز المنتجات" onViewAll={() => {}} />
+            <div className="grid grid-cols-2 gap-3">
+              {featured.map((p) => (
+                <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
+              ))}
+            </div>
+          </div>
+
+          {/* عروض رائعة */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-4">
+            <SectionHeader title="عروض رائعة" onViewAll={() => {}} />
+            <div className="grid grid-cols-2 gap-3">
+              {deals.map((p) => (
+                <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+      <ProductsRow
+        title="الأكثر ملائمة لك"
+        products={forYou}
+        onViewAll={() => {}}
+        onAddToCart={() => {}}
       />
-      
-      <CategoriesBanner
-        categories={categories}
-        onSelectCategory={setSelectedCategoryId}
+
+      <ProductsRow
+        title="الأكثر مبيعًا"
+        products={bestSellers}
+        onViewAll={() => {}}
+        onAddToCart={() => {}}
       />
+
+      <Footer />
+
     </div>
-  )
+    
+  );
 }
 
-export default HomePage
+export default HomePage;
