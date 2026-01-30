@@ -10,4 +10,3 @@ export default defineConfig({
     allowedHosts: ['e-mall.store'],
   },
 })
-
