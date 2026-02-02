@@ -1,19 +1,19 @@
 import React, { useMemo, useState } from "react";
-import Header from "../components/Header";
+import Header from "../components/HomePageComponents/Header";
 import { normalizeCategories } from "../utils/tmpCategories";
 import rawMalls from "../assets/malls.json";
 import rawStores from "../assets/stores.json";
 import rawCategories from "../assets/categories.json";
 import rawProducts from "../assets/products.json";
-import CategoryBar from "../components/CategoryBar";
+import CategoryBar from "../components/HomePageComponents/CategoryBar";
 import { normalizeMalls, normalizeStores } from "../utils/tmpMallsAndStores";
-import AdvSection from "../components/AdvSection";
-import CategoriesBanner from "../components/CategoriesBanner";
-import ProductCard from "../components/ProductCard";
-import SectionHeader from "../components/SectionHeader";
+import AdvSection from "../components/HomePageComponents/AdvSection";
+import CategoriesBanner from "../components/HomePageComponents/CategoriesBanner";
+import ProductCard from "../components/HomePageComponents/ProductCard";
+import SectionHeader from "../components/HomePageComponents/SectionHeader";
 import { normalizeProducts, isDiscount } from "../utils/tmpProducts";
-import ProductsRow from "../components/ProductsRow";
-import Footer from "../components/Footer";
+import ProductsRow from "../components/HomePageComponents/ProductsRow";
+import Footer from "../components/HomePageComponents/Footer";
 
 
 const imgsUrl = [
@@ -55,13 +55,13 @@ function HomePage() {
         onSelectMall={setSelectedMallId}
         onSelectStore={setSelectedStoreId}
       />
-      <section className="min-h-[calc(100svh-120px)] flex flex-col">
+      <section className="flex flex-col">
         <div className="flex-1 px-4 pt-4">
           {/* لازم AdvSection يدعم full لتصير الصورة تملأ */}
-          <AdvSection imgsUrl={imgsUrl} intervalMs={4000} full />
+          <AdvSection imgsUrl={imgsUrl} intervalMs={4000} page="home" full />
         </div>
 
-        <div className="pb-2">
+        <div className="">
           <CategoriesBanner
             categories={categories}
             onSelectCategory={setSelectedCategoryId}
@@ -70,7 +70,7 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-4 mt-6 pb-10">
+      <section className="mx-auto px-4 mt-6 pb-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* أبرز المنتجات */}
           <div className="bg-white rounded-2xl border border-gray-200  p-4">

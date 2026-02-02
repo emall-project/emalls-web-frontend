@@ -1,25 +1,32 @@
+import { Button } from "@radix-ui/themes";
 import { FiShoppingBag } from "react-icons/fi";
 import { FiShoppingCart } from "react-icons/fi";
 import { GrFavorite } from "react-icons/gr";
 import { IoIosSearch } from "react-icons/io";
 import { VscAccount } from "react-icons/vsc";
+import { useNavigate } from "react-router-dom";
 
 function Header() {
+  const navigate = useNavigate();
   return (
     <header className='sticky top-0 z-50 bg-white'>
-      <div className='flex max-w-7x1 mx-auto px-4 pt-3 pb-1 items-center gap-3'>
+      <div className='flex mx-auto px-4 pt-3 pb-1 items-center md:gap-3'>
         {/* logo */}
-        <div className='flex items-center gap-1 shrink-0 min-w-30'>
+        <Button className='flex items-center gap-1 shrink-0  min-w-20 md:min-w-30 cursor-pointer' onClick={() => navigate("/")}>
           <FiShoppingBag className='text-[#1A73E8] md:text-2xl text-lg'/>
           <div className='text-lg md:text-2xl font-extrabold text-[#1A73E8]'>سوقَنا</div>
-        </div>
+        </Button>
         {/* search */}
         <div className='flex-1 min-w-0'>
           <div className='relative'>
             <input 
-              className='w-full h-10 md:h-11 rounded-2xl  bg-[#E8F0FE] pr-12 pl-3 md:pl-4 text-sm md:text-base outline-none focus:ring-2 focus:ring-blue-200'
+              className='hidden md:flex w-full h-10 md:h-11 rounded-2xl  bg-[#E8F0FE] pr-12 pl-3 md:pl-4 text-sm md:text-base outline-none focus:ring-2 focus:ring-blue-200'
               type="text" 
               placeholder='ما الذي تبحث عنه؟'
+            />
+            <input 
+              className='md:hidden w-full h-10 md:h-11 rounded-2xl  bg-[#E8F0FE] pr-12 pl-3 md:pl-4 text-sm md:text-base outline-none focus:ring-2 focus:ring-blue-200'
+              type="text" 
             />
             <IoIosSearch className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-xl' />
           </div>

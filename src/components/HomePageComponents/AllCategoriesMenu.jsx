@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { getParentCategories } from "../utils/tmpCategories";
+import { getParentCategories } from "../../utils/tmpCategories";
 import * as NavigationMenu from "@radix-ui/react-navigation-menu";
 import { IoIosArrowDown } from "react-icons/io";
 

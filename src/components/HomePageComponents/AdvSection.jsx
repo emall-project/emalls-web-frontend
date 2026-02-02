@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 
-function AdvSection({imgsUrl , intervalMs}) {
+function AdvSection({imgsUrl , intervalMs , page}) {
   const [index , setIndex] = useState(0);
   //auto Slide
   useEffect(() => {
@@ -16,7 +16,7 @@ function AdvSection({imgsUrl , intervalMs}) {
 
   const currentImg = imgsUrl[index];
   return (
-    <section className='max-w-7xl mx-auto px-4 mt-5'>
+    <section className={`mx-auto  ${page == "mall" ? 'px-10 mt-7' : 'px-4 mt-5'}`}>
       <a
         href={null}
         className='block shadow-[0_8px_10px_-6px_rgba(0,0,0,0.25)] relative overflow-hidden rounded-2xl border border-gray-300 bg-white '
@@ -26,8 +26,8 @@ function AdvSection({imgsUrl , intervalMs}) {
           alt={currentImg.alt || "Ad"}
           loading='lazy'
           className='
-            w-full h-35 sm:h-45 md:h-full
-            object-cover
+            w-full h-35 sm:h-45 md:h-104
+            object-full
           '
         />
         {/* dot */}

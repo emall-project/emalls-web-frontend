@@ -23,7 +23,7 @@ export default function ProductsRow({ title, products = [], onViewAll, onAddToCa
   if (!products.length) return null;
 
   return (
-    <section className="max-w-7xl mx-auto px-4 mt-6">
+    <section className=" mx-auto px-4 mt-6">
       <div className="bg-white rounded-2xl border border-gray-200 p-4">
         <SectionHeader title={title} onViewAll={onViewAll} />
 

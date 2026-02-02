@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { FiShoppingCart } from "react-icons/fi";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import * as Dialog from "@radix-ui/react-dialog";
-import { isDiscount, discountAmount, isOutOfStock } from "../utils/tmpProducts";
+import { isDiscount, discountAmount, isOutOfStock } from "../../utils/tmpProducts";
 
 export default function ProductCard({ p, onAddToCart }) {
   const discount = isDiscount(p);
@@ -37,7 +37,7 @@ export default function ProductCard({ p, onAddToCart }) {
         <img
           src={p.imageUrl}
           alt={p.name}
-          className="w-full h-[190px] object-cover"
+          className="w-full md:h-[300px] h-[190px] object-cover"
           loading="lazy"
         />
       </div>

@@ -9,7 +9,7 @@ export default function Footer() {
 
   return (
     <footer className="mt-10 border-t border-gray-200 bg-white" dir="rtl">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className=" mx-auto px-10 py-8">
         {/* top grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* brand */}

@@ -17,7 +17,9 @@ export function normalizeProducts(rawJson) {
     };
   });
 }
-
+export function mallProduct(products = [] , mallId){
+  return products.filter((p)=> String(p.mallId) === String(mallId));
+}
 export function isDiscount(p) {
   return p.oldPrice != null && p.oldPrice > p.price;
 }

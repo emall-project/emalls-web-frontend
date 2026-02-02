@@ -30,7 +30,7 @@ function CategoriesBanner({ categories = [], onSelectCategory }) {
   if (!items.length) return null;
 
   return (
-    <section className="max-w-7xl mx-auto px-3 md:px-4 md:mt-10">
+    <section className="mx-auto px-3 md:px-4 md:mt-10">
       <div className="relative">
         {/* Left arrow */}
         <button
