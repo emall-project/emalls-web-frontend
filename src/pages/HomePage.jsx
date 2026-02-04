@@ -15,11 +15,10 @@ import { normalizeProducts, isDiscount } from "../utils/tmpProducts";
 import ProductsRow from "../components/HomePageComponents/ProductsRow";
 import Footer from "../components/HomePageComponents/Footer";
 
-
 const imgsUrl = [
-  { id: 1, image: "/adv4.jpg", alt: "adv1" },
-  { id: 2, image: "/adv1.jpg", alt: "adv2" },
-  { id: 3, image: "/adv3.jpg", alt: "adv3" },
+  { id: 1, image: "/video.gif", alt: "adv1" },
+  { id: 2, image: "https://template.canva.com/EAFdkOY1eMU/1/0/1600w-ewRm6zuOTts.jpg", alt: "adv2" },
+  { id: 3, image: "https://template.canva.com/EAFygIBpY9A/1/0/1280w-OJGt1T4cr94.jpg", alt: "adv3" },
 ];
 
 function HomePage() {
@@ -40,8 +39,9 @@ function HomePage() {
   );
   const bestSellers = useMemo(() => products.slice(0, 10), [products]);
   const forYou = useMemo(() => products.slice(10, 20), [products]);
+
   return (
-    <div className="min-h-screen bg-[#F7F9FC]">
+    <div className="min-h-screen bg-white">
       <Header />
 
       <CategoryBar
@@ -55,44 +55,48 @@ function HomePage() {
         onSelectMall={setSelectedMallId}
         onSelectStore={setSelectedStoreId}
       />
-      <section className="flex flex-col">
-        <div className="flex-1 px-4 pt-4">
-          {/* لازم AdvSection يدعم full لتصير الصورة تملأ */}
-          <AdvSection imgsUrl={imgsUrl} intervalMs={4000} page="home" full />
-        </div>
 
-        <div className="">
-          <CategoriesBanner
-            categories={categories}
-            onSelectCategory={setSelectedCategoryId}
-            full
-          />
-        </div>
-      </section>
+      {/* Hero Section - Full Screen */}
+      <AdvSection imgsUrl={imgsUrl} intervalMs={5000} page="home" />
 
-      <section className="mx-auto px-4 mt-6 pb-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* أبرز المنتجات */}
-          <div className="bg-white rounded-2xl border border-gray-200  p-4">
+      {/* Categories Banner */}
+      <CategoriesBanner
+        categories={categories}
+        onSelectCategory={setSelectedCategoryId}
+      />
+
+      {/* Featured & Deals Grid Section */}
+      <section className="max-w-[1600px] mx-auto px-6 md:px-12 py-8 md:py-12">
+        {/* Top accent line */}
+        <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mb-8 md:mb-12"></div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+          {/* أبرز المنتجات - Featured */}
+          <div className="bg-white">
             <SectionHeader title="أبرز المنتجات" onViewAll={() => {}} />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4 md:gap-6 mt-8">
               {featured.map((p) => (
                 <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
               ))}
             </div>
           </div>
 
-          {/* عروض رائعة */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-4">
+          {/* عروض رائعة - Deals */}
+          <div className="bg-white">
             <SectionHeader title="عروض رائعة" onViewAll={() => {}} />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4 md:gap-6 mt-8">
               {deals.map((p) => (
                 <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
               ))}
             </div>
           </div>
         </div>
+
+        {/* Bottom accent line */}
+        <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mt-8 md:mt-12"></div>
       </section>
+
+      {/* Products Rows */}
       <ProductsRow
         title="الأكثر ملائمة لك"
         products={forYou}
@@ -108,9 +112,7 @@ function HomePage() {
       />
 
       <Footer />
-
     </div>
-    
   );
 }
 

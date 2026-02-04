@@ -1,82 +1,99 @@
+import React from "react";
 import { Button } from "@radix-ui/themes";
-import { FiShoppingBag } from "react-icons/fi";
-import { FiShoppingCart } from "react-icons/fi";
+import { FiShoppingBag, FiShoppingCart } from "react-icons/fi";
 import { GrFavorite } from "react-icons/gr";
-import { IoIosSearch } from "react-icons/io";
 import { VscAccount } from "react-icons/vsc";
 import { useNavigate } from "react-router-dom";
 
+import HeaderSearch from "./HeaderSearch";
+
 function Header() {
   const navigate = useNavigate();
+
   return (
-    <header className='sticky top-0 z-50 bg-white'>
-      <div className='flex mx-auto px-4 pt-3 pb-1 items-center md:gap-3'>
-        {/* logo */}
-        <Button className='flex items-center gap-1 shrink-0  min-w-20 md:min-w-30 cursor-pointer' onClick={() => navigate("/")}>
-          <FiShoppingBag className='text-[#1A73E8] md:text-2xl text-lg'/>
-          <div className='text-lg md:text-2xl font-extrabold text-[#1A73E8]'>سوقَنا</div>
-        </Button>
-        {/* search */}
-        <div className='flex-1 min-w-0'>
-          <div className='relative'>
-            <input 
-              className='hidden md:flex w-full h-10 md:h-11 rounded-2xl  bg-[#E8F0FE] pr-12 pl-3 md:pl-4 text-sm md:text-base outline-none focus:ring-2 focus:ring-blue-200'
-              type="text" 
-              placeholder='ما الذي تبحث عنه؟'
-            />
-            <input 
-              className='md:hidden w-full h-10 md:h-11 rounded-2xl  bg-[#E8F0FE] pr-12 pl-3 md:pl-4 text-sm md:text-base outline-none focus:ring-2 focus:ring-blue-200'
-              type="text" 
-            />
-            <IoIosSearch className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-xl' />
+    <header className="sticky top-0 z-50 bg-white border-b border-black/10">
+      {/* Top thin line - luxury accent */}
+      <div className="h-px bg-black"></div>
+      
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 py-4 md:py-5">
+        <div className="flex items-center justify-between gap-6">
+          
+          {/* Logo - Minimal & Elegant */}
+          <Button
+            className="group flex items-center gap-2.5 shrink-0 cursor-pointer bg-transparent hover:bg-black/5 rounded-none px-2 py-1 transition-all duration-300 border-0"
+            onClick={() => navigate("/")}
+          >
+            <FiShoppingBag className="text-black text-2xl md:text-3xl transition-transform duration-300 group-hover:rotate-12" />
+            <div className="text-2xl md:text-3xl font-light tracking-wider text-black">
+              سوقَنا
+            </div>
+          </Button>
+
+          {/* Search - Centered & Clean */}
+          <div className="flex-1 max-w-2xl">
+            <HeaderSearch />
+          </div>
+
+          {/* Actions - Minimalist Icons */}
+          <div className="flex items-center gap-6 md:gap-8">
+            
+            {/* Favorites */}
+            <button
+              aria-label="favorites"
+              className="group relative flex flex-col items-center gap-1 transition-all duration-300"
+            >
+              <div className="relative">
+                <GrFavorite className="text-black text-xl md:text-2xl transition-all duration-300 group-hover:scale-110" />
+                {/* Subtle badge */}
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-black text-white text-[10px] font-medium rounded-full flex items-center justify-center">
+                  3
+                </span>
+              </div>
+              <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-light group-hover:text-black transition-colors">
+                المفضلة
+              </span>
+            </button>
+
+            {/* Cart */}
+            <button
+              aria-label="cart"
+              className="group relative flex flex-col items-center gap-1 transition-all duration-300"
+            >
+              <div className="relative">
+                <FiShoppingCart className="text-black text-xl md:text-2xl transition-all duration-300 group-hover:scale-110" />
+                {/* Subtle badge */}
+                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-black text-white text-[10px] font-medium rounded-full flex items-center justify-center">
+                  5
+                </span>
+              </div>
+              <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-light group-hover:text-black transition-colors">
+                السلة
+              </span>
+            </button>
+
+            {/* Divider - Thin vertical line */}
+            <div className="hidden md:block h-8 w-px bg-black/20"></div>
+
+            {/* Account/Login */}
+            <button
+              type="button"
+              onClick={() => navigate("/login")}
+              className="group flex flex-col items-center gap-1 transition-all duration-300"
+            >
+              <VscAccount className="text-black text-xl md:text-2xl transition-all duration-300 group-hover:scale-110" />
+              <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-light group-hover:text-black transition-colors">
+                الحساب
+              </span>
+            </button>
+
           </div>
         </div>
-
-        {/* actions */}
-        <div className="flex md:hidden items-center gap-1">
-          <button aria-label="favorites" className="h-10 w-10 rounded-xl hover:bg-gray-100 flex items-center justify-center">
-            <GrFavorite className="text-[#1A73E8]" size={16} />
-          </button>
-
-          <button aria-label="cart" className="h-10 w-10 rounded-xl hover:bg-gray-100 flex items-center justify-center">
-            <FiShoppingCart className="text-[#1A73E8]" size={16} />
-          </button>
-
-          <a href="#" aria-label="account" className="h-10 w-10 rounded-xl hover:bg-gray-100 flex items-center justify-center">
-            <VscAccount className="text-[#1A73E8]" size={16} />
-          </a>
-        </div>
-
-        <div className='flex shrink-0 gap-2 md:gap-20'>
-        <div className='hidden md:flex items-center gap-3'>
-          <button
-            aria-label='favorites'
-            className='h-11 px-3 rounded-xl hover:bg-gray-100 border-transparent hover:border-gray-200 flex items-center gap-2'
-          >
-            <GrFavorite className='text-[#1A73E8]' size={16}/>
-            <span className='font-extrabold text-sm'>المفضلة</span>
-          </button>
-          <span className="h-6 w-px bg-gray-300" aria-hidden="true" />
-          <button
-            aria-label='cart'
-            className='h-11 px-3 rounded-xl hover:bg-gray-100 border-transparent hover:border-gray-200 flex items-center gap-2'
-          >
-            <FiShoppingCart className='text-[#1A73E8]' size={16}/>
-            <span className='font-extrabold text-sm'>السلة</span>
-          </button>
-        </div>
-
-        <a 
-          href='#'
-          className='hidden md:flex h-11 px-3 rounded-xl hover:bg-gray-100 flex items-center gap-2'
-        >
-          <VscAccount className='text-[#1A73E8]' size={16}/>
-          <span className='font-extrabold text-sm'>تسجيل الدخول</span>
-        </a>
       </div>
-      </div>
+
+      {/* Bottom subtle shadow */}
+      <div className="h-px bg-gradient-to-r from-transparent via-black/5 to-transparent"></div>
     </header>
-  )
+  );
 }
 
-export default Header
+export default Header;

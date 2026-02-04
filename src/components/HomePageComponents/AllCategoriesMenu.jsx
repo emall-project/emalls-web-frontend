@@ -1,10 +1,8 @@
-import React, { useMemo, useState } from "react";
-import { getParentCategories } from "../../utils/tmpCategories";
+import React, { useState } from "react";
 import * as NavigationMenu from "@radix-ui/react-navigation-menu";
 import { IoIosArrowDown } from "react-icons/io";
 
-function AllCategoriesMenu({ categories, selectedCategoryId, onSelectCategory }) {
-  const parents = categories;
+function AllCategoriesMenu({ categories = [], selectedCategoryId, onSelectCategory }) {
   const [value, setValue] = useState("");
 
   return (
@@ -16,55 +14,58 @@ function AllCategoriesMenu({ categories, selectedCategoryId, onSelectCategory })
     >
       <NavigationMenu.List className="flex items-center">
         <NavigationMenu.Item value="all" className="relative">
-          {/* Trigger */}
+          {/* Trigger (minimal underline style) */}
           <NavigationMenu.Trigger
             className="
-                group flex w-full md:w-auto items-center justify-between gap-2
-                rounded-xl px-3 py-1
-                border border-gray-200 md:border-transparent
-                bg-white md:bg-[#1A73E8]
-                hover:bg-gray-50 md:hover:bg-[#E8F0FE]
-                transition-colors cursor-pointer outline-none
+              group flex items-center gap-2
+              px-1 py-2
+              border-b border-black/20
+              text-black/80
+              hover:text-black hover:border-black/50
+              transition-colors
+              outline-none
+              data-[state=open]:text-black data-[state=open]:border-black
             "
           >
-            <span className="  font-extrabold text-xs md:text-sm
-                                text-[#1A73E8] md:text-white
-                                md:group-hover:text-[#1A73E8]
-                                transition-colors">
+            <span className="tracking-wide text-sm  md:text-[15px] font-bold">
               جميع الفئات
             </span>
 
             <IoIosArrowDown
               className="
-                  text-[#1A73E8] md:text-white
-                  md:group-hover:text-[#1A73E8]
-                  transition-transform duration-150
-                  group-data-[state=open]:rotate-180
+              
+                text-black/50
+                group-hover:text-black/70
+                transition-transform duration-150
+                group-data-[state=open]:rotate-180
               "
             />
           </NavigationMenu.Trigger>
 
-          {/* Content */}
+          {/* Content (minimal panel) */}
           <NavigationMenu.Content
             className="
-              fixed inset-x-0 right-0  z-50
+              fixed inset-x-0 right-0 z-50
               max-h-[70vh] overflow-auto
-              bg-white border border-gray-200
-              rounded-t-2xl shadow-lg p-3
+              bg-white
+              border border-black/10
+              shadow-[0_8px_30px_rgba(0,0,0,0.12)]
+              p-4
               md:absolute md:right-0 md:top-full md:mt-3
-              md:bottom-auto md:inset-x-auto
-              md:w-lvw md:max-w-[92vw]
-              md:max-h-none md:overflow-visible
-              md:rounded-2xl
+              md:inset-x-auto
+              md:w-[min(920px,calc(100vw-32px))]
+              md:max-h-[520px]
             "
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-3  top-0 bg-white pb-2">
-              <p className="font-extrabold text-gray-800">اختر فئة</p>
+            <div className="flex items-center justify-between pb-3 border-b border-black/10">
+              <p className="text-[10px] font-light text-black/60 tracking-[0.25em] uppercase">
+                اختر فئة
+              </p>
 
               <button
                 type="button"
-                className="text-sm font-semibold text-gray-500 hover:text-[#1A73E8]"
+                className="text-black/70 font-light text-sm underline hover:no-underline transition"
                 onClick={() => {
                   onSelectCategory?.(null);
                   setValue("");
@@ -75,9 +76,9 @@ function AllCategoriesMenu({ categories, selectedCategoryId, onSelectCategory })
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-              {parents.map((cat) => {
-                const active = selectedCategoryId === cat.id;
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              {categories.map((cat) => {
+                const active = String(selectedCategoryId) === String(cat.id);
 
                 return (
                   <button
@@ -88,31 +89,63 @@ function AllCategoriesMenu({ categories, selectedCategoryId, onSelectCategory })
                       setValue("");
                     }}
                     className={[
-                      "flex items-center gap-3 p-2 rounded-xl border text-right hover:bg-gray-50 transition",
-                      active ? "border-blue-500 bg-blue-50" : "border-gray-200 bg-white",
+                      "w-full text-right flex items-center gap-4",
+                      "px-4 py-3",
+                      "border border-black/10",
+                      "hover:bg-black/[0.02] transition-colors",
+                      active ? "border-black/40" : "",
                     ].join(" ")}
                   >
-                    <img
-                      src={cat.imageUrl}
-                      alt={cat.name}
-                      className="w-10 h-10 rounded-full object-cover border border-gray-200 shrink-0"
-                      onError={(e) => (e.currentTarget.style.display = "none")}
-                      loading="lazy"
-                    />
+                    {/* image */}
+                    <div className="w-12 h-12 bg-black/5 overflow-hidden shrink-0 flex items-center justify-center">
+                      {cat.imageUrl ? (
+                        <img
+                          src={cat.imageUrl}
+                          alt={cat.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => (e.currentTarget.style.display = "none")}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className="text-black/40 font-light text-lg">
+                          {cat.name?.[0] || "?"}
+                        </span>
+                      )}
+                    </div>
 
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 truncate">{cat.name}</p>
-                      <p className="text-xs text-gray-500 truncate">تصفّح منتجات هذه الفئة</p>
+                    {/* text */}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-light text-black truncate tracking-wide">
+                        {cat.name}
+                      </p>
+                      <p className="text-xs text-black/50 font-light truncate mt-1 tracking-wide">
+                        تصفّح منتجات هذه الفئة
+                      </p>
+                    </div>
+
+                    {/* minimal arrow */}
+                    <div className="text-black/20">
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15 19l-7-7 7-7"
+                        />
+                      </svg>
                     </div>
                   </button>
                 );
               })}
             </div>
 
-            {/* موبایل: مساحة صغيرة تحت عشان السحب/اللمس */}
             <div className="h-2 md:hidden" />
           </NavigationMenu.Content>
-
         </NavigationMenu.Item>
       </NavigationMenu.List>
     </NavigationMenu.Root>

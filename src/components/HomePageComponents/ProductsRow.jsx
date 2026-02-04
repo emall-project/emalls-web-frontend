@@ -23,24 +23,30 @@ export default function ProductsRow({ title, products = [], onViewAll, onAddToCa
   if (!products.length) return null;
 
   return (
-    <section className=" mx-auto px-4 mt-6">
-      <div className="bg-white rounded-2xl border border-gray-200 p-4">
+    <section className="max-w-[1600px] mx-auto px-6 md:px-12 py-8 md:py-12">
+      {/* Top accent line */}
+      <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mb-8"></div>
+
+      <div className="bg-white">
         <SectionHeader title={title} onViewAll={onViewAll} />
 
-        <div className="relative mt-3">
-          {/* arrows (desktop/tablet) */}
+        <div className="relative mt-8 md:mt-10">
+          {/* arrows - luxury square style */}
           <button
             type="button"
             aria-label="scroll left"
             onClick={() => scrollByAmount(-1)}
             className="
-              hidden sm:flex
-              absolute left-2 top-1/2 -translate-y-1/2 z-10
-              h-10 w-10 rounded-full bg-white border border-gray-200 shadow
-              items-center justify-center hover:bg-gray-50
+              hidden md:flex
+              absolute left-0 md:-left-14 top-1/2 -translate-y-1/2 z-10
+              h-12 w-12 bg-white border border-black/10
+              items-center justify-center 
+              transition-all duration-300
+              hover:bg-black hover:border-black
+              group
             "
           >
-            <IoIosArrowBack className="text-gray-700" size={18} />
+            <IoIosArrowBack className="text-black text-xl transition-colors group-hover:text-white" />
           </button>
 
           <button
@@ -48,43 +54,45 @@ export default function ProductsRow({ title, products = [], onViewAll, onAddToCa
             aria-label="scroll right"
             onClick={() => scrollByAmount(1)}
             className="
-              hidden sm:flex
-              absolute right-2 top-1/2 -translate-y-1/2 z-10
-              h-10 w-10 rounded-full bg-white border border-gray-200 shadow
-              items-center justify-center hover:bg-gray-50
+              hidden md:flex
+              absolute right-0 md:-right-14 top-1/2 -translate-y-1/2 z-10
+              h-12 w-12 bg-white border border-black/10
+              items-center justify-center 
+              transition-all duration-300
+              hover:bg-black hover:border-black
+              group
             "
           >
-            <IoIosArrowForward className="text-gray-700" size={18} />
+            <IoIosArrowForward className="text-black text-xl transition-colors group-hover:text-white" />
           </button>
 
           {/* scroller */}
           <div
             ref={scrollerRef}
             className="
-              flex gap-3 overflow-x-auto scroll-smooth
-              pb-1
-              sm:px-12
+              flex gap-4 md:gap-6
+              overflow-x-auto scroll-smooth
+              pb-2
               [-ms-overflow-style:none] [scrollbar-width:none]
+              [&::-webkit-scrollbar]:hidden
             "
             style={{ WebkitOverflowScrolling: "touch" }}
           >
-            {/* إخفاء السكرول بار للـ Chrome */}
-            <style>{`
-              .no-scrollbar::-webkit-scrollbar { display: none; }
-            `}</style>
-
             {products.map((p) => (
-              <div key={p.id} className="shrink-0 w-[170px] sm:w-[210px]">
+              <div key={p.id} className="shrink-0 w-[200px] sm:w-[240px] md:w-[280px]">
                 <ProductCard p={p} onAddToCart={onAddToCart} />
               </div>
             ))}
           </div>
 
-         
-          <div className="pointer-events-none hidden sm:block absolute left-0 top-0 h-full w-10 bg-gradient-to-r from-white to-transparent" />
-          <div className="pointer-events-none hidden sm:block absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-white to-transparent" />
+          {/* Elegant fade gradients */}
+          <div className="pointer-events-none hidden md:block absolute left-0 top-0 h-full w-20 bg-gradient-to-r from-white via-white/80 to-transparent" />
+          <div className="pointer-events-none hidden md:block absolute right-0 top-0 h-full w-20 bg-gradient-to-l from-white via-white/80 to-transparent" />
         </div>
       </div>
+
+      {/* Bottom accent line */}
+      <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mt-8"></div>
     </section>
   );
 }

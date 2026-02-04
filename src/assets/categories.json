@@ -5,140 +5,147 @@
       "name": "إلكترونيات",
       "description": "أجهزة وأدوات تشمل الهواتف الذكية، الكاميرات، والمعدات الصوتية.",
       "parentId": null,
-      "image_url": "https://images.unsplash.com/photo-1498049794561-7780e7231661?q=80&w=500"
+      "image_url": "/elect.jpg"
     },
     {
       "_id": 2,
       "name": "أزياء",
       "description": "ملابس، إكسسوارات، وأحذية لجميع الأعمار والأذواق.",
       "parentId": null,
-      "image_url": "https://images.pexels.com/photos/30900490/pexels-photo-30900490.jpeg?_gl=1*19g29r9*_ga*MTIwMDYyNzg1MS4xNzQ1MDc1NDQ0*_ga_8JE65Q40S6*czE3NjkyODA4MzMkbzEzJGcxJHQxNzY5MjgxMDE3JGoxNiRsMCRoMA.."
+      "image_url": "/clothes.jpg"
     },
     {
       "_id": 3,
       "name": "المنزل والحديقة",
       "description": "أثاث، ديكور، ومعدات خارجية لمساحات المعيشة الخاصة بك.",
       "parentId": null,
-      "image_url": "https://images.unsplash.com/photo-1484154218962-a197022b5858?q=80&w=500"
+      "image_url": "/home.jpg"
     },
     {
       "_id": 4,
       "name": "الرياضة والأنشطة الخارجية",
       "description": "معدات وملابس للرياضة، التخييم، والأنشطة الخارجية.",
       "parentId": null,
-      "image_url": "https://images.pexels.com/photos/28744545/pexels-photo-28744545.jpeg?_gl=1*1xhnmbr*_ga*MTIwMDYyNzg1MS4xNzQ1MDc1NDQ0*_ga_8JE65Q40S6*czE3NjkyODA4MzMkbzEzJGcxJHQxNzY5MjgwODUwJGo0MyRsMCRoMA.."
+      "image_url": "/sportandexerc.jpg"
     },
     {
       "_id": 5,
       "name": "الجمال والعناية الشخصية",
       "description": "منتجات العناية بالبشرة، المكياج، ومنتجات العناية الشخصية.",
       "parentId": null,
-      "image_url": "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=500"
+      "image_url": "/beautyandselfcare.jpg"
     },
     {
       "_id": 6,
       "name": "كاميرات",
       "description": "كاميرات رقمية، DSLR، وكاميرات الحركة لهواة التصوير الفوتوغرافي.",
       "parentId": 1,
-      "image_url": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=500"
+      "image_url": "/camers.jpg"
     },
     {
       "_id": 7,
       "name": "هواتف ذكية",
       "description": "أحدث الهواتف الذكية وملحقاتها.",
       "parentId": 1,
-      "image_url": "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=500"
+      "image_url": "/phone.jpg"
     },
     {
       "_id": 8,
       "name": "صوتيات",
       "description": "سماعات الرأس، سماعات الأذن، ومكبرات الصوت للحصول على صوت عالي الجودة.",
       "parentId": 1,
-      "image_url": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?q=80&w=500"
+      "image_url": "/speaker.png"
     },
     {
       "_id": 9,
       "name": "ملابس رجالية",
       "description": "ملابس كاجوال ورسمية للرجال.",
       "parentId": 2,
-      "image_url": "https://images.pexels.com/photos/9775856/pexels-photo-9775856.jpeg?_gl=1*mihwxa*_ga*MTIwMDYyNzg1MS4xNzQ1MDc1NDQ0*_ga_8JE65Q40S6*czE3NjkyODA4MzMkbzEzJGcxJHQxNzY5MjgxMTc1JGoyNiRsMCRoMA.."
+      "image_url": "/men.jpg"
     },
     {
       "_id": 10,
       "name": "ملابس نسائية",
       "description": "فساتين، بلوزات، وملابس رياضية للنساء.",
       "parentId": 2,
-      "image_url": "https://images.pexels.com/photos/13991579/pexels-photo-13991579.jpeg"
+      "image_url": "/dress.jpg"
     },
     {
       "_id": 11,
       "name": "إكسسوارات",
       "description": "محافظ، أحزمة، ومجوهرات لتكمل مظهرك الخاص.",
       "parentId": 2,
-      "image_url": "https://images.unsplash.com/photo-1523293182086-7651a899d37f?q=80&w=500"
+      "image_url": "/perfum.png"
     },
     {
       "_id": 12,
       "name": "أثاث",
       "description": "طاولات، كراسي، وحلول تخزين لمنزلك.",
       "parentId": 3,
-      "image_url": "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?q=80&w=500"
+      "image_url": "/chair.jpg"
     },
     {
       "_id": 13,
       "name": "ديكور خارجي",
       "description": "أثاث الفناء، المظلات، وإكسسوارات الحديقة.",
       "parentId": 3,
-      "image_url": "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?q=80&w=500"
+      "image_url": "/garden.jpg"
     },
     {
       "_id": 14,
       "name": "معدات التخييم",
       "description": "خيام، كراسي، ومعدات لمغامرات التخييم.",
       "parentId": 4,
-      "image_url": "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?q=80&w=500"
+      "image_url": "/khaima.jpg"
     },
     {
       "_id": 15,
       "name": "ملابس رياضية",
       "description": "ملابس وأحذية مصممة للرياضة واللياقة البدنية.",
       "parentId": 4,
-      "image_url": "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=500"
+      "image_url": "/sportclothes.jpg"
     },
     {
       "_id": 16,
       "name": "العناية بالبشرة",
       "description": "منظفات، مرطبات، وعلاجات لبشرة صحية.",
       "parentId": 5,
-      "image_url": "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=500"
+      "image_url": "/treatment.jpg"
     },
     {
       "_id": 17,
       "name": "مكياج",
       "description": "مستحضرات التجميل بما في ذلك الماسكارا، أحمر الشفاه، وكريم الأساس.",
       "parentId": 5,
-      "image_url": "https://images.pexels.com/photos/31154612/pexels-photo-31154612.jpeg"
+      "image_url": "/makeup.jpg"
     },
     {
       "_id": 18,
       "name": "كاميرات الحركة",
       "description": "كاميرات مدمجة لالتقاط المغامرات.",
       "parentId": 6,
-      "image_url": "https://images.unsplash.com/photo-1502982720700-bfff97f2ecac?q=80&w=500"
+      "image_url": "/cammosh.jpg"
     },
     {
       "_id": 19,
       "name": "سماعات لاسلكية",
       "description": "حلول صوتية لاسلكية محمولة وعالية الجودة.",
       "parentId": 8,
-      "image_url": "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?q=80&w=500"
+      "image_url": "/airpods.jpg"
     },
     {
       "_id": 20,
       "name": "نظارات شمسية",
       "description": "نظارات أنيقة وواقية لجميع المناسبات.",
       "parentId": 11,
-      "image_url": "https://images.pexels.com/photos/29538717/pexels-photo-29538717.jpeg"
+      "image_url": "/glasses.jpg"
+    },
+    {
+      "_id": 21,
+      "name": "احذية",
+      "description": "",
+      "parentId": 10,
+      "image_url": "/shoes.jpg"
     }
   ],
   "totalCategories": 20,
