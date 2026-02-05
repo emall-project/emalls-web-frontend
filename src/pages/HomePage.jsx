@@ -17,8 +17,16 @@ import Footer from "../components/HomePageComponents/Footer";
 
 const imgsUrl = [
   { id: 1, image: "/video.gif", alt: "adv1" },
-  { id: 2, image: "https://template.canva.com/EAFdkOY1eMU/1/0/1600w-ewRm6zuOTts.jpg", alt: "adv2" },
-  { id: 3, image: "https://template.canva.com/EAFygIBpY9A/1/0/1280w-OJGt1T4cr94.jpg", alt: "adv3" },
+  {
+    id: 2,
+    image: "https://template.canva.com/EAFdkOY1eMU/1/0/1600w-ewRm6zuOTts.jpg",
+    alt: "adv2",
+  },
+  {
+    id: 3,
+    image: "https://template.canva.com/EAFygIBpY9A/1/0/1280w-OJGt1T4cr94.jpg",
+    alt: "adv3",
+  },
 ];
 
 function HomePage() {
@@ -31,12 +39,13 @@ function HomePage() {
   const [selectedMallId, setSelectedMallId] = useState(null);
   const [selectedStoreId, setSelectedStoreId] = useState(null);
 
-  const deals = useMemo(() => products.filter(isDiscount).slice(0, 2), [products]);
+  const deals = useMemo(() => products.filter(isDiscount).slice(0, 3), [products]);
 
   const featured = useMemo(
-    () => products.filter((p) => (p.status || "").includes("وصل حديثاً")).slice(0, 2),
+    () => products.filter((p) => (p.status || "").includes("وصل حديثاً")).slice(0, 3),
     [products]
   );
+
   const bestSellers = useMemo(() => products.slice(0, 10), [products]);
   const forYou = useMemo(() => products.slice(10, 20), [products]);
 
@@ -56,35 +65,34 @@ function HomePage() {
         onSelectStore={setSelectedStoreId}
       />
 
-      {/* Hero Section - Full Screen */}
+      {/* Hero Section */}
       <AdvSection imgsUrl={imgsUrl} intervalMs={5000} page="home" />
 
       {/* Categories Banner */}
-      <CategoriesBanner
-        categories={categories}
-        onSelectCategory={setSelectedCategoryId}
-      />
+      <CategoriesBanner categories={categories} onSelectCategory={setSelectedCategoryId} />
 
-      {/* Featured & Deals Grid Section */}
-      <section className="max-w-[1600px] mx-auto px-6 md:px-12 py-8 md:py-12">
+      {/* Featured & Deals */}
+      <section className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-12 py-6 sm:py-8 md:py-12">
         {/* Top accent line */}
-        <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mb-8 md:mb-12"></div>
+        <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mb-6 sm:mb-8 md:mb-12" />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-          {/* أبرز المنتجات - Featured */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
+          {/* Featured */}
           <div className="bg-white">
             <SectionHeader title="أبرز المنتجات" onViewAll={() => {}} />
-            <div className="grid grid-cols-2 gap-4 md:gap-6 mt-8">
+
+            <div className="mt-5 sm:mt-6 md:mt-8 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
               {featured.map((p) => (
                 <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
               ))}
             </div>
           </div>
 
-          {/* عروض رائعة - Deals */}
+          {/* Deals */}
           <div className="bg-white">
             <SectionHeader title="عروض رائعة" onViewAll={() => {}} />
-            <div className="grid grid-cols-2 gap-4 md:gap-6 mt-8">
+
+            <div className="mt-5 sm:mt-6 md:mt-8 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
               {deals.map((p) => (
                 <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
               ))}
@@ -93,7 +101,7 @@ function HomePage() {
         </div>
 
         {/* Bottom accent line */}
-        <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mt-8 md:mt-12"></div>
+        <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mt-6 sm:mt-8 md:mt-12" />
       </section>
 
       {/* Products Rows */}

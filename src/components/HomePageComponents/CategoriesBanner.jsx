@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 
 function CategoriesBanner({ categories = [], onSelectCategory }) {
@@ -6,46 +6,52 @@ function CategoriesBanner({ categories = [], onSelectCategory }) {
 
   const items = useMemo(() => categories.filter((c) => c.imageUrl), [categories]);
 
+  // RTL: start from the right
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollLeft = el.scrollWidth;
+  }, [items.length]);
+
   const scrollByAmount = (dir) => {
     const el = scrollerRef.current;
     if (!el) return;
-    const amount = Math.max(260, Math.floor(el.clientWidth * 0.9));
+
+    // responsive scroll amount based on visible width
+    const amount = Math.max(240, Math.floor(el.clientWidth * 0.85));
     el.scrollBy({ left: dir * amount, behavior: "smooth" });
   };
 
   if (!items.length) return null;
 
   return (
-    <section className="relative w-full py-8 sm:py-10 md:py-14 bg-neutral-50">
+    <section className="relative w-full bg-neutral-50 py-7 sm:py-10 md:py-14">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-12">
-        {/* Section header */}
-        <div className="mb-6 sm:mb-8 md:mb-12">
-          <h2
-            className="text-sm sm:text-base md:text-lg font-extralight text-black/70 text-center"
-            style={{ letterSpacing: "0.1em", lineHeight: "1.8" }}
-          >
+        {/* Header */}
+        <div className="mb-5 sm:mb-7 md:mb-10 text-center">
+          <h2 className="text-xs sm:text-sm md:text-lg font-extralight text-black/70 tracking-[0.18em]">
             التشكيلات الحصرية
           </h2>
         </div>
 
         <div className="relative">
-          {/* Arrows (hide on mobile) */}
+          {/* arrows (md+) */}
           <button
             type="button"
             aria-label="Previous"
             onClick={() => scrollByAmount(-1)}
             className="
-              hidden sm:flex
-              absolute left-0 md:-left-16 top-1/2 -translate-y-1/2 z-10
-              h-11 w-11 md:h-12 md:w-12
+              hidden md:flex
+              absolute -left-4 lg:-left-10 top-1/2 -translate-y-1/2 z-10
+              h-11 w-11 rounded-full
+              bg-white border border-black/10 shadow-sm
               items-center justify-center
-              bg-white border border-black/10
-              transition-all duration-300
               hover:bg-black hover:border-black
+              transition
               group
             "
           >
-            <IoIosArrowBack className="text-black text-lg md:text-xl transition-colors group-hover:text-white" />
+            <IoIosArrowBack className="text-black text-lg group-hover:text-white transition-colors" />
           </button>
 
           <button
@@ -53,131 +59,103 @@ function CategoriesBanner({ categories = [], onSelectCategory }) {
             aria-label="Next"
             onClick={() => scrollByAmount(1)}
             className="
-              hidden sm:flex
-              absolute right-0 md:-right-16 top-1/2 -translate-y-1/2 z-10
-              h-11 w-11 md:h-12 md:w-12
+              hidden md:flex
+              absolute -right-4 lg:-right-10 top-1/2 -translate-y-1/2 z-10
+              h-11 w-11 rounded-full
+              bg-white border border-black/10 shadow-sm
               items-center justify-center
-              bg-white border border-black/10
-              transition-all duration-300
               hover:bg-black hover:border-black
+              transition
               group
             "
           >
-            <IoIosArrowForward className="text-black text-lg md:text-xl transition-colors group-hover:text-white" />
+            <IoIosArrowForward className="text-black text-lg group-hover:text-white transition-colors" />
           </button>
 
-          {/* Scroller */}
-          <div
-            ref={scrollerRef}
-            className="
-              flex gap-3 sm:gap-4 md:gap-6
-              overflow-x-auto scroll-smooth
-              scrollbar-hide
-              snap-x snap-mandatory
-              pb-1
-            "
-            style={{ WebkitOverflowScrolling: "touch" }}
-          >
-            {items.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => onSelectCategory?.(c.id)}
-                className="
-                  group relative shrink-0
-                  w-[180px] xs:w-[200px] sm:w-[240px] md:w-[320px] lg:w-[380px]
-                  aspect-[3/4]
-                  overflow-hidden
-                  snap-center
-                  transition-all duration-500
-                  hover:shadow-2xl
-                "
-                style={{
-                  borderRadius: "999px", // نفس الروح لكن يطلع لطيف مع الصغير والكبير
-                }}
-              >
-                {/* Background image */}
-                <img
-                  src={c.imageUrl}
-                  alt={c.name}
-                  className="
-                    w-full h-full
-                    object-cover
-                    transition-transform duration-700
-                    group-hover:scale-105
-                  "
-                  loading="lazy"
-                  onError={(e) => (e.currentTarget.style.display = "none")}
-                />
+          {/* scroller */}
+          <div className="relative">
+            <div
+              ref={scrollerRef}
+              dir="rtl"
+              className="
+                flex gap-3 sm:gap-4 md:gap-6
+                overflow-x-auto scroll-smooth
+                snap-x snap-mandatory
+                pb-2
+                [-ms-overflow-style:none] [scrollbar-width:none]
+              "
+              style={{ WebkitOverflowScrolling: "touch" }}
+            >
+              <style>{`
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+              `}</style>
 
-                {/* Gradient overlay */}
-                <div
+              {items.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => onSelectCategory?.(c.id)}
                   className="
-                    absolute inset-0
-                    bg-gradient-to-t from-black/60 via-black/20 to-transparent
-                    transition-all duration-500
-                    group-hover:from-black/70
+                    group relative shrink-0 snap-center
+                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30
+                    overflow-hidden
+                    transition
+                    hover:shadow-2xl
                   "
-                />
-
-                {/* Text overlay */}
-                <div
-                  className="
-                    absolute inset-x-0 bottom-0
-                    p-4 sm:p-5 md:p-8
-                    flex flex-col items-center justify-end
-                    text-center
-                  "
+                  // Responsive sizing: small on mobile, grows gradually
+                  // aspect a bit taller on mobile to look premium
+                  style={{
+                    width: "clamp(150px, 44vw, 220px)", // mobile
+                    borderRadius: "clamp(80px, 18vw, 140px)",
+                    aspectRatio: "3 / 4",
+                  }}
                 >
-                  <h3
+                  {/* image */}
+                  <img
+                    src={c.imageUrl}
+                    alt={c.name}
+                    loading="lazy"
                     className="
-                      text-xs sm:text-sm md:text-lg
-                      font-light
-                      tracking-[0.18em] md:tracking-[0.2em]
-                      uppercase
-                      text-white
-                      transition-all duration-500
-                      group-hover:tracking-[0.22em] md:group-hover:tracking-[0.3em]
+                      w-full h-full object-cover
+                      transition-transform duration-700
+                      group-hover:scale-[1.04]
                     "
-                  >
-                    {c.name}
-                  </h3>
-
-                  {/* Underline */}
-                  <div
-                    className="
-                      w-0 h-px bg-white mt-2 sm:mt-3
-                      transition-all duration-500
-                      group-hover:w-12 sm:group-hover:w-16 md:group-hover:w-20
-                    "
+                    onError={(e) => (e.currentTarget.style.display = "none")}
                   />
 
-                  {/* Shop now text */}
-                  <span
-                    className="
-                      text-[9px] sm:text-[10px]
-                      tracking-[0.22em] sm:tracking-[0.25em]
-                      uppercase
-                      text-white/80
-                      mt-3 sm:mt-4
-                      opacity-0
-                      transition-all duration-500
-                      group-hover:opacity-100
-                    "
-                  >
-                    تسوق الآن
-                  </span>
-                </div>
-              </button>
-            ))}
+                  {/* overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent transition group-hover:from-black/70" />
+
+                  {/* text */}
+                  <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 md:p-7 text-center">
+                    <h3
+                      className="
+                        text-[10px] sm:text-xs md:text-sm
+                        font-light uppercase text-white
+                        tracking-[0.22em] sm:tracking-[0.25em]
+                        transition-all duration-500
+                        group-hover:tracking-[0.30em]
+                      "
+                    >
+                      {c.name}
+                    </h3>
+
+                    <div className="mx-auto mt-2 sm:mt-3 h-px w-0 bg-white/90 transition-all duration-500 group-hover:w-10 sm:group-hover:w-14 md:group-hover:w-20" />
+
+                    <span className="mt-3 sm:mt-4 block text-[9px] sm:text-[10px] text-white/80 tracking-[0.25em] uppercase opacity-0 transition duration-500 group-hover:opacity-100">
+                      تسوق الآن
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* edge fades (always, helps on mobile too) */}
+            <div className="pointer-events-none absolute left-0 top-0 h-full w-10 sm:w-12 bg-gradient-to-r from-neutral-50 to-transparent" />
+            <div className="pointer-events-none absolute right-0 top-0 h-full w-10 sm:w-12 bg-gradient-to-l from-neutral-50 to-transparent" />
           </div>
         </div>
       </div>
-
-      <style>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { scrollbar-width: none; }
-      `}</style>
     </section>
   );
 }

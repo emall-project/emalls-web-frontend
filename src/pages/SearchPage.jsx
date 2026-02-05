@@ -1,6 +1,12 @@
 import React, { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { IoArrowForward, IoSearchOutline, IoStorefrontOutline, IoCartOutline, IoBusinessOutline } from "react-icons/io5";
+import {
+  IoArrowForward,
+  IoSearchOutline,
+  IoStorefrontOutline,
+  IoCartOutline,
+  IoBusinessOutline,
+} from "react-icons/io5";
 
 import rawMalls from "../assets/malls.json";
 import rawStores from "../assets/stores.json";
@@ -15,154 +21,112 @@ function useQueryParam(name) {
 
 export default function SearchPage() {
   const navigate = useNavigate();
+
   const q = useQueryParam("q");
+  const mallIdParam = useQueryParam("mallId"); // ✅ optional
+
+  // ✅ filter raw data if mallId exists
+  const scoped = useMemo(() => {
+    if (!mallIdParam) {
+      return { malls: rawMalls, stores: rawStores, products: rawProducts };
+    }
+    return {
+      malls: rawMalls.filter((m) => String(m.id) === String(mallIdParam)),
+      stores: rawStores.filter((s) => String(s.mallId) === String(mallIdParam)),
+      products: rawProducts.filter((p) => String(p.mallId) === String(mallIdParam)),
+    };
+  }, [mallIdParam]);
 
   const searchIndex = useMemo(
-    () => buildSearchIndex({ rawMalls, rawStores, rawProducts }),
-    []
+    () => buildSearchIndex({ rawMalls: scoped.malls, rawStores: scoped.stores, rawProducts: scoped.products }),
+    [scoped]
   );
 
-  const results = useMemo(
-    () => searchInIndex(q, searchIndex, { limit: 80 }),
-    [q, searchIndex]
-  );
+  const results = useMemo(() => searchInIndex(q, searchIndex, { limit: 80 }), [q, searchIndex]);
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+    <div dir="rtl" className="min-h-screen bg-white">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-12 py-8 md:py-10">
+        <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mb-8" />
+
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 mb-8">
+        <div className="flex items-start md:items-center justify-between gap-4 mb-8">
           <div className="text-right flex-1">
-            <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-2">
+            <h1 className="text-2xl md:text-3xl font-light tracking-wide text-black mb-2">
               نتائج البحث
             </h1>
-            <div className="flex items-center gap-2 text-lg">
+
+            <div className="flex flex-wrap items-center gap-2 text-sm md:text-base">
               {q ? (
                 <>
-                  <span className="text-gray-600 font-semibold">البحث عن:</span>
-                  <span className="text-[#1A73E8] font-black bg-[#E8F0FE] px-4 py-1 rounded-full">
+                  <span className="text-black/60 font-light">البحث عن:</span>
+                  <span className="text-black font-light border border-black/10 px-4 py-1.5">
                     "{q}"
                   </span>
+                  {mallIdParam ? (
+                    <span className="text-black/40 text-xs md:text-sm font-light">
+                      (داخل هذا المول فقط)
+                    </span>
+                  ) : null}
                 </>
               ) : (
-                <span className="text-gray-500 font-semibold">اكتب كلمة للبحث</span>
+                <span className="text-black/50 font-light">اكتب كلمة للبحث</span>
               )}
             </div>
           </div>
 
           <button
             onClick={() => navigate(-1)}
-            className="h-12 px-6 rounded-full bg-white border-2 border-gray-200 hover:border-[#1A73E8] hover:bg-[#E8F0FE] font-bold transition-all shadow-sm flex items-center gap-2"
+            className="
+              h-11 px-5
+              bg-white border border-black/10
+              hover:bg-black hover:text-white
+              transition-all duration-300
+              flex items-center gap-2
+              text-sm font-light tracking-wide
+            "
           >
-            <IoArrowForward className="text-xl" />
+            <IoArrowForward className="text-lg" />
             <span>رجوع</span>
           </button>
         </div>
 
-        {/* Count Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <CountCard 
-            label="المولات" 
-            count={results.malls.length}
-            icon={<IoBusinessOutline className="text-3xl" />}
-            color="blue"
-          />
-          <CountCard 
-            label="المتاجر" 
-            count={results.stores.length}
-            icon={<IoStorefrontOutline className="text-3xl" />}
-            color="green"
-          />
-          <CountCard 
-            label="المنتجات" 
-            count={results.products.length}
-            icon={<IoCartOutline className="text-3xl" />}
-            color="purple"
-          />
+        {/* Count */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-10">
+          <CountCard label="المولات" count={results.malls.length} icon={<IoBusinessOutline className="text-2xl" />} />
+          <CountCard label="المتاجر" count={results.stores.length} icon={<IoStorefrontOutline className="text-2xl" />} />
+          <CountCard label="المنتجات" count={results.products.length} icon={<IoCartOutline className="text-2xl" />} />
         </div>
 
-        {/* Empty States */}
+        {/* States */}
         {q.trim().length < 2 ? (
-          <div className="mt-16 text-center">
-            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-[#E8F0FE] to-[#C2D9F5] flex items-center justify-center">
-              <IoSearchOutline className="text-5xl text-[#1A73E8]" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">ابدأ البحث</h3>
-            <p className="text-gray-600 font-semibold">
-              اكتب حرفين على الأقل لعرض النتائج
-            </p>
-          </div>
+          <EmptyState title="ابدأ البحث" desc="اكتب حرفين على الأقل لعرض النتائج" icon={<IoSearchOutline className="text-4xl text-black/30" />} />
         ) : results.all.length === 0 ? (
-          <div className="mt-16 text-center">
-            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <IoSearchOutline className="text-5xl text-gray-400" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">لا توجد نتائج</h3>
-            <p className="text-gray-600 font-semibold mb-4">
-              لم نجد أي نتائج مطابقة لـ "{q}"
-            </p>
-            <p className="text-gray-500 text-sm">
-              جرب كلمات بحث مختلفة أو تحقق من الإملاء
-            </p>
-          </div>
+          <EmptyState title="لا توجد نتائج" desc={`لم نجد أي نتائج مطابقة لـ "${q}"`} sub="جرب كلمات بحث مختلفة أو تحقق من الإملاء" icon={<IoSearchOutline className="text-4xl text-black/30" />} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ResultsSection
-              title="المولات"
-              items={results.malls}
-              onPick={(item) => navigate(item.href)}
-              icon={<IoBusinessOutline className="text-xl" />}
-            />
-            <ResultsSection
-              title="المتاجر"
-              items={results.stores}
-              onPick={(item) => navigate(item.href)}
-              icon={<IoStorefrontOutline className="text-xl" />}
-            />
+            <ResultsSection title="المولات" items={results.malls} onPick={(item) => navigate(item.href)} icon={<IoBusinessOutline className="text-lg" />} />
+            <ResultsSection title="المتاجر" items={results.stores} onPick={(item) => navigate(item.href)} icon={<IoStorefrontOutline className="text-lg" />} />
             <div className="lg:col-span-2">
-              <ResultsSection
-                title="المنتجات"
-                items={results.products}
-                onPick={(item) => navigate(item.href)}
-                icon={<IoCartOutline className="text-xl" />}
-                grid
-              />
+              <ResultsSection title="المنتجات" items={results.products} onPick={(item) => navigate(item.href)} icon={<IoCartOutline className="text-lg" />} grid />
             </div>
           </div>
         )}
+
+        <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mt-12" />
       </div>
     </div>
   );
 }
 
-function CountCard({ label, count, icon, color = "blue" }) {
-  const colors = {
-    blue: {
-      bg: "from-blue-50 to-blue-100",
-      icon: "text-[#1A73E8]",
-      border: "border-blue-200"
-    },
-    green: {
-      bg: "from-green-50 to-green-100",
-      icon: "text-green-600",
-      border: "border-green-200"
-    },
-    purple: {
-      bg: "from-purple-50 to-purple-100",
-      icon: "text-purple-600",
-      border: "border-purple-200"
-    }
-  };
-
-  const colorScheme = colors[color];
-
+function CountCard({ label, count, icon }) {
   return (
-    <div className={`bg-gradient-to-br ${colorScheme.bg} border-2 ${colorScheme.border} rounded-3xl p-6 text-right shadow-sm hover:shadow-md transition-shadow`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className={`${colorScheme.icon}`}>{icon}</div>
-        <div className="text-sm text-gray-700 font-bold">{label}</div>
+    <div className="bg-white border border-black/10 p-5 md:p-6">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-black/60">{icon}</div>
+        <div className="text-xs tracking-widest uppercase text-black/50 font-light">{label}</div>
       </div>
-      <div className="text-4xl font-black text-gray-900">{count}</div>
+      <div className="text-3xl md:text-4xl font-light tracking-wide text-black">{count}</div>
     </div>
   );
 }
@@ -171,73 +135,70 @@ function ResultsSection({ title, items, onPick, icon, grid = false }) {
   if (!items?.length) return null;
 
   return (
-    <section className="bg-white border-2 border-gray-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
+    <section className="bg-white border border-black/10 p-5 md:p-6">
       <div className="flex items-center gap-3 mb-5">
-        <div className="bg-gradient-to-br from-[#E8F0FE] to-[#C2D9F5] p-2 rounded-xl text-[#1A73E8]">
+        <div className="h-9 w-9 border border-black/10 grid place-items-center text-black/60">
           {icon}
         </div>
-        <h2 className="text-2xl font-black text-gray-900">{title}</h2>
-        <span className="mr-auto bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-bold">
+        <h2 className="text-base md:text-lg font-light tracking-wide text-black">{title}</h2>
+        <span className="mr-auto text-xs tracking-widest uppercase text-black/50 font-light border border-black/10 px-3 py-1">
           {items.length}
         </span>
       </div>
 
-      <div className={grid 
-        ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" 
-        : "space-y-3"
-      }>
+      <div className={grid ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-3"}>
         {items.map((item) => (
           <button
             key={`${item.type}-${item.id}`}
             onClick={() => onPick(item)}
             className="
-              w-full
-              text-right
-              rounded-2xl
-              border-2 border-gray-100
-              hover:border-[#1A73E8]
-              hover:bg-[#E8F0FE]/30
-              transition-all
+              w-full text-right
+              border border-black/10
+              hover:bg-black/[0.02]
+              transition-colors
               p-4
               flex items-center gap-4
               group
-              shadow-sm hover:shadow-md
             "
           >
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#E8F0FE] to-[#C2D9F5] overflow-hidden flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-sm">
+            <div className="w-12 h-12 bg-black/5 flex items-center justify-center overflow-hidden shrink-0 group-hover:bg-black/10 transition-colors">
               {item.imageUrl ? (
-                <img 
-                  src={item.imageUrl} 
-                  alt={item.title} 
-                  className="w-full h-full object-cover" 
-                />
+                <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover" />
               ) : (
-                <span className="text-[#1A73E8] font-black text-xl">
-                  {item.title?.[0] || "?"}
-                </span>
+                <span className="text-black/40 font-light text-lg">{item.title?.[0] || "?"}</span>
               )}
             </div>
 
             <div className="min-w-0 flex-1">
-              <div className="font-bold text-gray-900 truncate group-hover:text-[#1A73E8] transition-colors">
+              <div className="font-light text-black truncate text-base tracking-wide group-hover:underline">
                 {item.title}
               </div>
               {item.subtitle ? (
-                <div className="text-sm text-gray-500 font-medium truncate mt-1">
+                <div className="text-xs text-black/50 font-light truncate mt-1 tracking-wide">
                   {item.subtitle}
                 </div>
               ) : null}
             </div>
 
-            {/* Arrow */}
-            <div className="text-gray-300 group-hover:text-[#1A73E8] transition-colors">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <div className="text-black/20 group-hover:text-black/60 transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </div>
           </button>
         ))}
       </div>
     </section>
+  );
+}
+
+function EmptyState({ title, desc, sub, icon }) {
+  return (
+    <div className="mt-16 text-center border border-black/10 bg-white p-10">
+      <div className="w-16 h-16 mx-auto mb-5 bg-black/5 grid place-items-center">{icon}</div>
+      <h3 className="text-lg md:text-xl font-light text-black mb-2">{title}</h3>
+      <p className="text-black/60 font-light">{desc}</p>
+      {sub ? <p className="text-black/40 font-light text-sm mt-2">{sub}</p> : null}
+    </div>
   );
 }

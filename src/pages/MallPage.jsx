@@ -2,9 +2,9 @@ import React, { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import rawMalls from "../assets/malls.json";
-import rawCategories from "../assets/categories.json"
-import rawStores from "../assets/stores.json"; 
-import products from "../assets/products.json";
+import rawCategories from "../assets/categories.json";
+import rawStores from "../assets/stores.json";
+import rawProducts from "../assets/products.json";
 
 import Header from "../components/HomePageComponents/Header";
 import CategoryBar from "../components/HomePageComponents/CategoryBar";
@@ -12,6 +12,12 @@ import FeaturedShops from "../components/MallPageComponents/FeaturedShops";
 import Footer from "../components/HomePageComponents/Footer";
 import SectionHeader from "../components/HomePageComponents/SectionHeader";
 import ProductCard from "../components/HomePageComponents/ProductCard";
+import ProductsRow from "../components/HomePageComponents/ProductsRow";
+
+import MallInfoDialog from "../components/MallPageComponents/MallInfoStrip";
+import AdvSection from "../components/HomePageComponents/AdvSection";
+
+import MallSearch from "../components/MallPageComponents/MallSearch";
 
 import {
   normalizeMalls,
@@ -20,51 +26,72 @@ import {
   getMallStores,
 } from "../utils/tmpMallsAndStores";
 import { normalizeCategories } from "../utils/tmpCategories";
-import MallInfoDialog from "../components/MallPageComponents/MallInfoStrip";
-import AdvSection from "../components/HomePageComponents/AdvSection"
-import {normalizeProducts, mallProduct, isDiscount } from "../utils/tmpProducts";
+import { normalizeProducts, mallProduct, isDiscount } from "../utils/tmpProducts";
 
 function MallPage() {
   const { mallId } = useParams();
 
- 
   const mallsData = useMemo(() => normalizeMalls(rawMalls), []);
   const mallData = useMemo(() => getMallById(mallId, mallsData), [mallId, mallsData]);
-  const allProducts = useMemo(() => normalizeProducts(products), []);
+
+  const categories = useMemo(() => normalizeCategories(rawCategories), []);
 
   const allStores = useMemo(() => normalizeStores(rawStores), []);
   const storesOfThisMall = useMemo(() => getMallStores(allStores, mallId), [allStores, mallId]);
-  const mallProducts = useMemo(() => mallProduct(allProducts , mallId).slice(0, 2) ,[allProducts , mallId])
- 
+
+  const allProducts = useMemo(() => normalizeProducts(rawProducts), []);
+  const mallAllProducts = useMemo(() => mallProduct(allProducts, mallId), [allProducts, mallId]);
+
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedStoreId, setSelectedStoreId] = useState(null);
 
+  const filteredMallProducts = useMemo(() => {
+    let list = mallAllProducts;
+
+    if (selectedStoreId) {
+      list = list.filter((p) => String(p.storeId) === String(selectedStoreId));
+    }
+    if (selectedCategoryId) {
+      list = list.filter((p) => String(p.categoryId) === String(selectedCategoryId));
+    }
+    return list;
+  }, [mallAllProducts, selectedStoreId, selectedCategoryId]);
+
+  const mallFeaturedProducts = useMemo(() => filteredMallProducts.slice(0, 2), [filteredMallProducts]);
+
   const deals = useMemo(() => {
-  const excludeIds = new Set(mallProducts.map((p) => String(p.id)));
+    const excludeIds = new Set(mallFeaturedProducts.map((p) => String(p.id)));
+    return filteredMallProducts
+      .filter(isDiscount)
+      .filter((p) => !excludeIds.has(String(p.id)))
+      .slice(0, 2);
+  }, [filteredMallProducts, mallFeaturedProducts]);
 
-  return allProducts
-    .filter(isDiscount)                 
-    .filter((p) => !excludeIds.has(String(p.id)))
-    .slice(0, 2);
-}, [allProducts, mallProducts]);
-  const categories = useMemo(() => normalizeCategories(rawCategories), []); 
-
+  const mallRowProducts = useMemo(() => {
+    const excludeIds = new Set([
+      ...mallFeaturedProducts.map((p) => String(p.id)),
+      ...deals.map((p) => String(p.id)),
+    ]);
+    return filteredMallProducts.filter((p) => !excludeIds.has(String(p.id))).slice(0, 20);
+  }, [filteredMallProducts, mallFeaturedProducts, deals]);
 
   if (!mallData) {
     return (
-      <div dir="rtl" className="min-h-screen p-6">
-        <p className="text-red-600 font-bold">المول غير موجود أو غير فعّال</p>
-        <p className="text-gray-600 mt-2">mallId: {mallId}</p>
+      <div dir="rtl" className="min-h-screen flex items-center justify-center p-6">
+        <div className="text-center">
+          <p className="text-lg font-semibold text-black mb-2">المول غير موجود أو غير فعّال</p>
+          <p className="text-sm text-black/60">معرّف المول: {mallId}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div dir="rtl" className="min-h-screen">
+    <div dir="rtl" className="min-h-screen bg-white">
       <Header />
 
       <CategoryBar
-        showMallStoreMenu={false}  
+        showMallStoreMenu={false}
         categories={categories}
         selectedCategoryId={selectedCategoryId}
         onSelectCategory={setSelectedCategoryId}
@@ -72,33 +99,48 @@ function MallPage() {
         selectedStoreId={selectedStoreId}
         onSelectStore={setSelectedStoreId}
       />
-      <MallInfoDialog mall={mallData} stores={storesOfThisMall}/>
-      <AdvSection imgsUrl={mallData.images} intervalMs={4000}  page="mall" full />
+
+      <AdvSection imgsUrl={mallData.images} intervalMs={4000} page="mall" />
+
+      <MallInfoDialog mall={mallData} stores={storesOfThisMall} />
+
+      {/* ✅ Search inside mall
+      <MallSearch mallId={mallId} /> */}
+
       <FeaturedShops shops={storesOfThisMall} mallName={mallData.name} />
 
-      <section className="mx-auto px-10 mt-6 pb-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* أبرز المنتجات */}
-          <div className="bg-white rounded-2xl border border-gray-200  p-4">
+      <section className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-8 md:py-12">
+        <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mb-8 md:mb-12" />
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10">
+          <div className="bg-white">
             <SectionHeader title="أبرز المنتجات" onViewAll={() => {}} />
-            <div className="grid grid-cols-2 gap-3">
-              {mallProducts.map((p) => (
+            <div className="mt-6 md:mt-8 grid grid-cols-2 gap-3 sm:gap-4">
+              {mallFeaturedProducts.map((p) => (
                 <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
               ))}
             </div>
           </div>
 
-          {/* عروض رائعة */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-4">
+          <div className="bg-white">
             <SectionHeader title="عروض رائعة" onViewAll={() => {}} />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="mt-6 md:mt-8 grid grid-cols-2 gap-3 sm:gap-4">
               {deals.map((p) => (
                 <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
               ))}
             </div>
           </div>
         </div>
+
+        <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mt-8 md:mt-12" />
       </section>
+
+      <ProductsRow
+        title={`منتجات ${mallData.name}`}
+        products={mallRowProducts}
+        onViewAll={() => {}}
+        onAddToCart={() => {}}
+      />
 
       <Footer />
     </div>

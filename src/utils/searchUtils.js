@@ -9,18 +9,19 @@ export function buildSearchIndex({ rawMalls, rawStores, rawProducts }) {
   const mallById = new Map(malls.map((m) => [String(m.id), m]));
   const storeById = new Map(stores.map((s) => [String(s.id), s]));
 
-  // ✅ malls items (صح)
+  // ✅ malls (FIX href)
   const mallItems = malls.map((m) => ({
     type: "mall",
     id: String(m.id),
     title: m.name,
     subtitle: m.location || m.city || "",
     imageUrl: m.logoUrl || "",
-    href: `/mall/${m.id}`,
+    href: `/malls/${m.id}`, // ✅ FIXED
     keywords: `${m.name} ${m.location || ""} ${m.city || ""}`.toLowerCase(),
+    mallId: String(m.id),
   }));
 
-  // ✅ stores items
+  // ✅ stores (FIX href)
   const storeItems = stores.map((s) => {
     const mall = mallById.get(String(s.mallId));
     return {
@@ -29,15 +30,18 @@ export function buildSearchIndex({ rawMalls, rawStores, rawProducts }) {
       title: s.name,
       subtitle: mall?.name ? `في ${mall.name}` : "",
       imageUrl: s.logoUrl || "",
-      href: `/store/${s.id}`, // عدليها حسب الروت
+      href: `/stores/${s.id}`, // ✅ FIXED
       keywords: `${s.name} ${mall?.name || ""}`.toLowerCase(),
+      mallId: String(s.mallId),
     };
   });
 
-  // ✅ products items
+  // ✅ products
+  // إذا ما عندك Route للمنتج (/product/:id) لا تحطيه هون عشان ما يروح 404
+  // خلي المنتج يفتح صفحة المتجر تبعه
   const productItems = products.map((p) => {
     const mall = mallById.get(String(p.mallId));
-    const store = storeById.get(String(p.storeId)); // ✅ هنا كان الخطأ
+    const store = storeById.get(String(p.storeId));
 
     const mallName = mall?.name || "";
     const storeName = store?.name || "";
@@ -48,10 +52,12 @@ export function buildSearchIndex({ rawMalls, rawStores, rawProducts }) {
       title: p.name,
       subtitle: `${storeName}${storeName && mallName ? " • " : ""}${mallName}`,
       imageUrl: p.imageUrl || "",
-      href: `/product/${p.id}`, // عدليها حسب الروت
+      href: `/stores/${p.storeId}`, // ✅ SAFE (no 404)
       keywords: `${p.name} ${storeName} ${mallName}`.toLowerCase(),
       price: p.price,
       oldPrice: p.oldPrice,
+      mallId: String(p.mallId),
+      storeId: String(p.storeId),
     };
   });
 

@@ -23,10 +23,9 @@ export default function ProductsRow({ title, products = [], onViewAll, onAddToCa
   if (!products.length) return null;
 
   return (
-    <section className="max-w-[1600px] mx-auto px-6 md:px-12 py-8 md:py-12">
+    <section className="max-w-[1600px] mx-auto px-6 md:px-12 py-3 md:py-3">
       {/* Top accent line */}
-      <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mb-8"></div>
-
+      
       <div className="bg-white">
         <SectionHeader title={title} onViewAll={onViewAll} />
 

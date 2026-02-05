@@ -1,9 +1,8 @@
 import React, { useEffect, useRef } from "react";
 import {
   IoStorefrontOutline,
-  IoChevronForward,
-  IoStarSharp,
   IoChevronBack,
+  IoStarSharp,
 } from "react-icons/io5";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 
@@ -28,42 +27,49 @@ function FeaturedShops({ shops = [], mallName }) {
   }, [specialistShops.length]);
 
   return (
-    <section className=" mx-auto px-10 mt-10">
-      {/* Header (home style) */}
-      <div className="flex items-end justify-between gap-4 mb-5">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-[#E8F0FE] flex items-center justify-center">
-            <IoStarSharp className="text-xl text-[#1A73E8]" />
+    <section className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-8 md:py-12">
+      {/* Top accent line */}
+      <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mb-8 md:mb-10"></div>
+
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-6 md:mb-8">
+        <div className="flex items-center gap-3 md:gap-4">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-black flex items-center justify-center flex-shrink-0">
+            <IoStarSharp className="text-lg md:text-xl text-white" />
           </div>
 
           <div className="text-right">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-black">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-wide text-black">
               متاجر مميزة
             </h2>
-            <p className="text-sm sm:text-base text-gray-600 mt-1 font-semibold">
+            <p className="text-xs sm:text-sm md:text-base text-black/60 mt-1 font-semibold">
               تجارب تسوق استثنائية في{" "}
-              <span className="text-[#1A73E8]">{mallName}</span>
+              <span className="text-black">{mallName}</span>
             </p>
           </div>
         </div>
       </div>
 
-      {/* Container like ProductsRow */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-4">
-        <div className="relative mt-3">
-          {/* arrows (desktop/tablet) - same as ProductsRow */}
+      {/* Container */}
+      <div className="bg-white">
+        <div className="relative">
+          {/* Arrows - luxury square style */}
           <button
             type="button"
             aria-label="scroll left"
             onClick={() => scrollByAmount(-1)}
             className="
-              hidden sm:flex
-              absolute left-2 top-1/2 -translate-y-1/2 z-10
-              h-10 w-10 rounded-full bg-white border border-gray-200 shadow
-              items-center justify-center hover:bg-gray-50
+              hidden md:flex
+              absolute left-0 md:-left-14 top-1/2 -translate-y-1/2 z-10
+              h-10 w-10 md:h-12 md:w-12
+              bg-white border border-black/10
+              items-center justify-center
+              transition-all duration-300
+              hover:bg-black hover:border-black
+              group
             "
           >
-            <IoIosArrowBack className="text-gray-700" size={18} />
+            <IoIosArrowBack className="text-black text-lg md:text-xl transition-colors group-hover:text-white" />
           </button>
 
           <button
@@ -71,53 +77,53 @@ function FeaturedShops({ shops = [], mallName }) {
             aria-label="scroll right"
             onClick={() => scrollByAmount(1)}
             className="
-              hidden sm:flex
-              absolute right-2 top-1/2 -translate-y-1/2 z-10
-              h-10 w-10 rounded-full bg-white border border-gray-200 shadow
-              items-center justify-center hover:bg-gray-50
+              hidden md:flex
+              absolute right-0 md:-right-14 top-1/2 -translate-y-1/2 z-10
+              h-10 w-10 md:h-12 md:w-12
+              bg-white border border-black/10
+              items-center justify-center
+              transition-all duration-300
+              hover:bg-black hover:border-black
+              group
             "
           >
-            <IoIosArrowForward className="text-gray-700" size={18} />
+            <IoIosArrowForward className="text-black text-lg md:text-xl transition-colors group-hover:text-white" />
           </button>
 
-          {/* scroller */}
+          {/* Scroller */}
           <div
             ref={scrollRef}
             className="
-              flex gap-4 sm:gap-6
+              flex gap-4 md:gap-6
               overflow-x-auto scroll-smooth
               pb-2
-              sm:px-12
               [-ms-overflow-style:none] [scrollbar-width:none]
+              [&::-webkit-scrollbar]:hidden
             "
             style={{ WebkitOverflowScrolling: "touch" }}
           >
-            {/* hide scrollbar (webkit) */}
-            <style>{`
-              .no-scrollbar::-webkit-scrollbar { display: none; }
-            `}</style>
-
             {specialistShops.map((shop) => (
               <article
                 key={shop.id}
                 className="
+                  group
                   shrink-0
-                  w-[280px] sm:w-[320px]
+                  w-[260px] sm:w-[280px] md:w-[320px]
                   bg-white
-                  rounded-3xl
-                  border border-gray-200
-                  shadow-sm hover:shadow-md
-                  transition
+                  border border-black/10
                   overflow-hidden
+                  transition-all duration-500
+                  hover:shadow-xl
+                  hover:-translate-y-1
                 "
               >
                 {/* Image / Logo area */}
-                <div className="relative h-44 sm:h-48 bg-[#E8F0FE] flex items-center justify-center">
-                  {/* badge */}
-                  <div className="absolute top-3 left-3">
-                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white border border-gray-200 text-sm font-bold text-[#1A73E8]">
-                      <IoStarSharp className="text-base" />
-                      متجر مميز
+                <div className="relative h-40 sm:h-44 md:h-48 bg-neutral-50 flex items-center justify-center overflow-hidden">
+                  {/* Badge */}
+                  <div className="absolute top-3 left-3 z-10">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white text-[10px] sm:text-xs font-semibold tracking-wider uppercase">
+                      <IoStarSharp className="text-xs sm:text-sm" />
+                      مميز
                     </span>
                   </div>
 
@@ -125,55 +131,62 @@ function FeaturedShops({ shops = [], mallName }) {
                     <img
                       src={shop.image}
                       alt={shop.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                   ) : shop.logoUrl ? (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-full h-full flex items-center justify-center p-6">
                       <img
                         src={shop.logoUrl}
                         alt={shop.name}
-                        className="w-28 h-28 object-contain"
+                        className="max-w-full max-h-full object-contain"
                       />
                     </div>
                   ) : (
-                    <IoStorefrontOutline className="text-6xl text-[#1A73E8]/40" />
+                    <IoStorefrontOutline className="text-5xl md:text-6xl text-black/20" />
                   )}
+
+                  {/* Overlay on hover */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all duration-500"></div>
                 </div>
 
                 {/* Details */}
-                <div className="p-5 text-right">
-                  <h3 className="text-xl font-extrabold text-black line-clamp-1">
+                <div className="p-4 sm:p-5 text-right border-t border-black/5">
+                  <h3 className="text-base sm:text-lg md:text-xl font-semibold tracking-wide text-black line-clamp-1 mb-4">
                     {shop.name}
                   </h3>
 
-                  <div className="mt-4">
-                    <button
-                      className="
-                        w-full
-                        rounded-full
-                        bg-[#1A73E8]
-                        text-white
-                        py-3
-                        font-bold
-                        hover:brightness-95
-                        transition
-                        flex items-center justify-center gap-5
-                      "
-                    >
-                      <span>استكشف المتجر</span>
-                      <IoChevronBack className="text-lg" />
-                    </button>
-                  </div>
+                  {/* CTA Button */}
+                  <button
+                    className="
+                      w-full
+                      h-10 sm:h-11 md:h-12
+                      bg-black
+                      text-white
+                      text-xs sm:text-sm
+                      font-semibold
+                      tracking-widest
+                      uppercase
+                      hover:bg-black/90
+                      transition-all duration-300
+                      flex items-center justify-center gap-3
+                    "
+                  >
+                    <span>استكشف المتجر</span>
+                    <IoChevronBack className="text-base sm:text-lg" />
+                  </button>
                 </div>
               </article>
             ))}
           </div>
 
-          {/* fades like ProductsRow */}
-          <div className="pointer-events-none hidden sm:block absolute left-0 top-0 h-full w-10 bg-gradient-to-r from-white to-transparent" />
-          <div className="pointer-events-none hidden sm:block absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-white to-transparent" />
+          {/* Elegant fade gradients */}
+          <div className="pointer-events-none hidden md:block absolute left-0 top-0 h-full w-20 bg-gradient-to-r from-white via-white/80 to-transparent" />
+          <div className="pointer-events-none hidden md:block absolute right-0 top-0 h-full w-20 bg-gradient-to-l from-white via-white/80 to-transparent" />
         </div>
       </div>
+
+      {/* Bottom accent line */}
+      <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mt-8 md:mt-10"></div>
     </section>
   );
 }

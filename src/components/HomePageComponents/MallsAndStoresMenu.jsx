@@ -79,7 +79,7 @@ function MallsAndStoresMenu({
               data-[state=open]:text-black data-[state=open]:border-black
             "
           >
-            <span className="tracking-wide text-sm  md:text-[15px] font-bold">
+            <span className="tracking-wide text-xs  md:text-[15px] font-bold">
               المولات والمتاجر
             </span>
 
