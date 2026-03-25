@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { FiShoppingCart, FiMinus, FiPlus } from "react-icons/fi";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import * as Dialog from "@radix-ui/react-dialog";
-import { isDiscount, discountAmount, isOutOfStock } from "../../utils/tmpProducts";
+import { isDiscount, discountAmount, isOutOfStock } from "../../../utils/tmpProducts";
 
 export default function ProductCard({ p, onAddToCart }) {
   const discount = isDiscount(p);

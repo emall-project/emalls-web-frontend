@@ -1,32 +1,32 @@
 import React, { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import rawMalls from "../assets/malls.json";
-import rawCategories from "../assets/categories.json";
-import rawStores from "../assets/stores.json";
-import rawProducts from "../assets/products.json";
+import rawMalls from "../../assets/malls.json";
+import rawCategories from "../../assets/categories.json";
+import rawStores from "../../assets/stores.json";
+import rawProducts from "../../assets/products.json";
 
-import Header from "../components/HomePageComponents/Header";
-import CategoryBar from "../components/HomePageComponents/CategoryBar";
-import FeaturedShops from "../components/MallPageComponents/FeaturedShops";
-import Footer from "../components/HomePageComponents/Footer";
-import SectionHeader from "../components/HomePageComponents/SectionHeader";
-import ProductCard from "../components/HomePageComponents/ProductCard";
-import ProductsRow from "../components/HomePageComponents/ProductsRow";
+import Header from "../../components/customer/HomePageComponents/Header";
+import CategoryBar from "../../components/customer/HomePageComponents/CategoryBar";
+import FeaturedShops from "../../components/customer/MallPageComponents/FeaturedShops";
+import Footer from "../../components/customer/HomePageComponents/Footer";
+import SectionHeader from "../../components/customer/HomePageComponents/SectionHeader";
+import ProductCard from "../../components/customer/HomePageComponents/ProductCard";
+import ProductsRow from "../../components/customer/HomePageComponents/ProductsRow";
 
-import MallInfoDialog from "../components/MallPageComponents/MallInfoStrip";
-import AdvSection from "../components/HomePageComponents/AdvSection";
+import MallInfoDialog from "../../components/customer/MallPageComponents/MallInfoStrip";
+import AdvSection from "../../components/customer/HomePageComponents/AdvSection";
 
-import MallSearch from "../components/MallPageComponents/MallSearch";
+import MallSearch from "../../components/customer/MallPageComponents/MallSearch";
 
 import {
   normalizeMalls,
   normalizeStores,
   getMallById,
   getMallStores,
-} from "../utils/tmpMallsAndStores";
-import { normalizeCategories } from "../utils/tmpCategories";
-import { normalizeProducts, mallProduct, isDiscount } from "../utils/tmpProducts";
+} from "../../utils/tmpMallsAndStores";
+import { normalizeCategories } from "../../utils/tmpCategories";
+import { normalizeProducts, mallProduct, isDiscount } from "../../utils/tmpProducts";
 
 function MallPage() {
   const { mallId } = useParams();
@@ -105,7 +105,7 @@ function MallPage() {
       <MallInfoDialog mall={mallData} stores={storesOfThisMall} />
 
       {/* ✅ Search inside mall
-      <MallSearch mallId={mallId} /> */}
+      <MallSearch mallId={mallId} /> */} 
 
       <FeaturedShops shops={storesOfThisMall} mallName={mallData.name} />
 

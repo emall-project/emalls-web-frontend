@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import * as NavigationMenu from "@radix-ui/react-navigation-menu";
 import { IoIosArrowDown } from "react-icons/io";
 import { useNavigate } from "react-router-dom";
-import { getMallStores } from "../../utils/tmpMallsAndStores";
+import { getMallStores } from "../../../utils/tmpMallsAndStores";
 
 function MallsAndStoresMenu({
   malls = [],

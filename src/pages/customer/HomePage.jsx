@@ -1,19 +1,19 @@
 import React, { useMemo, useState } from "react";
-import Header from "../components/HomePageComponents/Header";
-import { normalizeCategories } from "../utils/tmpCategories";
-import rawMalls from "../assets/malls.json";
-import rawStores from "../assets/stores.json";
-import rawCategories from "../assets/categories.json";
-import rawProducts from "../assets/products.json";
-import CategoryBar from "../components/HomePageComponents/CategoryBar";
-import { normalizeMalls, normalizeStores } from "../utils/tmpMallsAndStores";
-import AdvSection from "../components/HomePageComponents/AdvSection";
-import CategoriesBanner from "../components/HomePageComponents/CategoriesBanner";
-import ProductCard from "../components/HomePageComponents/ProductCard";
-import SectionHeader from "../components/HomePageComponents/SectionHeader";
-import { normalizeProducts, isDiscount } from "../utils/tmpProducts";
-import ProductsRow from "../components/HomePageComponents/ProductsRow";
-import Footer from "../components/HomePageComponents/Footer";
+import Header from "../../components/customer/HomePageComponents/Header";
+import { normalizeCategories } from "../../utils/tmpCategories";
+import rawMalls from "../../assets/malls.json";
+import rawStores from "../../assets/stores.json";
+import rawCategories from "../../assets/categories.json";
+import rawProducts from "../../assets/products.json";
+import CategoryBar from "../../components/customer/HomePageComponents/CategoryBar";
+import { normalizeMalls, normalizeStores } from "../../utils/tmpMallsAndStores";
+import AdvSection from "../../components/customer/HomePageComponents/AdvSection";
+import CategoriesBanner from "../../components/customer/HomePageComponents/CategoriesBanner";
+import ProductCard from "../../components/customer/HomePageComponents/ProductCard";
+import SectionHeader from "../../components/customer/HomePageComponents/SectionHeader";
+import { normalizeProducts, isDiscount } from "../../utils/tmpProducts";
+import ProductsRow from "../../components/customer/HomePageComponents/ProductsRow";
+import Footer from "../../components/customer/HomePageComponents/Footer";
 
 const imgsUrl = [
   { id: 1, image: "/video.gif", alt: "adv1" },

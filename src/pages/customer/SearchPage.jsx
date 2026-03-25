@@ -8,11 +8,11 @@ import {
   IoBusinessOutline,
 } from "react-icons/io5";
 
-import rawMalls from "../assets/malls.json";
-import rawStores from "../assets/stores.json";
-import rawProducts from "../assets/products.json";
+import rawMalls from "../../assets/malls.json";
+import rawStores from "../../assets/stores.json";
+import rawProducts from "../../assets/products.json";
 
-import { buildSearchIndex, searchInIndex } from "../utils/searchUtils";
+import { buildSearchIndex, searchInIndex } from "../../utils/searchUtils";
 
 function useQueryParam(name) {
   const { search } = useLocation();

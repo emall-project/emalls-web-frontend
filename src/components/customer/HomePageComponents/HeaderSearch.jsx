@@ -4,11 +4,11 @@ import * as Popover from "@radix-ui/react-popover";
 import { IoIosSearch, IoIosClose } from "react-icons/io";
 import { useNavigate } from "react-router-dom";
 
-import { buildSearchIndex, searchInIndex } from "../../utils/searchUtils";
+import { buildSearchIndex, searchInIndex } from "../../../utils/searchUtils";
 
-import rawMalls from "../../assets/malls.json";
-import rawStores from "../../assets/stores.json";
-import rawProducts from "../../assets/products.json";
+import rawMalls from "../../../assets/malls.json";
+import rawStores from "../../../assets/stores.json";
+import rawProducts from "../../../assets/products.json";
 
 export default function HeaderSearch() {
   const navigate = useNavigate();

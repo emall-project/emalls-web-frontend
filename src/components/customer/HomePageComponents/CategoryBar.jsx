@@ -1,7 +1,7 @@
 import React, { useMemo, useLayoutEffect, useRef } from "react";
 import AllCategoriesMenu from "./AllCategoriesMenu";
 import MallsAndStoresMenu from "./MallsAndStoresMenu";
-import { getParentCategories } from "../../utils/tmpCategories";
+import { getParentCategories } from "../../../utils/tmpCategories";
 
 function CategoryBar({
   categories,
