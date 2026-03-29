@@ -11,24 +11,15 @@ export const ROLE_LABELS = {
 };
 
 export const ROLE_COLORS = {
-  1: { bg: "rgba(37,99,235,.10)",  fg: "#2563eb" },
-  2: { bg: "rgba(22,163,74,.10)",  fg: "#16a34a" },
-  3: { bg: "rgba(202,138,4,.12)",  fg: "#ca8a04" },
+  1: { bg: "var(--blue-a3)",   fg: "var(--blue-11)"   },
+  2: { bg: "var(--green-a3)",  fg: "var(--green-11)"  },
+  3: { bg: "var(--yellow-a3)", fg: "var(--yellow-11)" },
 };
 
 export const ACTIVE_OPTIONS = [
   { value: "true",  label: "نشط",      dot: "#16a34a" },
   { value: "false", label: "غير نشط",  dot: "#ef4444" },
 ];
-
-export const FAKE_USER = {
-  userId:   999,
-  fullName: "Lama Hafiz - تجريبي",
-  email:    "lama.demo@example.com",
-  phone:    { prefix: "+972", number: "599339444" },
-  role:     { roleId: 2, code: "ROLE_SHOP_OWNER", name: "Shop Owner" },
-  isActive: true,
-};
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 export function getErrorMessage(error) {

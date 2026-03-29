@@ -4,3 +4,12 @@ html, body {
   font-family: "Cairo", sans-serif;
   direction: rtl;
 }
+
+/* Force Cairo on Radix Themes (overrides its built-in font stack) */
+.radix-themes {
+  --default-font-family: "Cairo", sans-serif;
+}
+
+*, *::before, *::after {
+  font-family: "Cairo", sans-serif;
+}

@@ -6,8 +6,34 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    host: true, // allow external access
+    host: true,
     allowedHosts: ['e-mall.store'],
+    proxy: {
+      '/accounts': {
+        target: 'https://api.e-mall.store',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/catalog': {
+        target: 'https://api.e-mall.store',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/campaigns': {
+        target: 'https://api.e-mall.store',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/order-hub': {
+        target: 'https://api.e-mall.store',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/media-manager': {
+        target: 'https://api.e-mall.store',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
 })
-

@@ -1,4 +1,4 @@
-const BASE_URL = "https://api.e-mall.store";
+const BASE_URL = "/accounts";
 
 export async function apiFetch(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {

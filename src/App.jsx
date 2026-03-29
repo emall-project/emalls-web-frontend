@@ -13,6 +13,13 @@ import ShopManagement from "./pages/admin/ShopManagement/ShopManagement.jsx";
 import UserManagement from "./pages/admin/UserManagement/UserManagement.jsx";
 import MallManagement from "./pages/admin/MallManagement/MallManagement.jsx";
 
+import { ShopOwnerLayout } from "./components/shopOwner/layout/ShopOwnerLayout";
+import ShopOwnerDashboard from "./pages/shopOwner/ShopOwnerDashboard";
+import ShopProfile from "./pages/shopOwner/ShopProfile/ShopProfile";
+import Products from "./pages/shopOwner/Products/Products";
+import ComingSoon from "./pages/shopOwner/ComingSoon";
+import Ads from "./pages/shopOwner/Ads/Ads";
+
 function StorePage() {
   return <div style={{ padding: 16 }}>Store Page</div>;
 }
@@ -52,6 +59,22 @@ export default function App() {
             <Route path="shops" element={<ShopManagement />} />
             <Route path="orders" element={<ShopManagement />} />
             <Route path="ads" element={<AdsManagement />} />
+          </Route>
+
+          {/* Shop Owner */}
+          <Route
+            path="/shop-owner"
+            element={<ShopOwnerLayout appearance={appearance} onToggleTheme={toggleAppearance} />}
+          >
+            <Route index element={<ShopOwnerDashboard />} />
+            <Route path="profile" element={<ShopProfile />} />
+            <Route path="products" element={<Products />} />
+            <Route path="orders" element={<ComingSoon title="إدارة الطلبات" />} />
+            <Route path="returns" element={<ComingSoon title="إدارة الإرجاعات" />} />
+            <Route path="ads" element={<Ads />} />
+            <Route path="finance" element={<ComingSoon title="المستحقات المالية" />} />
+            <Route path="offers" element={<ComingSoon title="إدارة العروض" />} />
+            <Route path="subscription" element={<ComingSoon title="إدارة الاشتراك" />} />
           </Route>
 
           <Route path="*" element={<div style={{ padding: 16 }}>Page Not Found</div>} />

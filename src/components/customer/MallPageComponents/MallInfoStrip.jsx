@@ -5,7 +5,7 @@ import DialogContent from "./DialogContent";
 
 export default function MallInfoDialog({ mall, stores }) {
   return (
-    <div className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 mt-6 md:mt-8">
+    <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 mt-6 md:mt-8">
       <Dialog.Root>
         <Dialog.Trigger asChild>
           <button

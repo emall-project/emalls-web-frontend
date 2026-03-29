@@ -71,37 +71,72 @@ function HomePage() {
       {/* Categories Banner */}
       <CategoriesBanner categories={categories} onSelectCategory={setSelectedCategoryId} />
 
-      {/* Featured & Deals */}
-      <section className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-12 py-6 sm:py-8 md:py-12">
-        {/* Top accent line */}
-        <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mb-6 sm:mb-8 md:mb-12" />
+      {/* Featured */}
+      <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 py-8 sm:py-10 md:py-14">
+        <SectionHeader title="أبرز المنتجات" onViewAll={() => {}} />
+        <div className="mt-5 sm:mt-6 md:mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+          {featured.map((p) => (
+            <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
+          ))}
+        </div>
+      </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
-          {/* Featured */}
-          <div className="bg-white">
-            <SectionHeader title="أبرز المنتجات" onViewAll={() => {}} />
+      {/* Deals */}
+      <section className="w-full">
+        {/* Banner header */}
+        <div
+          className="relative w-full overflow-hidden py-10 sm:py-12 md:py-16"
+          style={{ background: "linear-gradient(135deg, #0a0a0a 0%, #1c1c1c 60%, #111111 100%)" }}
+        >
+          {/* Gold shine sweep */}
+          <div className="absolute inset-0 pointer-events-none"
+            style={{ background: "linear-gradient(120deg, transparent 30%, rgba(212,175,55,0.08) 50%, transparent 70%)" }} />
+          {/* Subtle top gold line */}
+          <div className="absolute top-0 inset-x-0 h-px"
+            style={{ background: "linear-gradient(to right, transparent, rgba(212,175,55,0.6), transparent)" }} />
+          {/* Subtle bottom gold line */}
+          <div className="absolute bottom-0 inset-x-0 h-px"
+            style={{ background: "linear-gradient(to right, transparent, rgba(212,175,55,0.4), transparent)" }} />
 
-            <div className="mt-5 sm:mt-6 md:mt-8 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-              {featured.map((p) => (
-                <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
-              ))}
+          <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 relative z-10">
+            <div className="flex items-center justify-between">
+              <div>
+                <span
+                  className="inline-block text-[9px] sm:text-[10px] font-semibold tracking-[0.3em] uppercase px-3 py-1 mb-3 border"
+                  style={{ color: "#d4af37", borderColor: "rgba(212,175,55,0.5)" }}
+                >
+                  EXCLUSIVE SALE
+                </span>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-white tracking-[0.12em]">
+                  عروض رائعة
+                </h2>
+                <p className="mt-2 text-white/40 text-[10px] sm:text-xs font-light tracking-[0.25em] uppercase">
+                  أسعار استثنائية — لفترة محدودة
+                </p>
+              </div>
+
+              <button
+                className="shrink-0 text-[10px] sm:text-xs tracking-[0.25em] uppercase font-light px-5 sm:px-6 py-2.5 sm:py-3 border transition-all duration-300"
+                style={{ color: "#d4af37", borderColor: "rgba(212,175,55,0.5)" }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "#d4af37"; e.currentTarget.style.color = "#0a0a0a"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#d4af37"; }}
+              >
+                عرض الكل
+              </button>
             </div>
           </div>
+        </div>
 
-          {/* Deals */}
-          <div className="bg-white">
-            <SectionHeader title="عروض رائعة" onViewAll={() => {}} />
-
-            <div className="mt-5 sm:mt-6 md:mt-8 grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+        {/* Products */}
+        <div className="w-full bg-white border-b border-black/5 py-8 sm:py-10 md:py-12">
+          <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               {deals.map((p) => (
                 <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
               ))}
             </div>
           </div>
         </div>
-
-        {/* Bottom accent line */}
-        <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mt-6 sm:mt-8 md:mt-12" />
       </section>
 
       {/* Products Rows */}

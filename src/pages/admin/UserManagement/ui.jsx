@@ -118,15 +118,18 @@ const GLOBAL_STYLES = `
   .f-item.active { background: var(--f-item-active); color: var(--f-item-active-text); font-weight: 600; }
 `;
 
+// Inject immediately at module load time — no flash on refresh
+(function injectStyles() {
+  if (typeof document === "undefined") return;
+  const styleId = "user-management-filter-styles";
+  if (document.getElementById(styleId)) return;
+  const style = document.createElement("style");
+  style.id = styleId;
+  style.innerHTML = GLOBAL_STYLES;
+  document.head.appendChild(style);
+})();
+
 export function StyleInjector() {
-  useEffect(() => {
-    const styleId = "user-management-filter-styles";
-    if (document.getElementById(styleId)) return;
-    const style = document.createElement("style");
-    style.id = styleId;
-    style.innerHTML = GLOBAL_STYLES;
-    document.head.appendChild(style);
-  }, []);
   return null;
 }
 
@@ -154,8 +157,8 @@ export function Toast({ message, type = "success", onClose }) {
 // ── StatusBadge ────────────────────────────────────────────────────────────────
 export function StatusBadge({ active }) {
   const s = active
-    ? { bg: "#dcfce7", fg: "#16a34a", dot: "#16a34a", label: "نشط" }
-    : { bg: "#fee2e2", fg: "#dc2626", dot: "#ef4444", label: "غير نشط" };
+    ? { bg: "var(--green-a3)", fg: "var(--green-11)", dot: "var(--green-9)", label: "نشط" }
+    : { bg: "var(--red-a3)",   fg: "var(--red-11)",   dot: "var(--red-9)",   label: "غير نشط" };
   return (
     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
       style={{ background: s.bg, color: s.fg }}>

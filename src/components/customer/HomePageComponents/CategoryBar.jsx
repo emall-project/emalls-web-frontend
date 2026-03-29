@@ -47,7 +47,7 @@ function CategoryBar({
       {/* Top thin accent line - matching header */}
       <div className="h-px bg-gradient-to-r from-transparent via-black/5 to-transparent"></div>
 
-      <div className="max-w-[1600px] mx-auto px-6 md:px-12 py-3 md:py-4 flex items-center gap-4 md:gap-8">
+      <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-6 md:px-12 py-3 md:py-4 flex items-center gap-4 md:gap-8">
         {/* left: all categories */}
         <div className="shrink-0">
           <AllCategoriesMenu

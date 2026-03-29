@@ -16,7 +16,7 @@ export default function MallSearch({ mallId }) {
   };
 
   return (
-    <section className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 mt-4">
+    <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 mt-4">
       <form
         onSubmit={submit}
         className="

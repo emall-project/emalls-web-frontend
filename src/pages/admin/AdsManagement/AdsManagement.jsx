@@ -11,7 +11,6 @@ import {
   TEMPLATE_STATUSES, TEMPLATE_STATUS_LABELS, TEMPLATE_STATUS_COLORS,
   POSITION_LABELS, REQUEST_STATUSES, REQUEST_STATUS_LABELS, REQUEST_STATUS_COLORS,
   PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS,
-  FAKE_TEMPLATE, FAKE_REQUEST,
 } from "./constants";
 import AdTemplateFormDialog    from "./AdTemplateFormDialog";
 import { AdRequestFormDialog, RejectDialog } from "./AdRequestDialogs";
@@ -134,8 +133,8 @@ function SimpleSelect({ value, onChange, options, placeholder }) {
 function Pagination({ page, totalPages, onPageChange }) {
   if (totalPages <= 1) return null;
   return (
-    <div className="flex items-center justify-between px-5 py-4 border-t" style={{ borderColor: "var(--gray-a5)" }}>
-      <span className="text-xs" style={{ color: "var(--gray-10)" }}>صفحة {page + 1} من {totalPages}</span>
+    <div className="flex items-center justify-between px-5 py-4 border-t" style={{ borderColor: "var(--gray-a6)" }}>
+      <span className="text-xs" style={{ color: "var(--gray-11)" }}>صفحة {page + 1} من {totalPages}</span>
       <div className="flex items-center gap-2">
         <button onClick={() => onPageChange(Math.max(0, page - 1))} disabled={page === 0}
           className="h-8 w-8 rounded-lg flex items-center justify-center border transition hover:opacity-80 disabled:opacity-30"
@@ -165,7 +164,7 @@ function Pagination({ page, totalPages, onPageChange }) {
 // ── Templates Tab ─────────────────────────────────────────────────────────────
 function TemplatesTab({ showToast, addOpen, setAddOpen }) {
   const themeContainer = useThemeContainer();
-  const [templates,   setTemplates]   = useState([FAKE_TEMPLATE]);
+  const [templates,   setTemplates]   = useState([]);
   const [totalPages,  setTotalPages]  = useState(1);
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState("");
@@ -183,9 +182,9 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
       const res  = await adTemplatesApi.getAll({ page, size: 10, ...(search ? { name: search } : {}), ...(statusF ? { status: statusF } : {}), ...(positionF ? { position: positionF } : {}) });
       const data = res?.data || res?.content || [];
       const list = Array.isArray(data) ? data : (data?.content || []);
-      setTemplates([FAKE_TEMPLATE, ...list]);
+      setTemplates(list);
       setTotalPages(data?.totalPages || 1);
-    } catch (e) { setError(e.message); setTemplates([FAKE_TEMPLATE]); }
+    } catch (e) { setError(e.message); setTemplates([]); }
     finally { setLoading(false); }
   }, [page, search, statusF, positionF]);
 
@@ -193,15 +192,20 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
   useEffect(() => { setPage(0); }, [search, statusF, positionF]);
 
   const handleArchive = async (t) => {
-    if (t.adTemplateId === FAKE_TEMPLATE.adTemplateId) return showToast("هذا نموذج تجريبي 😄", "error");
     setRowLoading((p) => ({ ...p, [t.adTemplateId]: true }));
     try { await adTemplatesApi.archive(t.adTemplateId); showToast(`تم أرشفة ${t.name}`); fetch(); }
     catch (e) { showToast(e.message, "error"); }
     finally { setRowLoading((p) => ({ ...p, [t.adTemplateId]: false })); }
   };
 
+  const handleActivate = async (t) => {
+    setRowLoading((p) => ({ ...p, [t.adTemplateId]: true }));
+    try { await adTemplatesApi.changeStatus(t.adTemplateId, "ACTIVE"); showToast(`تم تفعيل ${t.name}`); fetch(); }
+    catch (e) { showToast(e.message, "error"); }
+    finally { setRowLoading((p) => ({ ...p, [t.adTemplateId]: false })); }
+  };
+
   const handleDelete = async (t) => {
-    if (t.adTemplateId === FAKE_TEMPLATE.adTemplateId) return showToast("هذا نموذج تجريبي 😄", "error");
     if (!window.confirm(`هل تريد حذف "${t.name}"؟`)) return;
     setRowLoading((p) => ({ ...p, [t.adTemplateId]: true }));
     try { await adTemplatesApi.delete(t.adTemplateId); showToast(`تم حذف ${t.name}`); fetch(); }
@@ -217,7 +221,7 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
   return (
     <>
       {/* Filters */}
-      <div className="rounded-2xl p-5" style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
+      <div className="rounded-2xl p-5" style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a7)" }}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold" style={{ color: "var(--gray-11)" }}>اسم النموذج</label>
@@ -255,10 +259,10 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
       )}
 
       {/* Table */}
-      <div className="rounded-2xl overflow-hidden" style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
-        <table className="w-full text-sm">
+      <div className="rounded-2xl overflow-hidden overflow-x-auto" style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a7)" }}>
+        <table className="w-full text-sm" style={{ minWidth: 640 }}>
           <thead>
-            <tr style={{ borderBottom: "1px solid var(--gray-a5)", color: "var(--gray-10)" }}>
+            <tr style={{ borderBottom: "1px solid var(--gray-a6)", background: "var(--gray-a2)", color: "var(--gray-11)" }}>
               {["الاسم", "الموضع", "السعر", "الفترة", "الحالة", ""].map((h) => (
                 <th key={h} className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">{h}</th>
               ))}
@@ -276,16 +280,11 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
             ) : (
               templates.map((t, idx) => (
                 <tr key={t.adTemplateId}
-                  style={{ borderTop: idx === 0 ? "none" : "1px solid var(--gray-a4)", color: "var(--gray-12)", background: t.adTemplateId === FAKE_TEMPLATE.adTemplateId ? "rgba(37,99,235,.02)" : "transparent" }}
-                  className="transition hover:bg-black/[.015]">
+                  style={{ borderTop: idx === 0 ? "none" : "1px solid var(--gray-a5)", color: "var(--gray-12)", background: "transparent" }}
+                  className="transition hover:bg-(--gray-a3)">
                   <td className="px-5 py-4">
-                    <div className="font-semibold text-sm flex items-center gap-2">
-                      {t.name}
-                      {t.adTemplateId === FAKE_TEMPLATE.adTemplateId && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: "rgba(37,99,235,.1)", color: "#2563eb" }}>تجريبي</span>
-                      )}
-                    </div>
-                    <div className="text-xs mt-0.5" style={{ color: "var(--gray-10)" }}>#{t.adTemplateId} · {t.imageRatio}</div>
+                    <div className="font-semibold text-sm">{t.name}</div>
+                    <div className="text-xs mt-0.5" style={{ color: "var(--gray-11)" }}>#{t.adTemplateId} · {t.imageRatio}</div>
                   </td>
                   <td className="px-5 py-4">
                     <span className="text-xs px-2.5 py-1 rounded-full" style={{ background: "var(--blue-a3)", color: "var(--blue-11)" }}>
@@ -301,7 +300,7 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
                     <div className="text-xs flex items-center gap-1" style={{ color: "var(--gray-11)" }}>
                       <FiCalendar size={10} /> {t.startDate}
                     </div>
-                    <div className="text-xs flex items-center gap-1 mt-0.5" style={{ color: "var(--gray-10)" }}>
+                    <div className="text-xs flex items-center gap-1 mt-0.5" style={{ color: "var(--gray-11)" }}>
                       <FiCalendar size={10} /> {t.endDate}
                     </div>
                   </td>
@@ -322,6 +321,9 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
                           <DDItem icon={<FiEdit />} onSelect={() => { setSelected(t); setEditOpen(true); }}>تعديل</DDItem>
                           {t.status === "ACTIVE" && (
                             <DDItem icon={<FiArchive />} onSelect={() => handleArchive(t)}>أرشفة</DDItem>
+                          )}
+                          {t.status === "ARCHIVED" && (
+                            <DDItem icon={<FiRefreshCw />} onSelect={() => handleActivate(t)}>تفعيل</DDItem>
                           )}
                           <DropdownMenu.Separator className="my-1.5 mx-2" style={{ height: 1, background: "var(--gray-a5)" }} />
                           <DDItem icon={<FiTrash2 />} onSelect={() => handleDelete(t)} danger>حذف</DDItem>
@@ -348,7 +350,7 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
 // ── Requests Tab ──────────────────────────────────────────────────────────────
 function RequestsTab({ showToast, addOpen, setAddOpen }) {
   const themeContainer = useThemeContainer();
-  const [requests,    setRequests]    = useState([FAKE_REQUEST]);
+  const [requests,    setRequests]    = useState([]);
   const [totalPages,  setTotalPages]  = useState(1);
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState("");
@@ -364,9 +366,9 @@ function RequestsTab({ showToast, addOpen, setAddOpen }) {
       const res  = await adRequestsApi.getAll({ page, size: 10, ...(statusF ? { status: statusF } : {}) });
       const raw  = res?.data || res?.content || {};
       const list = Array.isArray(raw) ? raw : (raw?.content || []);
-      setRequests([FAKE_REQUEST, ...list]);
+      setRequests(list);
       setTotalPages(raw?.meta?.totalPages || raw?.totalPages || 1);
-    } catch (e) { setError(e.message); setRequests([FAKE_REQUEST]); }
+    } catch (e) { setError(e.message); setRequests([]); }
     finally { setLoading(false); }
   }, [page, statusF]);
 
@@ -374,7 +376,6 @@ function RequestsTab({ showToast, addOpen, setAddOpen }) {
   useEffect(() => { setPage(0); }, [statusF]);
 
   const handleApprove = async (r) => {
-    if (r.adRequestId === FAKE_REQUEST.adRequestId) return showToast("هذا طلب تجريبي 😄", "error");
     setRowLoading((p) => ({ ...p, [r.adRequestId]: true }));
     try { await adRequestsApi.approve(r.adRequestId); showToast(`تم قبول طلب ${r.title}`); fetch(); }
     catch (e) { showToast(e.message, "error"); }
@@ -387,7 +388,7 @@ function RequestsTab({ showToast, addOpen, setAddOpen }) {
   return (
     <>
       {/* Filters */}
-      <div className="rounded-2xl p-5" style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
+      <div className="rounded-2xl p-5" style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a7)" }}>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold" style={{ color: "var(--gray-11)" }}>حالة الطلب</label>
@@ -417,10 +418,10 @@ function RequestsTab({ showToast, addOpen, setAddOpen }) {
       )}
 
       {/* Table */}
-      <div className="rounded-2xl overflow-hidden" style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
-        <table className="w-full text-sm">
+      <div className="rounded-2xl overflow-hidden overflow-x-auto" style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a7)" }}>
+        <table className="w-full text-sm" style={{ minWidth: 640 }}>
           <thead>
-            <tr style={{ borderBottom: "1px solid var(--gray-a5)", color: "var(--gray-10)" }}>
+            <tr style={{ borderBottom: "1px solid var(--gray-a6)", background: "var(--gray-a2)", color: "var(--gray-11)" }}>
               {["الطلب", "المتجر", "النموذج", "الحالة", "الدفع", ""].map((h) => (
                 <th key={h} className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">{h}</th>
               ))}
@@ -440,20 +441,15 @@ function RequestsTab({ showToast, addOpen, setAddOpen }) {
                 const pmtColor = PAYMENT_STATUS_COLORS[r.paymentStatus] || { bg: "var(--gray-a3)", fg: "var(--gray-10)" };
                 return (
                   <tr key={r.adRequestId}
-                    style={{ borderTop: idx === 0 ? "none" : "1px solid var(--gray-a4)", color: "var(--gray-12)", background: r.adRequestId === FAKE_REQUEST.adRequestId ? "rgba(37,99,235,.02)" : "transparent" }}
+                    style={{ borderTop: idx === 0 ? "none" : "1px solid var(--gray-a4)", color: "var(--gray-12)", background: "transparent" }}
                     className="transition hover:bg-black/[.015]">
                     <td className="px-5 py-4">
-                      <div className="font-semibold text-sm flex items-center gap-2">
-                        {r.title}
-                        {r.adRequestId === FAKE_REQUEST.adRequestId && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style={{ background: "rgba(37,99,235,.1)", color: "#2563eb" }}>تجريبي</span>
-                        )}
-                      </div>
-                      <div className="text-xs mt-0.5" style={{ color: "var(--gray-10)" }}>#{r.adRequestId}</div>
+                      <div className="font-semibold text-sm">{r.title}</div>
+                      <div className="text-xs mt-0.5" style={{ color: "var(--gray-11)" }}>#{r.adRequestId}</div>
                     </td>
                     <td className="px-5 py-4">
                       <div className="text-sm font-medium">{r.shop?.name || `Shop #${r.shopId}`}</div>
-                      <div className="text-xs mt-0.5" style={{ color: "var(--gray-10)" }}>{r.shop?.ownerName}</div>
+                      <div className="text-xs mt-0.5" style={{ color: "var(--gray-11)" }}>{r.shop?.ownerName}</div>
                     </td>
                     <td className="px-5 py-4">
                       <div className="text-sm font-medium">{r.نموذج?.name || `نموذج #${r.نموذجId}`}</div>
@@ -541,7 +537,7 @@ export default function AdsManagement() {
     <>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div dir="rtl" className="space-y-6 p-6">
+      <div dir="rtl" className="space-y-6 p-3 sm:p-6">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row-reverse justify-between items-start sm:items-center gap-4">
@@ -569,7 +565,7 @@ export default function AdsManagement() {
               className="flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all"
               style={{
                 background: activeTab === tab.key ? "var(--gray-1)" : "transparent",
-                color:      activeTab === tab.key ? "var(--gray-12)" : "var(--gray-10)",
+                color:      activeTab === tab.key ? "var(--gray-12)" : "var(--gray-11)",
                 boxShadow:  activeTab === tab.key ? "0 1px 4px rgba(0,0,0,.08)" : "none",
               }}>
               {tab.label}

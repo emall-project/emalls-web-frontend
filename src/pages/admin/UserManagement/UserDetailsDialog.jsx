@@ -1,6 +1,6 @@
 import React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { FiX, FiUser, FiMail, FiPhone, FiShield, FiCheckCircle, FiXCircle, FiEdit2 } from "react-icons/fi";
+import { FiX, FiUser, FiMail, FiPhone, FiShield, FiCheckCircle, FiXCircle, FiEdit2, FiAtSign } from "react-icons/fi";
 import { useThemeContainer, InfoCard, dialogSurface } from "./ui";
 import { getRoleLabel, formatPhone } from "./constants";
 
@@ -38,7 +38,8 @@ export default function UserDetailsDialog({ open, onOpenChange, user, onEdit }) 
           {/* Body */}
           <div className="px-6 py-5 overflow-y-auto flex-1">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InfoCard label="الاسم الكامل"        value={user.fullName || "—"}         icon={<FiUser size={14} />} />
+              <InfoCard label="الاسم الكامل"        value={user.fullName  || "—"}        icon={<FiUser size={14} />} />
+              <InfoCard label="اسم المستخدم"        value={user.username  || "—"}        icon={<FiAtSign size={14} />} />
               <InfoCard label="البريد الإلكتروني"   value={user.email    || "—"}         icon={<FiMail size={14} />} />
               <InfoCard label="رقم الهاتف"          value={formatPhone(user)}            icon={<FiPhone size={14} />} />
               <InfoCard label="الدور"               value={getRoleLabel(user)}           icon={<FiShield size={14} />} />

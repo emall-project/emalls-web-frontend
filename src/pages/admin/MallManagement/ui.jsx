@@ -29,8 +29,8 @@ export function Toast({ message, type = "success", onClose }) {
   }, [onClose]);
 
   const colors = type === "success"
-    ? { bg: "#f0fdf4", border: "#86efac", text: "#16a34a" }
-    : { bg: "#fef2f2", border: "#fca5a5", text: "#dc2626" };
+    ? { bg: "var(--green-2)", border: "var(--green-6)", text: "var(--green-11)" }
+    : { bg: "var(--red-2)",   border: "var(--red-6)",   text: "var(--red-11)"   };
 
   return (
     <div

@@ -46,7 +46,7 @@ export default function SearchPage() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-white">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-12 py-8 md:py-10">
+      <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 py-8 md:py-10">
         <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mb-8" />
 
         {/* Header */}

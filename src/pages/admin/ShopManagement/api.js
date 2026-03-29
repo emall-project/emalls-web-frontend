@@ -1,6 +1,6 @@
-const BASE_URL = "https://api.e-mall.store";
+const BASE_URL = "/accounts";
 
-export async function apiFetch(path, options = {}) {
+async function apiFetch(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options,
@@ -24,4 +24,12 @@ export const shopsApi = {
 
 export const mallsApi = {
   getList: () => apiFetch("/api/malls/all"),
+};
+
+export const usersApi = {
+  getAll: (params = {}) => {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v !== "" && v != null) q.set(k, v); });
+    return apiFetch(`/api/users?${q.toString()}`);
+  },
 };

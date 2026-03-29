@@ -5,14 +5,14 @@ import {
 } from "react-icons/fi";
 
 import { mallsApi }            from "./api";
-import { MALL_STATUSES, STATUS_LABELS, STATUS_COLORS, FAKE_MALL } from "./constants";
+import { MALL_STATUSES, STATUS_LABELS, STATUS_COLORS } from "./constants";
 import { StyleInjector, Toast, StatusBadge, CustomDropdown, FilterInput, Spinner } from "./ui";
 import AdminActionsMenu         from "./AdminActionsMenu";
 import MallDetailsDialog        from "./MallDetailsDialog";
 import MallFormDialog           from "./MallFormDialog";
 
 export default function MallManagement() {
-  const [malls,         setMalls]         = useState([FAKE_MALL]);
+  const [malls,         setMalls]         = useState([]);
   const [totalPages,    setTotalPages]    = useState(1);
   const [totalElements, setTotalElements] = useState(1);
   const [fetchLoading,  setFetchLoading]  = useState(false);
@@ -49,12 +49,12 @@ export default function MallManagement() {
       const res  = await mallsApi.getAll(params);
       const data = res?.data || res?.content || [];
       const list = Array.isArray(data) ? data : (data?.content || []);
-      setMalls([FAKE_MALL, ...list]);
+      setMalls(list);
       setTotalPages(data?.totalPages || 1);
-      setTotalElements((data?.totalElements || list.length) + 1);
+      setTotalElements(data?.totalElements || list.length);
     } catch (e) {
       setFetchError(e.message || "فشل في جلب البيانات");
-      setMalls([FAKE_MALL]);
+      setMalls([]);
     } finally {
       setFetchLoading(false);
     }
@@ -66,7 +66,6 @@ export default function MallManagement() {
   const setRowBusy = (id, busy) => setRowLoading((p) => ({ ...p, [id]: busy }));
 
   const handleActivate = async (mall) => {
-    if (mall.mallId === FAKE_MALL.mallId) return showToast("هذا مول تجريبي فقط 😄", "error");
     setRowBusy(mall.mallId, true);
     try   { await mallsApi.activate(mall.mallId);   showToast(`تم تفعيل ${mall.name}`);   fetchMalls(); }
     catch (e) { showToast(e.message, "error"); }
@@ -74,7 +73,6 @@ export default function MallManagement() {
   };
 
   const handleDeactivate = async (mall) => {
-    if (mall.mallId === FAKE_MALL.mallId) return showToast("هذا مول تجريبي فقط 😄", "error");
     setRowBusy(mall.mallId, true);
     try   { await mallsApi.deactivate(mall.mallId);   showToast(`تم تعطيل ${mall.name}`);   fetchMalls(); }
     catch (e) { showToast(e.message, "error"); }
@@ -82,7 +80,6 @@ export default function MallManagement() {
   };
 
   const handleChangeStatus = async (mall, status) => {
-    if (mall.mallId === FAKE_MALL.mallId) return showToast("هذا مول تجريبي فقط 😄", "error");
     setRowBusy(mall.mallId, true);
     try   { await mallsApi.changeStatus(mall.mallId, status); showToast(`تم تغيير حالة ${mall.name}`); fetchMalls(); }
     catch (e) { showToast(e.message, "error"); }
@@ -105,7 +102,7 @@ export default function MallManagement() {
       <StyleInjector />
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div dir="rtl" className="space-y-6 p-6">
+      <div dir="rtl" className="space-y-6 p-3 sm:p-6">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row-reverse justify-between items-start sm:items-center gap-4">
@@ -134,7 +131,7 @@ export default function MallManagement() {
 
         {/* Filters */}
         <div className="rounded-2xl p-5"
-          style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
+          style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a7)" }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold" style={{ color: "var(--gray-11)" }}>اسم المول</label>
@@ -174,7 +171,7 @@ export default function MallManagement() {
             style={{ background: "var(--red-2)", border: "1px solid var(--red-6)" }}>
             <div className="flex items-center gap-2 text-sm" style={{ color: "var(--red-11)" }}>
               <FiAlertCircle size={15} />
-              <span>{fetchError} — يُعرض المول التجريبي فقط</span>
+              <span>{fetchError}</span>
             </div>
             <button onClick={fetchMalls}
               className="text-xs font-semibold underline flex-shrink-0"
@@ -185,11 +182,11 @@ export default function MallManagement() {
         )}
 
         {/* Table */}
-        <div className="rounded-2xl overflow-hidden"
-          style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
-          <table className="w-full text-sm">
+        <div className="rounded-2xl overflow-hidden overflow-x-auto"
+          style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a7)" }}>
+          <table className="w-full text-sm" style={{ minWidth: 640 }}>
             <thead>
-              <tr style={{ borderBottom: "1px solid var(--gray-a5)", color: "var(--gray-11)" }}>
+              <tr style={{ borderBottom: "1px solid var(--gray-a6)", background: "var(--gray-a2)", color: "var(--gray-11)" }}>
                 {["اسم المول", "الموقع / المدينة", "الخدمات", "الحالة", "الإجراءات"].map((h) => (
                   <th key={h} className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">{h}</th>
                 ))}
@@ -214,11 +211,11 @@ export default function MallManagement() {
                 malls.map((mall, idx) => (
                   <tr key={mall.mallId}
                     style={{
-                      borderTop:  idx === 0 ? "none" : "1px solid var(--gray-a4)",
+                      borderTop:  idx === 0 ? "none" : "1px solid var(--gray-a5)",
                       color:      "var(--gray-12)",
-                      background: mall.mallId === FAKE_MALL.mallId ? "rgba(37,99,235,.02)" : "transparent",
+                      background: "transparent",
                     }}
-                    className="transition hover:bg-black/[.015]">
+                    className="transition hover:bg-(--gray-a3)">
 
                     {/* Name */}
                     <td className="px-5 py-4">
@@ -230,16 +227,8 @@ export default function MallManagement() {
                             : <div className="h-full w-full flex items-center justify-center text-lg">🏬</div>}
                         </div>
                         <div>
-                          <div className="font-semibold text-sm flex items-center gap-2">
-                            {mall.name}
-                            {mall.mallId === FAKE_MALL.mallId && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                                style={{ background: "rgba(37,99,235,.1)", color: "#2563eb" }}>
-                                تجريبي
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs mt-0.5" style={{ color: "var(--gray-10)" }}>#{mall.mallId}</div>
+                          <div className="font-semibold text-sm">{mall.name}</div>
+                          <div className="text-xs mt-0.5" style={{ color: "var(--gray-11)" }}>#{mall.mallId}</div>
                         </div>
                       </div>
                     </td>
@@ -248,7 +237,7 @@ export default function MallManagement() {
                     <td className="px-5 py-4">
                       <div className="text-sm font-medium">{mall.location || "—"}</div>
                       {mall.city?.name && (
-                        <div className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "var(--gray-10)" }}>
+                        <div className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "var(--gray-11)" }}>
                           <FiMapPin size={10} /> {mall.city.name}
                         </div>
                       )}
@@ -300,8 +289,8 @@ export default function MallManagement() {
           {/* Pagination */}
           {!fetchLoading && totalPages > 1 && (
             <div className="flex items-center justify-between px-5 py-4 border-t"
-              style={{ borderColor: "var(--gray-a5)" }}>
-              <span className="text-xs" style={{ color: "var(--gray-10)" }}>
+              style={{ borderColor: "var(--gray-a6)" }}>
+              <span className="text-xs" style={{ color: "var(--gray-11)" }}>
                 صفحة {page + 1} من {totalPages}
               </span>
               <div className="flex items-center gap-2">

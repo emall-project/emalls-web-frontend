@@ -1,6 +1,5 @@
 import React from "react";
-import { Button } from "@radix-ui/themes";
-import { FiShoppingBag, FiShoppingCart } from "react-icons/fi";
+import { FiShoppingCart } from "react-icons/fi";
 import { GrFavorite } from "react-icons/gr";
 import { VscAccount } from "react-icons/vsc";
 import { useNavigate } from "react-router-dom";
@@ -15,19 +14,19 @@ function Header() {
       {/* Top thin line - luxury accent */}
       <div className="h-px bg-black"></div>
       
-      <div className="max-w-[1600px] mx-auto px-6 md:px-12 py-4 md:py-5">
+      <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-6 md:px-12 py-4 md:py-5">
         <div className="flex items-center justify-between gap-6">
           
-          {/* Logo - Minimal & Elegant */}
-          <Button
-            className="group flex items-center gap-2.5 shrink-0 cursor-pointer bg-transparent hover:bg-black/5 rounded-none px-2 py-1 transition-all duration-300 border-0"
+          {/* Logo */}
+          <button
+            className="shrink-0 cursor-pointer bg-transparent border-0 outline-none p-0"
             onClick={() => navigate("/")}
           >
-            <FiShoppingBag className="text-black text-2xl md:text-3xl transition-transform duration-300 group-hover:rotate-12" />
-            <div className="text-2xl md:text-3xl font-light tracking-wider text-black">
-              سوقَنا
+            <div className="flex flex-col items-end leading-none gap-0.5">
+              <span className="text-2xl md:text-3xl font-black tracking-tight text-black">سوقنا</span>
+              <span className="text-[9px] md:text-[10px] tracking-[0.35em] text-black/40 uppercase font-light self-stretch text-right">e-mall</span>
             </div>
-          </Button>
+          </button>
 
           {/* Search - Centered & Clean */}
           <div className="flex-1 max-w-2xl">
@@ -49,7 +48,7 @@ function Header() {
                   3
                 </span>
               </div>
-              <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-light group-hover:text-black transition-colors">
+              <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-medium group-hover:text-black transition-colors">
                 المفضلة
               </span>
             </button>
@@ -66,7 +65,7 @@ function Header() {
                   5
                 </span>
               </div>
-              <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-light group-hover:text-black transition-colors">
+              <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-medium group-hover:text-black transition-colors">
                 السلة
               </span>
             </button>
@@ -81,7 +80,7 @@ function Header() {
               className="group flex flex-col items-center gap-1 transition-all duration-300"
             >
               <VscAccount className="text-black text-xl md:text-2xl transition-all duration-300 group-hover:scale-110" />
-              <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-light group-hover:text-black transition-colors">
+              <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-medium group-hover:text-black transition-colors">
                 الحساب
               </span>
             </button>

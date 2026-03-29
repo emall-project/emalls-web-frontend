@@ -7,7 +7,7 @@ import {
 } from "react-icons/fi";
 import { usersApi } from "./api";
 import {
-  ROLE_OPTIONS, ACTIVE_OPTIONS, FAKE_USER,
+  ROLE_OPTIONS, ACTIVE_OPTIONS,
   getErrorMessage, buildUpdatePayload, extractUsersResponse,
   formatPhone, getRoleLabel,
 } from "./constants";
@@ -72,7 +72,7 @@ function DDItem({ children, icon, onSelect }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function UserManagement() {
-  const [users,         setUsers]         = useState([FAKE_USER]);
+  const [users,         setUsers]         = useState([]);
   const [totalPages,    setTotalPages]    = useState(1);
   const [totalElements, setTotalElements] = useState(1);
   const [fetchLoading,  setFetchLoading]  = useState(false);
@@ -107,12 +107,12 @@ export default function UserManagement() {
       };
       const res = await usersApi.getAll(params);
       const { list, totalPages, totalElements } = extractUsersResponse(res);
-      setUsers([FAKE_USER, ...list]);
+      setUsers(list);
       setTotalPages(totalPages || 1);
-      setTotalElements((totalElements || list.length) + 1);
+      setTotalElements(totalElements || list.length);
     } catch (error) {
       setFetchError(getErrorMessage(error) || "فشل في جلب البيانات");
-      setUsers([FAKE_USER]);
+      setUsers([]);
     } finally { setFetchLoading(false); }
   }, [page, fullNameFilter, emailFilter, phoneFilter, roleFilter, activeFilter]);
 
@@ -120,7 +120,6 @@ export default function UserManagement() {
   useEffect(() => { setPage(0); }, [fullNameFilter, emailFilter, phoneFilter, roleFilter, activeFilter]);
 
   const handleToggleActive = async (user, nextActive) => {
-    if (user.userId === FAKE_USER.userId) return showToast("هذا مستخدم تجريبي فقط 😄", "error");
     setRowLoading((p) => ({ ...p, [user.userId]: true }));
     try {
       await usersApi.update(buildUpdatePayload(user, { isActive: nextActive }));
@@ -140,7 +139,7 @@ export default function UserManagement() {
     <>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <div dir="rtl" className="space-y-6 p-6">
+      <div dir="rtl" className="space-y-6 p-3 sm:p-6">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row-reverse justify-between items-start sm:items-center gap-4">
@@ -166,7 +165,7 @@ export default function UserManagement() {
 
         {/* Filters */}
         <div className="rounded-2xl p-5"
-          style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
+          style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a7)" }}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold" style={{ color: "var(--gray-11)" }}>الاسم الكامل</label>
@@ -208,7 +207,7 @@ export default function UserManagement() {
             style={{ background: "var(--red-2)", border: "1px solid var(--red-6)" }}>
             <div className="flex items-center gap-2 text-sm" style={{ color: "var(--red-11)" }}>
               <FiAlertCircle size={15} />
-              <span>{fetchError} — يُعرض المستخدم التجريبي فقط</span>
+              <span>{fetchError}</span>
             </div>
             <button onClick={fetchUsers} className="text-xs font-semibold underline flex-shrink-0"
               style={{ color: "var(--red-11)" }}>
@@ -218,11 +217,11 @@ export default function UserManagement() {
         )}
 
         {/* Table */}
-        <div className="rounded-2xl overflow-hidden"
-          style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
-          <table className="w-full text-sm">
+        <div className="rounded-2xl overflow-hidden overflow-x-auto"
+          style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a7)" }}>
+          <table className="w-full text-sm" style={{ minWidth: 660 }}>
             <thead>
-              <tr style={{ borderBottom: "1px solid var(--gray-a5)", color: "var(--gray-10)" }}>
+              <tr style={{ borderBottom: "1px solid var(--gray-a6)", background: "var(--gray-a2)", color: "var(--gray-11)" }}>
                 {["المستخدم", "البريد الإلكتروني", "الهاتف", "الدور", "الحالة", "الإجراءات"].map((h) => (
                   <th key={h} className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">{h}</th>
                 ))}
@@ -247,11 +246,11 @@ export default function UserManagement() {
                 users.map((user, idx) => (
                   <tr key={user.userId}
                     style={{
-                      borderTop:  idx === 0 ? "none" : "1px solid var(--gray-a4)",
+                      borderTop:  idx === 0 ? "none" : "1px solid var(--gray-a5)",
                       color:      "var(--gray-12)",
-                      background: user.userId === FAKE_USER.userId ? "rgba(37,99,235,.02)" : "transparent",
+                      background: "transparent",
                     }}
-                    className="transition hover:bg-black/[.015]">
+                    className="transition hover:bg-(--gray-a3)">
 
                     {/* User */}
                     <td className="px-5 py-4">
@@ -261,23 +260,15 @@ export default function UserManagement() {
                           <FiUser size={18} />
                         </div>
                         <div>
-                          <div className="font-semibold text-sm flex items-center gap-2">
-                            {user.fullName || "—"}
-                            {user.userId === FAKE_USER.userId && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                                style={{ background: "rgba(37,99,235,.1)", color: "#2563eb" }}>
-                                تجريبي
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-xs mt-0.5" style={{ color: "var(--gray-10)" }}>#{user.userId}</div>
+                          <div className="font-semibold text-sm">{user.fullName || "—"}</div>
+                          <div className="text-xs mt-0.5" style={{ color: "var(--gray-11)" }}>#{user.userId}</div>
                         </div>
                       </div>
                     </td>
 
                     {/* Email */}
                     <td className="px-5 py-4">
-                      <div className="text-sm font-medium" style={{ color: "var(--gray-11)" }}>{user.email || "—"}</div>
+                      <div className="text-sm font-medium" style={{ color: "var(--gray-12)" }}>{user.email || "—"}</div>
                     </td>
 
                     {/* Phone */}
@@ -309,8 +300,8 @@ export default function UserManagement() {
           {/* Pagination */}
           {!fetchLoading && totalPages > 1 && (
             <div className="flex items-center justify-between px-5 py-4 border-t"
-              style={{ borderColor: "var(--gray-a5)" }}>
-              <span className="text-xs" style={{ color: "var(--gray-10)" }}>
+              style={{ borderColor: "var(--gray-a6)" }}>
+              <span className="text-xs" style={{ color: "var(--gray-11)" }}>
                 صفحة {page + 1} من {totalPages}
               </span>
               <div className="flex items-center gap-2">

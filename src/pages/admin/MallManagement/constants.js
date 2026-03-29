@@ -5,40 +5,15 @@ export const MALL_STATUSES = [
 export const STATUS_LABELS = {
   ACTIVE:             "نشط",
   INACTIVE:           "غير نشط",
-  MAINTENANCE:        "صيانة",
-  COMING_SOON:        "قريباً",
-  UNDER_CONSTRUCTION: "تحت الإنشاء",
+  MAINTENANCE:        "صيانة"
 };
 
 export const STATUS_COLORS = {
-  ACTIVE:             { bg: "#dcfce7", fg: "#16a34a", dot: "#16a34a" },
-  INACTIVE:           { bg: "#fee2e2", fg: "#dc2626", dot: "#ef4444" },
-  MAINTENANCE:        { bg: "#dbeafe", fg: "#2563eb", dot: "#3b82f6" },
-  COMING_SOON:        { bg: "#fef9c3", fg: "#ca8a04", dot: "#eab308" },
-  UNDER_CONSTRUCTION: { bg: "#f1f5f9", fg: "#64748b", dot: "#94a3b8" },
+  ACTIVE:      { bg: "var(--green-a3)", fg: "var(--green-11)", dot: "var(--green-9)" },
+  INACTIVE:    { bg: "var(--red-a3)",   fg: "var(--red-11)",   dot: "var(--red-9)"   },
+  MAINTENANCE: { bg: "var(--blue-a3)",  fg: "var(--blue-11)",  dot: "var(--blue-9)"  },
 };
 
-// ── Fake mall for development/testing ─────────────────────────────────────────
-export const FAKE_MALL = {
-  mallId: 999,
-  name: "سيتي مول - تجريبي",
-  location: "شارع الإرسال، وسط المدينة",
-  city: { cityId: 1, name: "رام الله", baseFee: 15 },
-  capacity: 250,
-  status: "ACTIVE",
-  logoUrl: "https://images.unsplash.com/photo-1519567241046-7f570eee3d9f?auto=format&fit=crop&w=80&q=80",
-  description: "أحد أكبر مراكز التسوق في المنطقة، يضم أكثر من 200 متجر.",
-  contactInfo: { phone: "+970599000000", email: "info@citymall.ps" },
-  services: [
-    { serviceId: 1, name: "موقف سيارات", isActive: true },
-    { serviceId: 2, name: "واي فاي مجاني", isActive: true },
-    { serviceId: 3, name: "سينما", isActive: false },
-  ],
-  createdAt: "2024-01-15T10:00:00",
-  createdBy: "admin",
-  updatedAt: null,
-  updatedBy: null,
-};
 
 export const GLOBAL_STYLES = `
   @keyframes dropIn {

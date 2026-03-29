@@ -35,30 +35,54 @@ const inp = {
 const inputCls = "w-full rounded-xl px-4 py-2.5 text-sm outline-none border transition-all focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500";
 const labelCls = "block text-xs font-semibold mb-1.5";
 
+const FIELD_MAP = {
+  templateId: "templateId",
+  shopId:     "shopId",
+  title:      "title",
+  imageUrl:   "imageUrl",
+};
+
+function translateCode(code = "") {
+  const c = code.toLowerCase();
+  if (c.includes("notblank") || c.includes("notnull") || c.includes("required")) return "هذا الحقل مطلوب";
+  if (c.includes("notfound")) return "العنصر غير موجود";
+  if (c.includes("invalid"))  return "قيمة غير صحيحة";
+  if (c.includes("size"))     return "الطول غير مناسب";
+  if (c.includes("min"))      return "القيمة أصغر من الحد المسموح";
+  return "قيمة غير صحيحة";
+}
+
+function FieldError({ msg }) {
+  if (!msg) return null;
+  return <p className="text-xs mt-1" style={{ color: "var(--red-9)" }}>{msg}</p>;
+}
+
 // ── Create Ad Request Dialog ───────────────────────────────────────────────────
 export function AdRequestFormDialog({ open, onOpenChange, onSuccess }) {
   const themeContainer = useThemeContainer();
   const bodyRef = useRef(null);
 
-  const [loading,    setLoading]    = useState(false);
-  const [error,      setError]      = useState("");
-  const [templateId, setTemplateId] = useState("");
-  const [shopId,     setShopId]     = useState("");
-  const [title,      setTitle]      = useState("");
-  const [imageUrl,   setImageUrl]   = useState("");
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [templateId,  setTemplateId]  = useState("");
+  const [shopId,      setShopId]      = useState("");
+  const [title,       setTitle]       = useState("");
+  const [imageUrl,    setImageUrl]    = useState("");
 
   useEffect(() => {
-    if (!open) { setTemplateId(""); setShopId(""); setTitle(""); setImageUrl(""); setError(""); }
+    if (!open) { setTemplateId(""); setShopId(""); setTitle(""); setImageUrl(""); setError(""); setFieldErrors({}); }
   }, [open]);
 
-  const scrollTop = () => { if (bodyRef.current) bodyRef.current.scrollTop = 0; };
+  const scrollTop  = () => { if (bodyRef.current) bodyRef.current.scrollTop = 0; };
+  const clearErr   = (f) => setFieldErrors((p) => ({ ...p, [f]: "" }));
 
   const handleSubmit = async () => {
-    if (!templateId) { setError("Template ID مطلوب"); return scrollTop(); }
-    if (!shopId)     { setError("Shop ID مطلوب");     return scrollTop(); }
-    if (!title.trim()) { setError("العنوان مطلوب");   return scrollTop(); }
+    if (!templateId)     { setError("معرّف النموذج الإعلاني مطلوب"); return scrollTop(); }
+    if (!shopId)         { setError("معرّف المتجر مطلوب");           return scrollTop(); }
+    if (!title.trim())   { setError("عنوان الإعلان مطلوب");          return scrollTop(); }
 
-    setError(""); setLoading(true);
+    setError(""); setFieldErrors({}); setLoading(true);
     try {
       await adRequestsApi.create({
         templateId: Number(templateId),
@@ -69,8 +93,18 @@ export function AdRequestFormDialog({ open, onOpenChange, onSuccess }) {
       onSuccess?.();
       onOpenChange(false);
     } catch (e) {
-      setError(e.message || "حدث خطأ، حاول مجدداً");
-      scrollTop();
+      if (e.errorCodes?.length) {
+        const mapped = {};
+        e.errorCodes.forEach(({ field, message }) => {
+          const key = FIELD_MAP[field] || field;
+          mapped[key] = translateCode(message);
+        });
+        setFieldErrors(mapped);
+        scrollTop();
+      } else {
+        setError(e.message || "حدث خطأ، حاول مجدداً");
+        scrollTop();
+      }
     } finally { setLoading(false); }
   };
 
@@ -85,9 +119,12 @@ export function AdRequestFormDialog({ open, onOpenChange, onSuccess }) {
 
           <div className="flex items-center justify-between px-6 py-4 border-b flex-shrink-0"
             style={{ borderColor: "var(--gray-a6)" }}>
-            <Dialog.Title className="text-base font-bold" style={{ color: "var(--gray-12)" }}>
-              إضافة Ad Request جديد
-            </Dialog.Title>
+            <div>
+              <Dialog.Title className="text-base font-bold" style={{ color: "var(--gray-12)" }}>
+                إضافة طلب إعلان جديد
+              </Dialog.Title>
+              <p className="text-xs mt-0.5" style={{ color: "var(--gray-11)" }}>أدخل بيانات طلب الإعلان</p>
+            </div>
             <Dialog.Close asChild>
               <button className="p-1.5 rounded-lg hover:opacity-70 transition-opacity"
                 style={{ color: "var(--gray-11)", background: "transparent", border: "none" }}>
@@ -106,46 +143,54 @@ export function AdRequestFormDialog({ open, onOpenChange, onSuccess }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={labelCls} style={{ color: "var(--gray-11)" }}>Template ID *</label>
+                <label className={labelCls} style={{ color: "var(--gray-11)" }}>معرّف النموذج الإعلاني *</label>
                 <input className={inputCls} style={{ ...inp, direction: "ltr", textAlign: "left" }}
-                  type="number" value={templateId} onChange={(e) => setTemplateId(e.target.value)}
+                  type="number" value={templateId}
+                  onChange={(e) => { setTemplateId(e.target.value); clearErr("templateId"); }}
                   placeholder="مثال: 1" />
+                <FieldError msg={fieldErrors.templateId} />
               </div>
               <div>
-                <label className={labelCls} style={{ color: "var(--gray-11)" }}>Shop ID *</label>
+                <label className={labelCls} style={{ color: "var(--gray-11)" }}>معرّف المتجر *</label>
                 <input className={inputCls} style={{ ...inp, direction: "ltr", textAlign: "left" }}
-                  type="number" value={shopId} onChange={(e) => setShopId(e.target.value)}
+                  type="number" value={shopId}
+                  onChange={(e) => { setShopId(e.target.value); clearErr("shopId"); }}
                   placeholder="مثال: 1" />
+                <FieldError msg={fieldErrors.shopId} />
               </div>
             </div>
 
             <div>
               <label className={labelCls} style={{ color: "var(--gray-11)" }}>عنوان الإعلان *</label>
               <input className={inputCls} style={inp} value={title}
-                onChange={(e) => setTitle(e.target.value)} placeholder="مثال: Shop 1 — Summer Sale" />
+                onChange={(e) => { setTitle(e.target.value); clearErr("title"); }}
+                placeholder="مثال: عرض الصيف - متجر الأناقة" />
+              <FieldError msg={fieldErrors.title} />
             </div>
 
             <div>
-              <label className={labelCls} style={{ color: "var(--gray-11)" }}>رابط الصورة (URL)</label>
+              <label className={labelCls} style={{ color: "var(--gray-11)" }}>رابط صورة الإعلان</label>
               <input className={inputCls} style={{ ...inp, direction: "ltr", textAlign: "left" }}
-                value={imageUrl} onChange={(e) => setImageUrl(e.target.value)}
+                value={imageUrl}
+                onChange={(e) => { setImageUrl(e.target.value); clearErr("imageUrl"); }}
                 placeholder="https://cdn.example.com/banner.jpg" />
+              <FieldError msg={fieldErrors.imageUrl} />
             </div>
           </div>
 
-          <div className="px-6 py-4 flex items-center justify-end gap-3 border-t flex-shrink-0"
+          <div className="px-6 py-4 flex items-center justify-start gap-3 border-t flex-shrink-0"
             style={{ borderColor: "var(--gray-a6)" }}>
+            <button onClick={handleSubmit} disabled={loading}
+              className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-60"
+              style={{ background: "#2563eb", color: "#fff" }}>
+              {loading ? <Spinner /> : null} إرسال الطلب
+            </button>
             <Dialog.Close asChild>
               <button className="px-5 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-80"
                 style={{ background: "transparent", border: "1px solid var(--gray-a7)", color: "var(--gray-12)" }}>
                 إلغاء
               </button>
             </Dialog.Close>
-            <button onClick={handleSubmit} disabled={loading}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-opacity hover:opacity-90 disabled:opacity-60"
-              style={{ background: "#2563eb", color: "#fff" }}>
-              {loading ? <Spinner /> : null} إرسال الطلب
-            </button>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
@@ -214,23 +259,23 @@ export function RejectDialog({ open, onOpenChange, request, onSuccess }) {
               <label className={labelCls} style={{ color: "var(--gray-11)" }}>سبب الرفض *</label>
               <textarea className={inputCls} style={{ ...inp, minHeight: 80, resize: "none" }}
                 value={reason} onChange={(e) => setReason(e.target.value)}
-                placeholder="مثال: Image quality too low" />
+                placeholder="مثال: جودة الصورة منخفضة جداً" />
             </div>
           </div>
 
-          <div className="px-5 py-3 flex items-center justify-end gap-2 border-t flex-shrink-0"
+          <div className="px-5 py-3 flex items-center justify-start gap-2 border-t flex-shrink-0"
             style={{ borderColor: "var(--gray-a6)" }}>
+            <button onClick={handleReject} disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-60"
+              style={{ background: "#dc2626", color: "#fff" }}>
+              {loading ? <Spinner /> : null} رفض الطلب
+            </button>
             <Dialog.Close asChild>
               <button className="px-4 py-2 rounded-xl text-xs font-bold transition-opacity hover:opacity-80"
                 style={{ background: "transparent", border: "1px solid var(--gray-a7)", color: "var(--gray-12)" }}>
                 إلغاء
               </button>
             </Dialog.Close>
-            <button onClick={handleReject} disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-opacity hover:opacity-90 disabled:opacity-60"
-              style={{ background: "#dc2626", color: "#fff" }}>
-              {loading ? <Spinner /> : null} رفض الطلب
-            </button>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

@@ -22,7 +22,6 @@ import {
   SHOP_STATUS_LABELS,
   SHOP_STATUS_COLORS,
   CATEGORY_LABELS,
-  FAKE_SHOP,
 } from "./constants";
 import ShopDetailsDialog from "./ShopDetailsDialog";
 import ShopFormDialog from "./ShopFormDialog";
@@ -461,7 +460,7 @@ function CustomDropdown({ value, onChange, options, placeholder }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ShopManagement() {
-  const [shops, setShops] = useState([FAKE_SHOP]);
+  const [shops, setShops] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(1);
   const [fetchLoading, setFetchLoading] = useState(false);
@@ -508,12 +507,12 @@ export default function ShopManagement() {
       const data = res?.data || res?.content || [];
       const list = Array.isArray(data) ? data : data?.content || [];
 
-      setShops([FAKE_SHOP, ...list]);
+      setShops(list);
       setTotalPages(data?.totalPages || 1);
-      setTotalElements((data?.totalElements || list.length) + 1);
+      setTotalElements(data?.totalElements || list.length);
     } catch (e) {
       setFetchError(e.message || "فشل في جلب البيانات");
-      setShops([FAKE_SHOP]);
+      setShops([]);
     } finally {
       setFetchLoading(false);
     }
@@ -539,10 +538,6 @@ export default function ShopManagement() {
   }, [search, mallIdFilter, statusFilter, categoryFilter, locationFilter]);
 
   const handleChangeStatus = async (shop, status) => {
-    if (shop.shopId === FAKE_SHOP.shopId) {
-      return showToast("هذا متجر تجريبي فقط 😄", "error");
-    }
-
     setRowLoading((p) => ({ ...p, [shop.shopId]: true }));
 
     try {
@@ -595,7 +590,7 @@ export default function ShopManagement() {
         />
       )}
 
-      <div dir="rtl" className="space-y-6 p-6">
+      <div dir="rtl" className="space-y-6 p-3 sm:p-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row-reverse justify-between items-start sm:items-center gap-4">
           <div className="flex gap-2">
@@ -642,7 +637,7 @@ export default function ShopManagement() {
           className="rounded-2xl p-5"
           style={{
             background: "var(--gray-1)",
-            border: "1px solid var(--gray-a6)",
+            border: "1px solid var(--gray-a7)",
           }}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -752,7 +747,7 @@ export default function ShopManagement() {
               style={{ color: "var(--red-11)" }}
             >
               <FiAlertCircle size={15} />
-              <span>{fetchError} — يُعرض المتجر التجريبي فقط</span>
+              <span>{fetchError}</span>
             </div>
 
             <button
@@ -767,18 +762,19 @@ export default function ShopManagement() {
 
         {/* Table */}
         <div
-          className="rounded-2xl overflow-hidden"
+          className="rounded-2xl overflow-hidden overflow-x-auto"
           style={{
             background: "var(--gray-1)",
-            border: "1px solid var(--gray-a6)",
+            border: "1px solid var(--gray-a7)",
           }}
         >
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ minWidth: 700 }}>
             <thead>
               <tr
                 style={{
-                  borderBottom: "1px solid var(--gray-a5)",
-                  color: "var(--gray-10)",
+                  borderBottom: "1px solid var(--gray-a6)",
+                  background: "var(--gray-a2)",
+                  color: "var(--gray-11)",
                 }}
               >
                 {[
@@ -827,14 +823,11 @@ export default function ShopManagement() {
                     key={shop.shopId}
                     style={{
                       borderTop:
-                        idx === 0 ? "none" : "1px solid var(--gray-a4)",
+                        idx === 0 ? "none" : "1px solid var(--gray-a5)",
                       color: "var(--gray-12)",
-                      background:
-                        shop.shopId === FAKE_SHOP.shopId
-                          ? "rgba(37,99,235,.02)"
-                          : "transparent",
+                      background: "transparent",
                     }}
-                    className="transition hover:bg-black/[.015]"
+                    className="transition hover:bg-(--gray-a3)"
                   >
                     {/* Shop name */}
                     <td className="px-5 py-4">
@@ -860,24 +853,11 @@ export default function ShopManagement() {
                         </div>
 
                         <div>
-                          <div className="font-semibold text-sm flex items-center gap-2">
-                            {shop.name}
-                            {shop.shopId === FAKE_SHOP.shopId && (
-                              <span
-                                className="text-[10px] px-1.5 py-0.5 rounded-full font-medium"
-                                style={{
-                                  background: "rgba(37,99,235,.1)",
-                                  color: "#2563eb",
-                                }}
-                              >
-                                تجريبي
-                              </span>
-                            )}
-                          </div>
+                          <div className="font-semibold text-sm">{shop.name}</div>
 
                           <div
                             className="text-xs mt-0.5"
-                            style={{ color: "var(--gray-10)" }}
+                            style={{ color: "var(--gray-11)" }}
                           >
                             #{shop.shopId}
                           </div>
@@ -894,7 +874,7 @@ export default function ShopManagement() {
                       {shop.location && (
                         <div
                           className="text-xs mt-0.5 flex items-center gap-1"
-                          style={{ color: "var(--gray-10)" }}
+                          style={{ color: "var(--gray-11)" }}
                         >
                           <FiMapPin size={10} /> {shop.location}
                         </div>
@@ -925,7 +905,7 @@ export default function ShopManagement() {
 
                     {/* Owner */}
                     <td className="px-5 py-4">
-                      <div className="text-sm" style={{ color: "var(--gray-11)" }}>
+                      <div className="text-sm" style={{ color: "var(--gray-12)" }}>
                         {shop.owner?.username || "—"}
                       </div>
                     </td>
@@ -961,9 +941,9 @@ export default function ShopManagement() {
           {!fetchLoading && totalPages > 1 && (
             <div
               className="flex items-center justify-between px-5 py-4 border-t"
-              style={{ borderColor: "var(--gray-a5)" }}
+              style={{ borderColor: "var(--gray-a6)" }}
             >
-              <span className="text-xs" style={{ color: "var(--gray-10)" }}>
+              <span className="text-xs" style={{ color: "var(--gray-11)" }}>
                 صفحة {page + 1} من {totalPages}
               </span>
 

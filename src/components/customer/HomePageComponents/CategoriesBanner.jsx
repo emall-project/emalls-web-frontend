@@ -26,7 +26,7 @@ function CategoriesBanner({ categories = [], onSelectCategory }) {
 
   return (
     <section className="relative w-full bg-neutral-50 py-7 sm:py-10 md:py-14">
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 md:px-12">
+      <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12">
         {/* Header */}
         <div className="mb-5 sm:mb-7 md:mb-10 text-center">
           <h2 className="text-xs sm:text-sm md:text-lg font-extralight text-black/70 tracking-[0.18em]">
@@ -102,10 +102,8 @@ function CategoriesBanner({ categories = [], onSelectCategory }) {
                     transition
                     hover:shadow-2xl
                   "
-                  // Responsive sizing: small on mobile, grows gradually
-                  // aspect a bit taller on mobile to look premium
                   style={{
-                    width: "clamp(150px, 44vw, 220px)", // mobile
+                    width: "clamp(150px, 44vw, 220px)",
                     borderRadius: "clamp(80px, 18vw, 140px)",
                     aspectRatio: "3 / 4",
                   }}
@@ -124,7 +122,7 @@ function CategoriesBanner({ categories = [], onSelectCategory }) {
                   />
 
                   {/* overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent transition group-hover:from-black/70" />
+                  <div className="absolute inset-0 bg-linear-to-t from-black/65 via-black/20 to-transparent transition group-hover:from-black/70" />
 
                   {/* text */}
                   <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 md:p-7 text-center">
@@ -151,8 +149,8 @@ function CategoriesBanner({ categories = [], onSelectCategory }) {
             </div>
 
             {/* edge fades (always, helps on mobile too) */}
-            <div className="pointer-events-none absolute left-0 top-0 h-full w-10 sm:w-12 bg-gradient-to-r from-neutral-50 to-transparent" />
-            <div className="pointer-events-none absolute right-0 top-0 h-full w-10 sm:w-12 bg-gradient-to-l from-neutral-50 to-transparent" />
+            <div className="pointer-events-none absolute left-0 top-0 h-full w-10 sm:w-12 bg-linear-to-r from-neutral-50 to-transparent" />
+            <div className="pointer-events-none absolute right-0 top-0 h-full w-10 sm:w-12 bg-linear-to-l from-neutral-50 to-transparent" />
           </div>
         </div>
       </div>

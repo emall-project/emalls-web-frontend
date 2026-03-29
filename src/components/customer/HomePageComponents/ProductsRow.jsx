@@ -23,7 +23,7 @@ export default function ProductsRow({ title, products = [], onViewAll, onAddToCa
   if (!products.length) return null;
 
   return (
-    <section className="max-w-[1600px] mx-auto px-6 md:px-12 py-3 md:py-3">
+    <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-6 md:px-12 py-3 md:py-3">
       {/* Top accent line */}
       
       <div className="bg-white">

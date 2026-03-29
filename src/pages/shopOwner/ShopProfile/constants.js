@@ -3,19 +3,14 @@ export const SHOP_STATUSES = ["ACTIVE", "INACTIVE", "MAINTENANCE"];
 export const SHOP_STATUS_LABELS = {
   ACTIVE:      "نشط",
   INACTIVE:    "غير نشط",
-  MAINTENANCE: "صيانة",
+  MAINTENANCE: "تحت الصيانة",
 };
 
 export const SHOP_STATUS_COLORS = {
-  ACTIVE:      { bg: "var(--green-a3)", fg: "var(--green-11)", dot: "var(--green-9)" },
-  INACTIVE:    { bg: "var(--red-a3)",   fg: "var(--red-11)",   dot: "var(--red-9)"   },
-  MAINTENANCE: { bg: "var(--blue-a3)",  fg: "var(--blue-11)",  dot: "var(--blue-9)"  },
+  ACTIVE:      { bg: "var(--green-a3)",  fg: "var(--green-11)",  dot: "var(--green-9)"  },
+  INACTIVE:    { bg: "var(--red-a3)",    fg: "var(--red-11)",    dot: "var(--red-9)"    },
+  MAINTENANCE: { bg: "var(--yellow-a3)", fg: "var(--yellow-11)", dot: "var(--yellow-9)" },
 };
-
-export const SHOP_CATEGORIES = [
-  "CLOTHING", "ELECTRONICS", "FOOD", "PHARMACY", "BEAUTY",
-  "SPORTS", "BOOKS", "JEWELRY", "HOME", "TOYS", "OTHER",
-];
 
 export const CATEGORY_LABELS = {
   CLOTHING:    "ملابس",
@@ -30,4 +25,3 @@ export const CATEGORY_LABELS = {
   TOYS:        "ألعاب",
   OTHER:       "أخرى",
 };
-
