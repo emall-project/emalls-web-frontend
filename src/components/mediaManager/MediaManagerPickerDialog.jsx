@@ -1,17 +1,6 @@
-import { useEffect, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { FiX } from "react-icons/fi";
 import { MediaManagerWidget } from "./MediaManagerWidget";
-
-function useThemeContainer() {
-  const [container, setContainer] = useState(null);
-
-  useEffect(() => {
-    setContainer(document.querySelector(".radix-themes") || document.body);
-  }, []);
-
-  return container;
-}
 
 export function MediaManagerPickerDialog({
   open,
@@ -25,15 +14,17 @@ export function MediaManagerPickerDialog({
   confirmLabel = "إضافة",
   onConfirm,
 }) {
-  const themeContainer = useThemeContainer();
-
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal container={themeContainer}>
+      <Dialog.Portal>
         <Dialog.Overlay
           className="fixed inset-0 z-[20040]"
-          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}
+          style={{
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(2px)",
+          }}
         />
+
         <Dialog.Content
           dir="rtl"
           className="fixed inset-0 z-[20041] flex items-center justify-center p-4"
@@ -50,7 +41,10 @@ export function MediaManagerPickerDialog({
               className="flex items-center justify-between border-b px-6 py-4"
               style={{ borderColor: "var(--gray-a6)" }}
             >
-              <Dialog.Title className="text-lg font-bold" style={{ color: "var(--gray-12)" }}>
+              <Dialog.Title
+                className="text-lg font-bold"
+                style={{ color: "var(--gray-12)" }}
+              >
                 {title}
               </Dialog.Title>
 
