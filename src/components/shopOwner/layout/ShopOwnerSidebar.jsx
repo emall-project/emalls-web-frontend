@@ -1,8 +1,9 @@
 import { NavLink } from "react-router-dom";
 import {
   FiGrid, FiShoppingBag, FiPackage, FiRotateCcw,
-  FiTag, FiDollarSign, FiGift, FiCreditCard, FiX,
+  FiTag, FiDollarSign, FiGift, FiCreditCard, FiFolder, FiClipboard, FiX,
 } from "react-icons/fi";
+import { useAuth } from "../../../auth/AuthContext";
 
 const baseLink = "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition";
 
@@ -22,6 +23,7 @@ function OwnerLink({ to, icon, label, end }) {
 
 export function ShopOwnerSidebar({ open, onClose }) {
   const sidebarClass = open ? "translate-x-0" : "translate-x-full lg:translate-x-0";
+  const { fullName, selectedStoreId } = useAuth();
 
   return (
     <>
@@ -54,6 +56,8 @@ export function ShopOwnerSidebar({ open, onClose }) {
           <OwnerLink to="/shop-owner"           icon={<FiGrid />}       label="لوحة التحكم"        end />
           <OwnerLink to="/shop-owner/profile"   icon={<FiShoppingBag />} label="ملف المتجر"             />
           <OwnerLink to="/shop-owner/products"  icon={<FiPackage />}    label="المنتجات"               />
+          <OwnerLink to="/shop-owner/shop-requests" icon={<FiClipboard />} label="طلب متجر جديد"       />
+          <OwnerLink to="/shop-owner/files"     icon={<FiFolder />}     label="إدارة الملفات"          />
           <OwnerLink to="/shop-owner/orders"    icon={<FiPackage />}    label="الطلبات"                />
           <OwnerLink to="/shop-owner/returns"   icon={<FiRotateCcw />}  label="الإرجاعات"              />
           <OwnerLink to="/shop-owner/ads"       icon={<FiTag />}        label="الإعلانات"              />
@@ -70,8 +74,12 @@ export function ShopOwnerSidebar({ open, onClose }) {
               SO
             </div>
             <div>
-              <div className="text-sm font-semibold" style={{ color: "var(--gray-12)" }}>صاحب المتجر</div>
-              <div className="text-xs" style={{ color: "var(--gray-11)" }}>متجر #1</div>
+              <div className="text-sm font-semibold" style={{ color: "var(--gray-12)" }}>
+                {fullName || "صاحب المتجر"}
+              </div>
+              <div className="text-xs" style={{ color: "var(--gray-11)" }}>
+                {selectedStoreId ? `متجر #${selectedStoreId}` : "لا يوجد متجر نشط"}
+              </div>
             </div>
           </div>
         </div>

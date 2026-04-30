@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import * as DDMenu from "@radix-ui/react-dropdown-menu";
 import * as Dialog from "@radix-ui/react-dialog";
-import { FiPlus, FiMoreVertical, FiEdit2, FiTrash2, FiPower, FiSearch, FiX, FiLoader, FiAlertCircle, FiChevronLeft, FiChevronRight } from "react-icons/fi";
-import { productsApi, SHOP_ID } from "./api";
+import { FiPlus, FiMoreVertical, FiEdit2, FiTrash2, FiPower, FiSearch, FiX, FiLoader, FiAlertCircle, FiChevronLeft, FiChevronRight, FiImage } from "react-icons/fi";
+import { useAuth } from "../../../auth/AuthContext";
+import { productsApi } from "./api";
 import { AUDIENCE_OPTIONS, AGE_GROUP_OPTIONS, STATUS_COLORS } from "./constants";
+import { MediaManagerPickerDialog } from "../../../components/mediaManager/MediaManagerPickerDialog";
+import { getMediaPreviewUrl } from "../../../api/mediaManager";
 
 // ── Injected styles ────────────────────────────────────────────────────────────
 const STYLES = `
@@ -89,6 +92,14 @@ function useThemeContainer() {
   const [c, setC] = useState(null);
   useEffect(() => { setC(document.querySelector(".radix-themes") || document.body); }, []);
   return c;
+}
+
+function normalizeVariantMedia(media = []) {
+  return media.map((item, index) => ({
+    ...item,
+    mediumId: item.mediumId ?? item.id,
+    sortOrder: item.sortOrder ?? index + 1,
+  }));
 }
 
 function Spinner({ size = 16 }) {
@@ -435,7 +446,19 @@ function TagInput({ tags, onChange, readOnly = false }) {
 // ── Variant Card ──────────────────────────────────────────────────────────────
 // productAttrIds = which attribute IDs apply to this product (chosen at product level)
 // variant.attributes = [{ attributeId, optionId }] — one entry per productAttrId
-function VariantCard({ variant, index, isDefault, onChange, onRemove, onSetDefault, canRemove, attrOptions = [], productAttrIds = [] }) {
+function VariantCard({
+  variant,
+  index,
+  isDefault,
+  onChange,
+  onRemove,
+  onSetDefault,
+  canRemove,
+  attrOptions = [],
+  productAttrIds = [],
+  onOpenMediaPicker,
+  onRemoveMedia,
+}) {
   const setOptionForAttr = (attributeId, optionId) => {
     const existing = variant.attributes || [];
     const updated = existing.some(a => String(a.attributeId) === String(attributeId))
@@ -517,6 +540,84 @@ function VariantCard({ variant, index, isDefault, onChange, onRemove, onSetDefau
           </div>
         </div>
       )}
+
+      <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--gray-a4)" }}>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <span className="text-xs font-semibold" style={{ color: "var(--gray-11)" }}>
+            وسائط المتغير
+          </span>
+          <button
+            type="button"
+            onClick={() => onOpenMediaPicker(index)}
+            className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition hover:opacity-80"
+            style={{ background: "var(--blue-a3)", color: "var(--blue-11)" }}
+          >
+            <FiImage size={12} />
+            اختيار من الملفات
+          </button>
+        </div>
+
+        {variant.media?.length ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {variant.media.map((medium, mediaIndex) => {
+              const file = medium.mediumFile || {};
+              const previewUrl = getMediaPreviewUrl(file);
+
+              return (
+                <div
+                  key={medium.mediumId || `${variant._key}-${mediaIndex}`}
+                  className="overflow-hidden rounded-xl border"
+                  style={{ background: "var(--gray-1)", borderColor: "var(--gray-a5)" }}
+                >
+                  <div
+                    className="relative"
+                    style={{ aspectRatio: "1 / 1", background: "var(--gray-a3)" }}
+                  >
+                    {previewUrl ? (
+                      <img src={previewUrl} alt={file.name || "media"} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center" style={{ color: "var(--gray-9)" }}>
+                        <FiImage size={18} />
+                      </div>
+                    )}
+
+                    <span
+                      className="absolute right-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                      style={{ background: "rgba(0,0,0,0.6)", color: "#fff" }}
+                    >
+                      {mediaIndex + 1}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => onRemoveMedia(index, mediaIndex)}
+                      className="absolute left-2 top-2 rounded-full p-1 transition hover:opacity-80"
+                      style={{ background: "rgba(0,0,0,0.6)", color: "#fff" }}
+                    >
+                      <FiX size={12} />
+                    </button>
+                  </div>
+
+                  <div className="truncate px-2 py-2 text-xs" style={{ color: "var(--gray-11)" }}>
+                    {file.name || medium.mediumId}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div
+            className="rounded-xl border border-dashed px-4 py-4 text-xs"
+            style={{
+              borderColor: "var(--gray-a6)",
+              background: "var(--gray-a2)",
+              color: "var(--gray-10)",
+            }}
+          >
+            لم يتم اختيار وسائط لهذا المتغير بعد.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -557,7 +658,7 @@ function productToForm(product) {
       ...v,
       _key: v.id ?? Date.now() + i,
       attributes: v.attributes || [],
-      media: v.media || [],
+      media: normalizeVariantMedia(v.media || []),
     })),
   };
 }
@@ -971,7 +1072,7 @@ function TagFormDialog({ open, onOpenChange, onSuccess, themeContainer }) {
 }
 
 // ── Product Form Dialog ───────────────────────────────────────────────────────
-function ProductFormDialog({ open, onOpenChange, product, onSuccess }) {
+function ProductFormDialog({ open, onOpenChange, product, onSuccess, storeId }) {
   const isEdit = !!product;
   const themeContainer = useThemeContainer();
   const [form, setForm] = useState(emptyForm);
@@ -984,6 +1085,8 @@ function ProductFormDialog({ open, onOpenChange, product, onSuccess }) {
   const [tagDialogOpen, setTagDialogOpen] = useState(false);
   const [brandDialogOpen, setBrandDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [activeVariantIndex, setActiveVariantIndex] = useState(null);
   const [productAttrIds, setProductAttrIds] = useState([]);
 
   const refreshAttributes = useCallback(() => {
@@ -1006,6 +1109,8 @@ function ProductFormDialog({ open, onOpenChange, product, onSuccess }) {
     if (open) {
       setForm(product ? productToForm(product) : emptyForm());
       setError("");
+      setMediaPickerOpen(false);
+      setActiveVariantIndex(null);
       // Derive which attribute IDs are used across all variants (for edit mode)
       if (product?.variants) {
         const ids = [...new Set(
@@ -1061,11 +1166,73 @@ function ProductFormDialog({ open, onOpenChange, product, onSuccess }) {
     });
   };
 
+  const openMediaPicker = (variantIndex) => {
+    setActiveVariantIndex(variantIndex);
+    setMediaPickerOpen(true);
+  };
+
+  const handleMediaPicked = (pickedFiles) => {
+    if (activeVariantIndex == null) {
+      return;
+    }
+
+    if (pickedFiles.length > 10) {
+      setError("الحد الأقصى لوسائط المتغير هو 10 ملفات");
+      return;
+    }
+
+    setForm((previous) => ({
+      ...previous,
+      variants: previous.variants.map((variant, index) =>
+        index !== activeVariantIndex
+          ? variant
+          : {
+              ...variant,
+              media: pickedFiles.map((file, order) => ({
+                mediumId: file.id,
+                sortOrder: order + 1,
+                mediumFile: file,
+              })),
+            }
+      ),
+    }));
+  };
+
+  const removeVariantMedia = (variantIndex, mediaIndex) => {
+    setForm((previous) => ({
+      ...previous,
+      variants: previous.variants.map((variant, index) => {
+        if (index !== variantIndex) {
+          return variant;
+        }
+
+        return {
+          ...variant,
+          media: normalizeVariantMedia(
+            (variant.media || []).filter((_, currentIndex) => currentIndex !== mediaIndex)
+          ),
+        };
+      }),
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSaving(true);
     try {
+      if (!storeId) {
+        throw new Error("لا يوجد متجر نشط");
+      }
+
+      const missingMediaIndex = form.variants.findIndex(
+        (variant) => !variant.media || variant.media.length === 0
+      );
+
+      if (missingMediaIndex !== -1) {
+        throw new Error(`أضف وسائط للمتغير ${missingMediaIndex + 1}`);
+      }
+
       const body = {
         name: form.name.trim(),
         slug: form.slug.trim(),
@@ -1088,13 +1255,16 @@ function ProductFormDialog({ open, onOpenChange, product, onSuccess }) {
               return entry?.optionId ? { attributeId: Number(attrId), optionId: Number(entry.optionId) } : null;
             })
             .filter(Boolean),
-          media: v.media || [],
+          media: normalizeVariantMedia(v.media || []).map((medium) => ({
+            mediumId: medium.mediumId,
+            sortOrder: medium.sortOrder,
+          })),
         })),
       };
       if (isEdit) {
-        await productsApi.update({ id: product.id, ...body });
+        await productsApi.update(storeId, { id: product.id, ...body });
       } else {
-        await productsApi.create(body);
+        await productsApi.create(storeId, body);
       }
       onSuccess?.();
       onOpenChange(false);
@@ -1367,6 +1537,8 @@ function ProductFormDialog({ open, onOpenChange, product, onSuccess }) {
                       canRemove={form.variants.length > 1}
                       attrOptions={attrOptions}
                       productAttrIds={productAttrIds}
+                      onOpenMediaPicker={openMediaPicker}
+                      onRemoveMedia={removeVariantMedia}
                     />
                   ))}
                 </div>
@@ -1422,6 +1594,24 @@ function ProductFormDialog({ open, onOpenChange, product, onSuccess }) {
       onOpenChange={setCategoryDialogOpen}
       themeContainer={themeContainer}
       onSuccess={handleCategoryCreated}
+    />
+    <MediaManagerPickerDialog
+      open={mediaPickerOpen}
+      onOpenChange={setMediaPickerOpen}
+      mode="store"
+      storeId={storeId}
+      title="اختيار وسائط المتغير"
+      selectionMode="multiple"
+      maxSelection={10}
+      confirmLabel="إضافة للمتغير"
+      initialSelection={
+        activeVariantIndex != null
+          ? (form.variants[activeVariantIndex]?.media || []).map(
+              (medium) => medium.mediumFile || { id: medium.mediumId, name: String(medium.mediumId) }
+            )
+          : []
+      }
+      onConfirm={handleMediaPicked}
     />
     </>
   );
@@ -1483,6 +1673,7 @@ function DeleteDialog({ open, onOpenChange, product, onConfirm, loading }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Products() {
+  const { selectedStoreId } = useAuth();
   const [products, setProducts] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
@@ -1516,10 +1707,19 @@ export default function Products() {
   }, []);
 
   const fetchProducts = useCallback(async () => {
+    if (!selectedStoreId) {
+      setProducts([]);
+      setTotalPages(1);
+      setTotalElements(0);
+      setFetchLoading(false);
+      setFetchError("");
+      return;
+    }
+
     setFetchLoading(true);
     setFetchError("");
     try {
-      const res = await productsApi.getAll({
+      const res = await productsApi.getAll(selectedStoreId, {
         page, size: 20,
         name: search,
         categoryId: filterCategoryId,
@@ -1537,7 +1737,7 @@ export default function Products() {
     } finally {
       setFetchLoading(false);
     }
-  }, [page, search, filterCategoryId, filterBrandId, filterIsActive]);
+  }, [filterBrandId, filterCategoryId, filterIsActive, page, search, selectedStoreId]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
@@ -1569,10 +1769,10 @@ export default function Products() {
   };
 
   const confirmDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || !selectedStoreId) return;
     setDeleteLoading(true);
     try {
-      await productsApi.delete(deleteTarget.id);
+      await productsApi.delete(selectedStoreId, deleteTarget.id);
       showToast("تم حذف المنتج بنجاح");
       setDeleteOpen(false);
       fetchProducts();
@@ -1584,9 +1784,14 @@ export default function Products() {
   };
 
   const handleToggle = async (product) => {
+    if (!selectedStoreId) {
+      showToast("لا يوجد متجر نشط", "error");
+      return;
+    }
+
     setRowLoading((p) => ({ ...p, [product.id]: true }));
     try {
-      await productsApi.update({
+      await productsApi.update(selectedStoreId, {
         id: product.id,
         name: product.name,
         slug: product.slug,
@@ -1611,6 +1816,27 @@ export default function Products() {
   };
 
   const defaultVariant = (product) => product.variants?.find((v) => v.isDefault) || product.variants?.[0];
+
+  if (!selectedStoreId) {
+    return (
+      <>
+        <StyleInjector />
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+        <div dir="rtl" className="p-3 sm:p-6">
+          <div
+            className="rounded-2xl border px-5 py-4 text-sm"
+            style={{
+              background: "var(--gray-1)",
+              borderColor: "var(--gray-a6)",
+              color: "var(--gray-11)",
+            }}
+          >
+            لا يوجد متجر نشط لهذا الحساب.
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -1889,6 +2115,7 @@ export default function Products() {
         open={formOpen}
         onOpenChange={setFormOpen}
         product={selectedProduct}
+        storeId={selectedStoreId}
         onSuccess={() => {
           showToast(selectedProduct ? "تم تحديث المنتج بنجاح" : "تم إضافة المنتج بنجاح");
           fetchProducts();

@@ -11,20 +11,31 @@ import {
   FiMoreVertical,
   FiEye,
   FiEdit,
-  FiCheckCircle,
-  FiXCircle,
   FiChevronLeft as FiArrowLeft,
   FiLoader,
 } from "react-icons/fi";
 import { shopsApi, mallsApi } from "./api";
+import { normalizePage } from "../../../api/accounts";
 import {
   SHOP_STATUSES,
+  SHOP_ADMIN_STATUSES,
   SHOP_STATUS_LABELS,
+  SHOP_ADMIN_STATUS_LABELS,
   SHOP_STATUS_COLORS,
+  SHOP_ADMIN_STATUS_COLORS,
   CATEGORY_LABELS,
 } from "./constants";
 import ShopDetailsDialog from "./ShopDetailsDialog";
 import ShopFormDialog from "./ShopFormDialog";
+
+function getShopLogoUrl(shop) {
+  return (
+    shop?.logoImage?.smallFileUrl ||
+    shop?.logoImage?.mediumFileUrl ||
+    shop?.logoImage?.originalFileUrl ||
+    ""
+  );
+}
 
 // ── Global Filter Styles ──────────────────────────────────────────────────────
 const GLOBAL_STYLES = `
@@ -198,6 +209,29 @@ function StatusBadge({ status }) {
   );
 }
 
+function AdminStatusBadge({ status }) {
+  const value = status || "NONE";
+  const s =
+    SHOP_ADMIN_STATUS_COLORS[value] || {
+      bg: "var(--gray-a3)",
+      fg: "var(--gray-11)",
+      dot: "var(--gray-9)",
+    };
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
+      style={{ background: s.bg, color: s.fg }}
+    >
+      <span
+        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+        style={{ background: s.dot }}
+      />
+      {SHOP_ADMIN_STATUS_LABELS[value] || value}
+    </span>
+  );
+}
+
 function Toast({ message, type = "success", onClose }) {
   useEffect(() => {
     const t = setTimeout(onClose, 3500);
@@ -224,8 +258,9 @@ function Toast({ message, type = "success", onClose }) {
 // ── Actions Menu ──────────────────────────────────────────────────────────────
 function ShopActionsMenu({ shop, loading, onView, onEdit, onChangeStatus }) {
   const themeContainer = useThemeContainer();
-  const isActive = shop?.status === "ACTIVE";
-  const otherStatuses = SHOP_STATUSES.filter((s) => s !== shop?.status);
+  const otherAdminStatuses = SHOP_ADMIN_STATUSES.filter(
+    (s) => s !== (shop?.adminStatus || "NONE")
+  );
 
   const menuStyle = {
     background: "var(--gray-1)",
@@ -274,15 +309,6 @@ function ShopActionsMenu({ shop, loading, onView, onEdit, onChangeStatus }) {
             style={{ height: 1, background: "var(--gray-a5)" }}
           />
 
-          <DDItem
-            icon={isActive ? <FiXCircle /> : <FiCheckCircle />}
-            onSelect={() =>
-              onChangeStatus(shop, isActive ? "INACTIVE" : "ACTIVE")
-            }
-          >
-            {isActive ? "تعطيل المتجر" : "تفعيل المتجر"}
-          </DDItem>
-
           <DropdownMenu.Sub>
             <DropdownMenu.SubTrigger
               className="flex items-center gap-2 w-full px-2 py-2 rounded-lg text-sm cursor-pointer select-none outline-none transition-colors hover:bg-black/5"
@@ -290,9 +316,9 @@ function ShopActionsMenu({ shop, loading, onView, onEdit, onChangeStatus }) {
             >
               <span
                 className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ background: SHOP_STATUS_COLORS[shop?.status]?.dot }}
+                style={{ background: SHOP_ADMIN_STATUS_COLORS[shop?.adminStatus || "NONE"]?.dot }}
               />
-              <span className="font-medium flex-1">تحويل الحالة</span>
+              <span className="font-medium flex-1">قرار الإدارة</span>
               <FiArrowLeft size={13} style={{ color: "var(--gray-10)" }} />
             </DropdownMenu.SubTrigger>
 
@@ -303,18 +329,18 @@ function ShopActionsMenu({ shop, loading, onView, onEdit, onChangeStatus }) {
                 className="z-[9999] min-w-[170px] rounded-xl p-2 outline-none"
                 style={menuStyle}
               >
-                {otherStatuses.map((s) => (
+                {otherAdminStatuses.map((s) => (
                   <DDItem
                     key={s}
                     icon={
                       <span
                         className="w-2 h-2 rounded-full"
-                        style={{ background: SHOP_STATUS_COLORS[s]?.dot }}
+                        style={{ background: SHOP_ADMIN_STATUS_COLORS[s]?.dot }}
                       />
                     }
                     onSelect={() => onChangeStatus(shop, s)}
                   >
-                    {SHOP_STATUS_LABELS[s]}
+                    {SHOP_ADMIN_STATUS_LABELS[s]}
                   </DDItem>
                 ))}
               </DropdownMenu.SubContent>
@@ -504,12 +530,11 @@ export default function ShopManagement() {
       };
 
       const res = await shopsApi.getAll(params);
-      const data = res?.data || res?.content || [];
-      const list = Array.isArray(data) ? data : data?.content || [];
+      const data = normalizePage(res);
 
-      setShops(list);
-      setTotalPages(data?.totalPages || 1);
-      setTotalElements(data?.totalElements || list.length);
+      setShops(data.content);
+      setTotalPages(data.totalPages || 1);
+      setTotalElements(data.totalElements || data.content.length);
     } catch (e) {
       setFetchError(e.message || "فشل في جلب البيانات");
       setShops([]);
@@ -537,12 +562,12 @@ export default function ShopManagement() {
     setPage(0);
   }, [search, mallIdFilter, statusFilter, categoryFilter, locationFilter]);
 
-  const handleChangeStatus = async (shop, status) => {
+  const handleChangeStatus = async (shop, adminStatus) => {
     setRowLoading((p) => ({ ...p, [shop.shopId]: true }));
 
     try {
-      await shopsApi.changeStatus(shop.shopId, status);
-      showToast(`تم تغيير حالة ${shop.name}`);
+      await shopsApi.changeAdminStatus(shop.shopId, adminStatus);
+      showToast(`تم تحديث قرار الإدارة للمتجر ${shop.name}`);
       fetchShops();
     } catch (e) {
       showToast(e.message, "error");
@@ -783,6 +808,7 @@ export default function ShopManagement() {
                   "الفئة",
                   "المالك",
                   "الحالة",
+                  "قرار الإدارة",
                   "الإجراءات",
                 ].map((h) => (
                   <th
@@ -798,7 +824,7 @@ export default function ShopManagement() {
             <tbody>
               {fetchLoading ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center">
+                  <td colSpan={7} className="py-16 text-center">
                     <div
                       className="flex items-center justify-center gap-2"
                       style={{ color: "var(--gray-10)" }}
@@ -810,7 +836,7 @@ export default function ShopManagement() {
               ) : shops.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="py-16 text-center text-sm"
                     style={{ color: "var(--gray-10)" }}
                   >
@@ -839,9 +865,9 @@ export default function ShopManagement() {
                             border: "1px solid var(--gray-a5)",
                           }}
                         >
-                          {shop.logoUrl ? (
+                          {getShopLogoUrl(shop) ? (
                             <img
-                              src={shop.logoUrl}
+                              src={getShopLogoUrl(shop)}
                               alt={shop.name}
                               className="h-full w-full object-cover"
                             />
@@ -913,6 +939,11 @@ export default function ShopManagement() {
                     {/* Status */}
                     <td className="px-5 py-4">
                       <StatusBadge status={shop.status} />
+                    </td>
+
+                    {/* Admin status */}
+                    <td className="px-5 py-4">
+                      <AdminStatusBadge status={shop.adminStatus} />
                     </td>
 
                     {/* Actions */}

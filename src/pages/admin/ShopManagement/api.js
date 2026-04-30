@@ -1,35 +1,27 @@
-const BASE_URL = "/accounts";
-
-async function apiFetch(path, options = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options,
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json?.message || json?.errorCodes?.[0] || "خطأ في الطلب");
-  return json;
-}
+import { accountsApi } from "../../../api/accounts";
 
 export const shopsApi = {
-  getAll: (params = {}) => {
-    const q = new URLSearchParams();
-    Object.entries(params).forEach(([k, v]) => { if (v !== "" && v != null) q.set(k, v); });
-    return apiFetch(`/api/shops?${q.toString()}`);
+  getAll: accountsApi.shops.page,
+  getList: accountsApi.shops.all,
+  getById: accountsApi.shops.byId,
+  create: accountsApi.shops.create,
+  update: accountsApi.shops.update,
+  delete: accountsApi.shops.delete,
+  setMaintenance: accountsApi.shops.setMaintenance,
+  block: accountsApi.shops.block,
+  unblock: accountsApi.shops.unblock,
+  changeAdminStatus: (id, adminStatus) => {
+    if (adminStatus === "MAINTENANCE") return accountsApi.shops.setMaintenance(id);
+    if (adminStatus === "BLOCKED") return accountsApi.shops.block(id);
+    return accountsApi.shops.unblock(id);
   },
-  getById:      (id)         => apiFetch(`/api/shops/${id}`),
-  create:       (body)       => apiFetch("/api/shops", { method: "POST", body: JSON.stringify(body) }),
-  update:       (body)       => apiFetch("/api/shops", { method: "PUT",  body: JSON.stringify(body) }),
-  changeStatus: (id, status) => apiFetch(`/api/shops/${id}/status?status=${status}`, { method: "PUT" }),
 };
 
 export const mallsApi = {
-  getList: () => apiFetch("/api/malls/all"),
+  getList: accountsApi.malls.all,
 };
 
 export const usersApi = {
-  getAll: (params = {}) => {
-    const q = new URLSearchParams();
-    Object.entries(params).forEach(([k, v]) => { if (v !== "" && v != null) q.set(k, v); });
-    return apiFetch(`/api/users?${q.toString()}`);
-  },
+  getAll: accountsApi.users.page,
+  getList: accountsApi.users.all,
 };

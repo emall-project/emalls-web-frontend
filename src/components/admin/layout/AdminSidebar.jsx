@@ -6,8 +6,13 @@ import {
   FiPackage,
   FiDollarSign,
   FiTag,
+  FiFolder,
+  FiClipboard,
+  FiMapPin,
+  FiShield,
   FiX,
 } from "react-icons/fi";
+import { useAuth } from "../../../auth/AuthContext";
 
 const baseLink =
   "flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition";
@@ -16,6 +21,7 @@ export function AdminSidebar({ open, onClose }) {
   const sidebarClass = open
     ? "translate-x-0"
     : "translate-x-full lg:translate-x-0";
+  const { fullName } = useAuth();
 
   return (
     <aside
@@ -56,8 +62,12 @@ export function AdminSidebar({ open, onClose }) {
         <AdminLink to="/admin" icon={<FiGrid />} label="لوحة التحكم" end />
         <AdminLink to="/admin/malls" icon={<FiShoppingBag />} label="إدارة المولات" />
         <AdminLink to="/admin/shops" icon={<FiShoppingBag />} label="إدارة المتاجر" />
+        <AdminLink to="/admin/shop-requests" icon={<FiClipboard />} label="طلبات المتاجر" />
         <AdminLink to="/admin/users" icon={<FiUsers />} label="إدارة المستخدمين" />
+        <AdminLink to="/admin/cities" icon={<FiMapPin />} label="إدارة المدن" />
+        <AdminLink to="/admin/roles" icon={<FiShield />} label="إدارة الأدوار" />
         <AdminLink to="/admin/ads" icon={<FiTag />} label="إدارة الإعلانات" />
+        <AdminLink to="/admin/files" icon={<FiFolder />} label="إدارة الملفات" />
         <AdminLink to="/admin/orders" icon={<FiPackage />} label="إدارة الطلبات" />
         <AdminLink to="/admin/finance" icon={<FiDollarSign />} label="الإدارة المالية" />
       </nav>
@@ -72,7 +82,7 @@ export function AdminSidebar({ open, onClose }) {
             AD
           </div>
           <div>
-            <div className="text-sm font-semibold">مستخدم إدمن</div>
+            <div className="text-sm font-semibold">{fullName || "مستخدم إدمن"}</div>
             <div className="text-xs" style={{ color: "var(--gray-11)" }}>
               مدير النظام
             </div>

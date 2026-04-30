@@ -4,10 +4,17 @@ import { GrFavorite } from "react-icons/gr";
 import { VscAccount } from "react-icons/vsc";
 import { useNavigate } from "react-router-dom";
 
+import { useAuth } from "../../../auth/AuthContext";
+import { getHomePathForRole } from "../../../auth/session";
 import HeaderSearch from "./HeaderSearch";
 
 function Header() {
   const navigate = useNavigate();
+  const { isAuthenticated, role } = useAuth();
+
+  const handleAccountClick = () => {
+    navigate(isAuthenticated ? getHomePathForRole(role) : "/login");
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-black/10">
@@ -76,7 +83,7 @@ function Header() {
             {/* Account/Login */}
             <button
               type="button"
-              onClick={() => navigate("/login")}
+              onClick={handleAccountClick}
               className="group flex flex-col items-center gap-1 transition-all duration-300"
             >
               <VscAccount className="text-black text-xl md:text-2xl transition-all duration-300 group-hover:scale-110" />

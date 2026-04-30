@@ -4,6 +4,7 @@ import { FiX, FiAlertCircle, FiPlus, FiTrash2, FiChevronDown, FiChevronUp } from
 import { mallsApi, citiesApi } from "./api";
 import { MALL_STATUSES, STATUS_LABELS } from "./constants";
 import { Spinner, CityDropdown } from "./ui";
+import { MediaUuidField, MediaUuidListField } from "../../../components/account/MediaUuidField";
 
 function useThemeContainer() {
   const [container, setContainer] = React.useState(null);
@@ -228,7 +229,10 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
   const [capacity,    setCapacity]    = useState("");
   const [status,      setStatus]      = useState("ACTIVE");
   const [description, setDescription] = useState("");
-  const [logoUrl,     setLogoUrl]     = useState("");
+  const [logoUuid,    setLogoUuid]    = useState("");
+  const [logoFile,    setLogoFile]    = useState(null);
+  const [mallImagesUuids, setMallImagesUuids] = useState([]);
+  const [mallImageFiles, setMallImageFiles] = useState([]);
   const [phone,       setPhone]       = useState("");
   const [email,       setEmail]       = useState("");
 
@@ -259,14 +263,19 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
       setCapacity(mall.capacity ?? "");
       setStatus(mall.status || "ACTIVE");
       setDescription(mall.description || "");
-      setLogoUrl(mall.logoUrl || "");
+      setLogoUuid(mall.logoUuid || "");
+      setLogoFile(mall.logoImage || null);
+      setMallImagesUuids(Array.isArray(mall.mallImagesUuids) ? mall.mallImagesUuids.map(String) : []);
+      setMallImageFiles(Array.isArray(mall.mallImages) ? mall.mallImages : []);
       setPhone(mall.contactInfo?.phone || "");
       setEmail(mall.contactInfo?.email || "");
       setServices(mall.services?.map(s => ({ name: s.name, description: s.description || "", isActive: s.isActive ?? true })) || []);
       setRestaurants(mall.restaurants?.map(r => ({ name: r.name, cuisineType: r.cuisineType || "", description: r.description || "", locationInMall: r.locationInMall || "", isActive: r.isActive ?? true })) || []);
     } else {
       setName(""); setCityId(""); setLocation(""); setCapacity("");
-      setStatus("ACTIVE"); setDescription(""); setLogoUrl("");
+      setStatus("ACTIVE"); setDescription(""); setLogoUuid("");
+      setLogoFile(null);
+      setMallImagesUuids([]); setMallImageFiles([]);
       setPhone(""); setEmail(""); setError("");
       setServices([]); setRestaurants([]);
     }
@@ -325,7 +334,8 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
         capacity:    capacity ? Number(capacity) : null,
         status,
         description: description.trim() || null,
-        logoUrl:     logoUrl.trim() || null,
+        logoUuid:    logoUuid.trim() || null,
+        mallImagesUuids,
         ...(Object.keys(contactInfo).length ? { contactInfo } : {}),
         ...(validServices.length    ? { services:     validServices }    : {}),
         ...(validRestaurants.length ? { restaurants:  validRestaurants } : {}),
@@ -434,14 +444,25 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
                   </select>
                 </div>
 
-                {/* Logo URL */}
-                <div>
-                  <label className={labelCls} style={{ color: "var(--gray-11)" }}>رابط الشعار (URL)</label>
-                  <input className={inputCls}
-                    style={{ ...inp, direction: "ltr", textAlign: "left" }}
-                    value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)}
-                    placeholder="https://..." />
-                </div>
+                <MediaUuidField
+                  label="الشعار"
+                  value={logoUuid}
+                  onChange={setLogoUuid}
+                  file={logoFile}
+                  onFileChange={setLogoFile}
+                  mode="admin"
+                  pickerTitle="اختيار شعار المول"
+                />
+
+                <MediaUuidListField
+                  label="صور المول"
+                  values={mallImagesUuids}
+                  onChange={setMallImagesUuids}
+                  files={mallImageFiles}
+                  onFilesChange={setMallImageFiles}
+                  mode="admin"
+                  pickerTitle="اختيار صور المول"
+                />
 
                 {/* Description */}
                 <div>

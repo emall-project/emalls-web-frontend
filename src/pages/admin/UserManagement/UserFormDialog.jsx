@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { FiX, FiEye, FiEyeOff } from "react-icons/fi";
+import { accountsApi, unwrapAccountPayload } from "../../../api/accounts";
+import { MediaUuidField } from "../../../components/account/MediaUuidField";
 import { usersApi } from "./api";
 import { ROLE_OPTIONS, ACTIVE_OPTIONS, getRoleId, getPhonePrefix, getPhoneNumber } from "./constants";
 import { useThemeContainer, Spinner, TextInput, CustomDropdown, dialogSurface } from "./ui";
@@ -13,9 +15,13 @@ const FIELD_MAP = {
   password:          "password",
   "phone":           "phoneNumber",
   "phone.number":    "phoneNumber",
-  "phone.countryCode": "phonePrefix",
+  "phone.prefix":    "phonePrefix",
   "role":            "roleId",
   "role.roleId":     "roleId",
+  gender:            "gender",
+  age:               "age",
+  nationalIdNumber:  "nationalIdNumber",
+  profilePictureUuid: "profilePictureUuid",
 };
 
 // Translate backend message codes to Arabic
@@ -50,22 +56,53 @@ export default function UserFormDialog({ open, onOpenChange, user, onSuccess, sh
   const [password,     setPassword]     = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isActive,     setIsActive]     = useState(true);
+  const [gender,       setGender]       = useState("NOT_SPECIFIED");
+  const [age,          setAge]          = useState("");
+  const [nationalIdNumber, setNationalIdNumber] = useState("");
+  const [profilePictureUuid, setProfilePictureUuid] = useState("");
+  const [profilePictureFile, setProfilePictureFile] = useState(null);
+  const [roleOptions, setRoleOptions] = useState(ROLE_OPTIONS);
+
+  useEffect(() => {
+    if (!open) return;
+    accountsApi.roles.all()
+      .then((response) => {
+        const roles = unwrapAccountPayload(response);
+        const list = Array.isArray(roles) ? roles : roles?.content || [];
+        if (list.length) {
+          setRoleOptions(
+            list.map((role) => ({
+              value: String(role.roleId),
+              label: role.name || role.code || `Role #${role.roleId}`,
+            }))
+          );
+        }
+      })
+      .catch(() => setRoleOptions(ROLE_OPTIONS));
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     setFieldErrors({});
     if (isEdit && user) {
       setFullName(user.fullName   || "");
-      setUserName(user.userName   || "");
+      setUserName(user.username || user.userName || "");
       setEmail(user.email         || "");
       setPhonePrefix(getPhonePrefix(user));
       setPhoneNumber(getPhoneNumber(user));
       setRoleId(getRoleId(user)   || "");
       setPassword("");
       setIsActive(!!user.isActive);
+      setGender(user.gender || "NOT_SPECIFIED");
+      setAge(user.age ?? "");
+      setNationalIdNumber(user.nationalIdNumber || "");
+      setProfilePictureUuid(user.profilePictureUuid || "");
+      setProfilePictureFile(user.profilePictureImage || user.profilePicture || null);
     } else {
       setFullName(""); setUserName(""); setEmail(""); setPhonePrefix("+970"); setPhoneNumber("");
       setRoleId(""); setPassword(""); setIsActive(true);
+      setGender("NOT_SPECIFIED"); setAge(""); setNationalIdNumber("");
+      setProfilePictureUuid(""); setProfilePictureFile(null);
     }
   }, [open, isEdit, user]);
 
@@ -78,6 +115,8 @@ export default function UserFormDialog({ open, onOpenChange, user, onSuccess, sh
     if (!isEdit && !email.trim())    { showToast("البريد الإلكتروني مطلوب",  "error"); return false; }
     if (!isEdit && !roleId)          { showToast("الدور مطلوب",              "error"); return false; }
     if (!isEdit && !password.trim()) { showToast("كلمة المرور مطلوبة",       "error"); return false; }
+    if (!age && age !== 0)           { showToast("العمر مطلوب",              "error"); return false; }
+    if (!gender)                     { showToast("الجنس مطلوب",              "error"); return false; }
     return true;
   };
 
@@ -90,15 +129,25 @@ export default function UserFormDialog({ open, onOpenChange, user, onSuccess, sh
         await usersApi.update({
           userId: user.userId,
           fullName: fullName.trim(),
+          email: email.trim() || null,
           phone: { prefix: phonePrefix.trim() || "+970", number: phoneNumber.trim() },
+          role: roleId ? { roleId: Number(roleId) } : undefined,
           isActive,
+          gender,
+          age: Number(age),
+          nationalIdNumber: nationalIdNumber.trim() || null,
+          profilePictureUuid: profilePictureUuid.trim() || null,
         });
       } else {
         await usersApi.create({
           fullName: fullName.trim(), username: userName.trim(), email: email.trim(),
-          phone: { countryCode: phonePrefix.trim() || "+970", number: phoneNumber.trim() },
+          phone: { prefix: phonePrefix.trim() || "+970", number: phoneNumber.trim() },
           role: { roleId: Number(roleId) },
           password: password.trim(),
+          gender,
+          age: Number(age),
+          nationalIdNumber: nationalIdNumber.trim() || null,
+          profilePictureUuid: profilePictureUuid.trim() || null,
         });
       }
       onOpenChange(false);
@@ -205,8 +254,47 @@ export default function UserFormDialog({ open, onOpenChange, user, onSuccess, sh
                 <label className="block text-xs font-semibold" style={{ color: "var(--gray-11)" }}>الدور {!isEdit && "*"}</label>
                 <CustomDropdown value={String(roleId)}
                   onChange={(v) => { setRoleId(v); clearErr("roleId"); }}
-                  options={ROLE_OPTIONS} placeholder="اختر الدور" />
+                  options={roleOptions} placeholder="اختر الدور" />
                 <FieldError msg={fieldErrors.roleId} />
+              </div>
+
+              {/* Gender */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold" style={{ color: "var(--gray-11)" }}>الجنس *</label>
+                <CustomDropdown
+                  value={gender}
+                  onChange={(v) => { setGender(v); clearErr("gender"); }}
+                  options={[
+                    { value: "MALE", label: "ذكر" },
+                    { value: "FEMALE", label: "أنثى" },
+                    { value: "NOT_SPECIFIED", label: "غير محدد" },
+                  ]}
+                  placeholder="اختر الجنس"
+                />
+                <FieldError msg={fieldErrors.gender} />
+              </div>
+
+              {/* Age */}
+              <div className="space-y-1.5">
+                <TextInput
+                  label="العمر *"
+                  value={age}
+                  onChange={(v) => { setAge(v); clearErr("age"); }}
+                  placeholder="مثال: 28"
+                  type="number"
+                />
+                <FieldError msg={fieldErrors.age} />
+              </div>
+
+              {/* National ID */}
+              <div className="space-y-1.5">
+                <TextInput
+                  label="رقم الهوية"
+                  value={nationalIdNumber}
+                  onChange={(v) => { setNationalIdNumber(v); clearErr("nationalIdNumber"); }}
+                  placeholder="اختياري"
+                />
+                <FieldError msg={fieldErrors.nationalIdNumber} />
               </div>
 
               {/* Active / Password */}
@@ -240,6 +328,19 @@ export default function UserFormDialog({ open, onOpenChange, user, onSuccess, sh
                   <FieldError msg={fieldErrors.password} />
                 </div>
               )}
+
+              <div className="sm:col-span-2">
+                <MediaUuidField
+                  label="صورة الملف الشخصي"
+                  value={profilePictureUuid}
+                  onChange={(uuid) => { setProfilePictureUuid(uuid); clearErr("profilePictureUuid"); }}
+                  file={profilePictureFile}
+                  onFileChange={setProfilePictureFile}
+                  mode="admin"
+                  pickerTitle="اختيار صورة المستخدم"
+                />
+                <FieldError msg={fieldErrors.profilePictureUuid} />
+              </div>
 
               {/* Edit note */}
               {isEdit && (

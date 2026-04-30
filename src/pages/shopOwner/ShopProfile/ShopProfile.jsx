@@ -3,8 +3,18 @@ import {
   FiEdit2, FiSave, FiX, FiRefreshCw, FiAlertCircle,
   FiMapPin, FiPhone, FiMail, FiFileText, FiShoppingBag, FiUser, FiLoader, FiChevronDown,
 } from "react-icons/fi";
+import { useAuth } from "../../../auth/AuthContext";
 import { shopProfileApi } from "./api";
 import { SHOP_STATUS_LABELS, SHOP_STATUS_COLORS, SHOP_STATUSES, CATEGORY_LABELS } from "./constants";
+
+function getShopLogoUrl(shop) {
+  return (
+    shop?.logoImage?.smallFileUrl ||
+    shop?.logoImage?.mediumFileUrl ||
+    shop?.logoImage?.originalFileUrl ||
+    ""
+  );
+}
 
 // ── StatusDropdown ─────────────────────────────────────────────────────────────
 function StatusDropdown({ value, onChange, options }) {
@@ -147,6 +157,7 @@ function EditInput({ label, icon, value, onChange, placeholder, multiline = fals
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function ShopProfile() {
+  const { selectedStoreId } = useAuth();
   const [shop,          setShop]          = useState(null);
   const [loading,       setLoading]       = useState(true);
   const [error,         setError]         = useState("");
@@ -160,9 +171,16 @@ export default function ShopProfile() {
   const showToast = useCallback((message, type = "success") => setToast({ message, type }), []);
 
   const fetchShop = useCallback(async () => {
+    if (!selectedStoreId) {
+      setShop(null);
+      setLoading(false);
+      setError("");
+      return;
+    }
+
     setLoading(true); setError("");
     try {
-      const res  = await shopProfileApi.get();
+      const res  = await shopProfileApi.get(selectedStoreId);
       const data = res.data;
       setShop(data);
       setForm({
@@ -175,7 +193,7 @@ export default function ShopProfile() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedStoreId]);
 
   useEffect(() => { fetchShop(); }, [fetchShop]);
 
@@ -212,10 +230,10 @@ export default function ShopProfile() {
 
 
   const handleStatusChange = async () => {
-    if (!newStatus) return;
+    if (!newStatus || !selectedStoreId) return;
     setStatusLoading(true);
     try {
-      await shopProfileApi.requestStatusChange(newStatus);
+      await shopProfileApi.requestStatusChange(selectedStoreId, newStatus);
       showToast("تم إرسال طلب تغيير الحالة بنجاح");
       setNewStatus("");
       fetchShop();
@@ -232,6 +250,18 @@ export default function ShopProfile() {
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       <div dir="rtl" className="space-y-6 p-3 sm:p-6">
+        {!selectedStoreId && (
+          <div
+            className="rounded-2xl border px-5 py-4 text-sm"
+            style={{
+              background: "var(--gray-1)",
+              borderColor: "var(--gray-a6)",
+              color: "var(--gray-11)",
+            }}
+          >
+            لا يوجد متجر نشط لهذا الحساب.
+          </div>
+        )}
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row-reverse justify-between items-start sm:items-center gap-4">
@@ -270,7 +300,7 @@ export default function ShopProfile() {
         </div>
 
         {/* Error */}
-        {error && (
+        {selectedStoreId && error && (
           <div className="rounded-2xl px-5 py-3 flex items-center justify-between gap-3"
             style={{ background: "var(--red-2)", border: "1px solid var(--red-6)" }}>
             <div className="flex items-center gap-2 text-sm" style={{ color: "var(--red-11)" }}>
@@ -281,11 +311,11 @@ export default function ShopProfile() {
           </div>
         )}
 
-        {loading && !shop ? (
+        {selectedStoreId && loading && !shop ? (
           <div className="flex items-center justify-center py-24 gap-3" style={{ color: "var(--gray-10)" }}>
             <Spinner size={24} /> جاري التحميل...
           </div>
-        ) : shop && (
+        ) : selectedStoreId && shop && (
           <>
             {/* Shop Identity Card */}
             <div className="rounded-2xl p-6" style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a7)" }}>
@@ -293,8 +323,8 @@ export default function ShopProfile() {
                 {/* Logo */}
                 <div className="h-20 w-20 rounded-2xl flex-shrink-0 overflow-hidden flex items-center justify-center text-3xl"
                   style={{ background: "var(--gray-a3)", border: "1px solid var(--gray-a6)" }}>
-                  {shop.logoUrl
-                    ? <img src={shop.logoUrl} alt={shop.name} className="h-full w-full object-cover" />
+                  {getShopLogoUrl(shop)
+                    ? <img src={getShopLogoUrl(shop)} alt={shop.name} className="h-full w-full object-cover" />
                     : "🏪"}
                 </div>
 

@@ -80,7 +80,7 @@ export function extractUsersResponse(res) {
 
   return {
     list,
-    totalPages:    data?.totalPages    ?? raw?.totalPages    ?? 1,
-    totalElements: data?.totalElements ?? raw?.totalElements ?? list.length,
+    totalPages:    data?.meta?.totalPages ?? raw?.meta?.totalPages ?? data?.totalPages    ?? raw?.totalPages    ?? 1,
+    totalElements: data?.meta?.totalItems ?? raw?.meta?.totalItems ?? data?.totalElements ?? raw?.totalElements ?? list.length,
   };
 }

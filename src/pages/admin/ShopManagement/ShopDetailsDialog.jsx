@@ -36,6 +36,15 @@ const CONTACT_META = {
   website:  { label: "الموقع الإلكتروني", icon: <FiGlobe size={15} /> },
 };
 
+function getShopLogoUrl(shop) {
+  return (
+    shop?.logoImage?.smallFileUrl ||
+    shop?.logoImage?.mediumFileUrl ||
+    shop?.logoImage?.originalFileUrl ||
+    ""
+  );
+}
+
 export default function ShopDetailsDialog({ open, onOpenChange, shop, onEdit }) {
   const themeContainer = useThemeContainer();
   const [detail, setDetail]   = useState(null);
@@ -95,8 +104,8 @@ export default function ShopDetailsDialog({ open, onOpenChange, shop, onEdit }) 
                 <div className="flex gap-4 items-start">
                   <div className="h-20 w-20 rounded-xl overflow-hidden flex-shrink-0"
                     style={{ background: "var(--gray-a3)", border: "1px solid var(--gray-a5)" }}>
-                    {s.logoUrl
-                      ? <img src={s.logoUrl} alt={s.name} className="h-full w-full object-cover" />
+                    {getShopLogoUrl(s)
+                      ? <img src={getShopLogoUrl(s)} alt={s.name} className="h-full w-full object-cover" />
                       : <div className="h-full w-full flex items-center justify-center text-2xl">🏪</div>}
                   </div>
                   <div className="flex-1 min-w-0">

@@ -1,4 +1,4 @@
-const BASE = "/campaigns";
+const BASE = ":8082";
 const SHOP_ID = 1;
 
 async function apiFetch(path, options = {}) {

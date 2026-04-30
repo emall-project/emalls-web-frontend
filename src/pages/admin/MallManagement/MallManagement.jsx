@@ -5,11 +5,21 @@ import {
 } from "react-icons/fi";
 
 import { mallsApi }            from "./api";
+import { normalizePage }       from "../../../api/accounts";
 import { MALL_STATUSES, STATUS_LABELS, STATUS_COLORS } from "./constants";
 import { StyleInjector, Toast, StatusBadge, CustomDropdown, FilterInput, Spinner } from "./ui";
 import AdminActionsMenu         from "./AdminActionsMenu";
 import MallDetailsDialog        from "./MallDetailsDialog";
 import MallFormDialog           from "./MallFormDialog";
+
+function getMallLogoUrl(mall) {
+  return (
+    mall?.logoImage?.smallFileUrl ||
+    mall?.logoImage?.mediumFileUrl ||
+    mall?.logoImage?.originalFileUrl ||
+    ""
+  );
+}
 
 export default function MallManagement() {
   const [malls,         setMalls]         = useState([]);
@@ -47,11 +57,10 @@ export default function MallManagement() {
         ...(serviceNameFilter ? { "service-name": serviceNameFilter } : {}),
       };
       const res  = await mallsApi.getAll(params);
-      const data = res?.data || res?.content || [];
-      const list = Array.isArray(data) ? data : (data?.content || []);
-      setMalls(list);
-      setTotalPages(data?.totalPages || 1);
-      setTotalElements(data?.totalElements || list.length);
+      const data = normalizePage(res);
+      setMalls(data.content);
+      setTotalPages(data.totalPages || 1);
+      setTotalElements(data.totalElements || data.content.length);
     } catch (e) {
       setFetchError(e.message || "فشل في جلب البيانات");
       setMalls([]);
@@ -222,8 +231,8 @@ export default function MallManagement() {
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl overflow-hidden flex-shrink-0"
                           style={{ background: "var(--gray-a3)", border: "1px solid var(--gray-a5)" }}>
-                          {mall.logoUrl
-                            ? <img src={mall.logoUrl} alt={mall.name} className="h-full w-full object-cover" />
+                          {getMallLogoUrl(mall)
+                            ? <img src={getMallLogoUrl(mall)} alt={mall.name} className="h-full w-full object-cover" />
                             : <div className="h-full w-full flex items-center justify-center text-lg">🏬</div>}
                         </div>
                         <div>

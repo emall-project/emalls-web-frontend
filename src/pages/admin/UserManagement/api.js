@@ -1,26 +1,10 @@
-const BASE_URL = "/accounts";
-
-export async function apiFetch(path, options = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options,
-  });
-  const json = await res.json();
-  if (!res.ok) {
-    const err = new Error(json?.message || "خطأ في الطلب");
-    err.errorCodes = json?.errorCodes || [];
-    throw err;
-  }
-  return json;
-}
+import { accountsApi } from "../../../api/accounts";
 
 export const usersApi = {
-  getAll:  (params = {}) => {
-    const q = new URLSearchParams();
-    Object.entries(params).forEach(([k, v]) => { if (v !== "" && v != null) q.set(k, v); });
-    return apiFetch(`/api/users?${q.toString()}`);
-  },
-  getById: (id)   => apiFetch(`/api/users/${id}`),
-  create:  (body) => apiFetch("/api/users", { method: "POST", body: JSON.stringify(body) }),
-  update:  (body) => apiFetch("/api/users", { method: "PUT",  body: JSON.stringify(body) }),
+  getAll: accountsApi.users.page,
+  getById: accountsApi.users.byId,
+  create: accountsApi.users.create,
+  update: accountsApi.users.update,
+  activate: accountsApi.users.activate,
+  deactivate: accountsApi.users.deactivate,
 };

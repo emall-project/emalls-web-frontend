@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { FiX, FiAlertCircle, FiChevronDown, FiCheck, FiSearch } from "react-icons/fi";
+import { MediaUuidField, MediaUuidListField } from "../../../components/account/MediaUuidField";
 import { shopsApi, mallsApi, usersApi } from "./api";
 import { SHOP_STATUSES, SHOP_STATUS_LABELS, SHOP_CATEGORIES, CATEGORY_LABELS } from "./constants";
 
@@ -167,7 +168,12 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
   const [location,    setLocation]    = useState("");
   const [status,      setStatus]      = useState("ACTIVE");
   const [description, setDescription] = useState("");
-  const [logoUrl,     setLogoUrl]     = useState("");
+  const [logoUuid,    setLogoUuid]    = useState("");
+  const [logoFile,    setLogoFile]    = useState(null);
+  const [licenseImageUuid, setLicenseImageUuid] = useState("");
+  const [licenseImageFile, setLicenseImageFile] = useState(null);
+  const [shopPhotosUuids, setShopPhotosUuids] = useState([]);
+  const [shopPhotoFiles, setShopPhotoFiles] = useState([]);
   const [phone,       setPhone]       = useState("");
   const [email,       setEmail]       = useState("");
 
@@ -202,11 +208,18 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
       setName(shop.name || ""); setMallId(String(shop.mall?.mallId || ""));
       setOwnerId(String(shop.owner?.userId || "")); setCategory(shop.category || "");
       setLocation(shop.location || ""); setStatus(shop.status || "ACTIVE");
-      setDescription(shop.description || ""); setLogoUrl(shop.logoUrl || "");
+      setDescription(shop.description || ""); setLogoUuid(shop.logoUuid || "");
+      setLogoFile(shop.logoImage || null);
+      setLicenseImageUuid(shop.licenseImageUuid || "");
+      setLicenseImageFile(shop.licenseImage || null);
+      setShopPhotosUuids(Array.isArray(shop.shopPhotosUuids) ? shop.shopPhotosUuids.map(String) : []);
+      setShopPhotoFiles(Array.isArray(shop.shopPhotos) ? shop.shopPhotos : []);
       setPhone(shop.contactInfo?.phone || ""); setEmail(shop.contactInfo?.email || "");
     } else {
       setName(""); setMallId(""); setOwnerId(""); setCategory(""); setLocation("");
-      setStatus("ACTIVE"); setDescription(""); setLogoUrl(""); setPhone(""); setEmail(""); setError("");
+      setStatus("ACTIVE"); setDescription(""); setLogoUuid(""); setLogoFile(null);
+      setLicenseImageUuid(""); setLicenseImageFile(null); setShopPhotosUuids([]); setShopPhotoFiles([]);
+      setPhone(""); setEmail(""); setError("");
     }
   }, [open, isEdit, shop]);
 
@@ -216,6 +229,16 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
     if (!name.trim())        { setError("اسم المتجر مطلوب");  return scrollTop(); }
     if (!isEdit && !mallId)  { setError("يجب اختيار المول");  return scrollTop(); }
     if (!isEdit && !ownerId) { setError("يجب اختيار المالك"); return scrollTop(); }
+    if (!category)           { setError("فئة المتجر مطلوبة"); return scrollTop(); }
+    if (!location.trim())    { setError("موقع المتجر مطلوب"); return scrollTop(); }
+    if (!isEdit && !licenseImageUuid.trim()) {
+      setError("صورة الرخصة مطلوبة");
+      return scrollTop();
+    }
+    if (!isEdit && shopPhotosUuids.length === 0) {
+      setError("يجب اختيار صورة واحدة على الأقل للمتجر");
+      return scrollTop();
+    }
 
     setError(""); setLoading(true);
     try {
@@ -225,7 +248,10 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
 
       const body = {
         name: name.trim(), location: location.trim() || null,
-        description: description.trim() || null, logoUrl: logoUrl.trim() || null,
+        description: description.trim() || null,
+        logoUuid: logoUuid.trim() || null,
+        licenseImageUuid: licenseImageUuid.trim() || null,
+        shopPhotosUuids,
         status, ...(category ? { category } : {}),
         ...(Object.keys(contactInfo).length ? { contactInfo } : {}),
       };
@@ -350,12 +376,37 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
               </div>
             </div>
 
-            {/* Logo URL */}
-            <div>
-              <label className={labelCls} style={{ color: "var(--gray-11)" }}>رابط الشعار (URL)</label>
-              <input className={inputCls} style={{ ...inp, direction: "ltr", textAlign: "left" }}
-                value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://..." />
-            </div>
+            <MediaUuidField
+              label="شعار المتجر"
+              value={logoUuid}
+              onChange={setLogoUuid}
+              file={logoFile}
+              onFileChange={setLogoFile}
+              mode="admin"
+              pickerTitle="اختيار شعار المتجر"
+            />
+
+            <MediaUuidField
+              label="صورة الرخصة"
+              required={!isEdit}
+              value={licenseImageUuid}
+              onChange={setLicenseImageUuid}
+              file={licenseImageFile}
+              onFileChange={setLicenseImageFile}
+              mode="admin"
+              pickerTitle="اختيار صورة الرخصة"
+            />
+
+            <MediaUuidListField
+              label="صور المتجر"
+              required={!isEdit}
+              values={shopPhotosUuids}
+              onChange={setShopPhotosUuids}
+              files={shopPhotoFiles}
+              onFilesChange={setShopPhotoFiles}
+              mode="admin"
+              pickerTitle="اختيار صور المتجر"
+            />
 
             {/* Description */}
             <div>

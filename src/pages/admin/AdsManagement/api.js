@@ -1,17 +1,9 @@
+import { requestJson } from "../../../utils/http";
+
 const BASE_URL = "/campaigns";
 
 export async function apiFetch(path, options = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options,
-  });
-  const json = await res.json();
-  if (!res.ok) {
-    const err = new Error(json?.message || "خطأ في الطلب");
-    err.errorCodes = json?.errorCodes || [];
-    throw err;
-  }
-  return json;
+  return requestJson(`${BASE_URL}${path}`, options);
 }
 
 // ── Ad Templates ──────────────────────────────────────────────────────────────

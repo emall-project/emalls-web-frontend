@@ -4,6 +4,7 @@ import { FiX, FiMapPin, FiPhone, FiMail, FiGlobe, FiHash, FiEdit2 } from "react-
 import { FaFacebook, FaInstagram, FaTwitter } from "react-icons/fa";
 import { mallsApi } from "./api";
 import { StatusBadge, Spinner } from "./ui";
+import { MallResourcesPanel } from "./MallResourcesPanel";
 
 function useThemeContainer() {
   const [container, setContainer] = React.useState(null);
@@ -29,6 +30,15 @@ const CONTACT_META = {
   instagram:{ label: "انستغرام",          icon: <FaInstagram size={16} /> },
   twitter:  { label: "تويتر",             icon: <FaTwitter size={16} /> },
 };
+
+function getMallLogoUrl(mall) {
+  return (
+    mall?.logoImage?.smallFileUrl ||
+    mall?.logoImage?.mediumFileUrl ||
+    mall?.logoImage?.originalFileUrl ||
+    ""
+  );
+}
 
 function StatPill({ label, value }) {
   return (
@@ -96,8 +106,8 @@ export default function MallDetailsDialog({ open, onOpenChange, mall, onEdit }) 
                 <div className="flex gap-4 items-start">
                   <div className="h-[90px] w-[90px] rounded-xl overflow-hidden flex-shrink-0"
                     style={{ background: "var(--gray-a3)", border: "1px solid var(--gray-a5)" }}>
-                    {m.logoUrl
-                      ? <img src={m.logoUrl} alt={m.name} className="h-full w-full object-cover" />
+                    {getMallLogoUrl(m)
+                      ? <img src={getMallLogoUrl(m)} alt={m.name} className="h-full w-full object-cover" />
                       : <div className="h-full w-full flex items-center justify-center text-2xl">🏬</div>}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -209,6 +219,8 @@ export default function MallDetailsDialog({ open, onOpenChange, mall, onEdit }) 
                     )}
                   </div>
                 )}
+
+                <MallResourcesPanel mallId={m.mallId} />
               </div>
             )}
           </div>

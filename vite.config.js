@@ -10,27 +10,27 @@ export default defineConfig({
     allowedHosts: ['e-mall.store'],
     proxy: {
       '/accounts': {
-        target: 'https://api.e-mall.store',
+        target: 'http://localhost',
         changeOrigin: true,
         secure: false,
       },
       '/catalog': {
-        target: 'https://api.e-mall.store',
+        target: 'http://localhost',
         changeOrigin: true,
         secure: false,
       },
       '/campaigns': {
-        target: 'https://api.e-mall.store',
+        target: 'http://localhost',
         changeOrigin: true,
         secure: false,
       },
       '/order-hub': {
-        target: 'https://api.e-mall.store',
+        target: 'http://localhost',
         changeOrigin: true,
         secure: false,
       },
       '/media-manager': {
-        target: 'https://api.e-mall.store',
+        target: 'http://localhost',
         changeOrigin: true,
         secure: false,
       },

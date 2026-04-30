@@ -8,7 +8,7 @@ import {
 import { usersApi } from "./api";
 import {
   ROLE_OPTIONS, ACTIVE_OPTIONS,
-  getErrorMessage, buildUpdatePayload, extractUsersResponse,
+  getErrorMessage, extractUsersResponse,
   formatPhone, getRoleLabel,
 } from "./constants";
 import {
@@ -122,7 +122,11 @@ export default function UserManagement() {
   const handleToggleActive = async (user, nextActive) => {
     setRowLoading((p) => ({ ...p, [user.userId]: true }));
     try {
-      await usersApi.update(buildUpdatePayload(user, { isActive: nextActive }));
+      if (nextActive) {
+        await usersApi.activate(user.userId);
+      } else {
+        await usersApi.deactivate(user.userId);
+      }
       showToast(nextActive ? `تم تفعيل ${user.fullName}` : `تم تعطيل ${user.fullName}`);
       fetchUsers();
     } catch (error) { showToast(getErrorMessage(error), "error"); }
