@@ -8,6 +8,9 @@ import { RedirectAuthenticated, RequireAuth } from "./components/auth/RequireAut
 import HomePage from "./pages/customer/HomePage.jsx";
 import MallPage from "./pages/customer/MallPage.jsx";
 import SearchPage from "./pages/customer/SearchPage.jsx";
+import StorePage from "./pages/customer/StorePage.jsx";
+import ProductDetailsPage from "./pages/customer/ProductDetailsPage.jsx";
+import FavoritesPage from "./pages/customer/FavoritesPage.jsx";
 import LoginPage from "./pages/auth/LoginPage.jsx";
 import SignupPage from "./pages/customer/SignupPage.jsx";
 import CustomerAccountPage from "./pages/customer/CustomerAccountPage.jsx";
@@ -23,6 +26,10 @@ import AdminFileManager from "./pages/admin/FileManager/FileManager.jsx";
 import ShopOwnerRequests from "./pages/admin/ShopOwnerRequests/ShopOwnerRequests.jsx";
 import CityManagement from "./pages/admin/CityManagement/CityManagement.jsx";
 import RoleManagement from "./pages/admin/RoleManagement/RoleManagement.jsx";
+import CatalogOverview from "./pages/admin/Catalog/CatalogOverview.jsx";
+import CatalogMetadataPage from "./pages/admin/Catalog/CatalogMetadataPage.jsx";
+import CatalogProductsPage from "./pages/admin/Catalog/CatalogProductsPage.jsx";
+import CatalogCommentsPage from "./pages/admin/Catalog/CatalogCommentsPage.jsx";
 
 import { ShopOwnerLayout } from "./components/shopOwner/layout/ShopOwnerLayout";
 import ShopOwnerDashboard from "./pages/shopOwner/ShopOwnerDashboard";
@@ -32,10 +39,6 @@ import ComingSoon from "./pages/shopOwner/ComingSoon";
 import Ads from "./pages/shopOwner/Ads/Ads";
 import ShopOwnerFileManager from "./pages/shopOwner/FileManager/FileManager.jsx";
 import ShopRequests from "./pages/shopOwner/ShopRequests/ShopRequests.jsx";
-
-function StorePage() {
-  return <div style={{ padding: 16 }}>Store Page</div>;
-}
 
 export default function App() {
   const [appearance, setAppearance] = useState("light"); // "light" | "dark"
@@ -61,6 +64,16 @@ export default function App() {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/malls/:mallId" element={<MallPage />} />
             <Route path="/stores/:storeId" element={<StorePage />} />
+            <Route path="/products/slug/:slug" element={<ProductDetailsPage />} />
+            <Route path="/products/:productId" element={<ProductDetailsPage />} />
+            <Route
+              path="/favorites"
+              element={(
+                <RequireAuth roles={[ROLE_CUSTOMER]}>
+                  <FavoritesPage />
+                </RequireAuth>
+              )}
+            />
             <Route
               path="/login"
               element={
@@ -96,6 +109,13 @@ export default function App() {
               <Route path="shop-requests" element={<ShopOwnerRequests />} />
               <Route path="cities" element={<CityManagement />} />
               <Route path="roles" element={<RoleManagement />} />
+              <Route path="catalog" element={<CatalogOverview />} />
+              <Route path="catalog/categories" element={<CatalogMetadataPage type="categories" />} />
+              <Route path="catalog/brands" element={<CatalogMetadataPage type="brands" />} />
+              <Route path="catalog/attributes" element={<CatalogMetadataPage type="attributes" />} />
+              <Route path="catalog/tags" element={<CatalogMetadataPage type="tags" />} />
+              <Route path="catalog/products" element={<CatalogProductsPage />} />
+              <Route path="catalog/comments" element={<CatalogCommentsPage />} />
               <Route path="orders" element={<ShopManagement />} />
               <Route path="ads" element={<AdsManagement />} />
               <Route path="files" element={<AdminFileManager />} />

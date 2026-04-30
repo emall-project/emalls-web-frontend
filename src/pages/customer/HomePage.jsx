@@ -1,53 +1,211 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Header from "../../components/customer/HomePageComponents/Header";
-import { normalizeCategories } from "../../utils/tmpCategories";
-import rawMalls from "../../assets/malls.json";
-import rawStores from "../../assets/stores.json";
-import rawCategories from "../../assets/categories.json";
-import rawProducts from "../../assets/products.json";
 import CategoryBar from "../../components/customer/HomePageComponents/CategoryBar";
-import { normalizeMalls, normalizeStores } from "../../utils/tmpMallsAndStores";
 import AdvSection from "../../components/customer/HomePageComponents/AdvSection";
 import CategoriesBanner from "../../components/customer/HomePageComponents/CategoriesBanner";
 import ProductCard from "../../components/customer/HomePageComponents/ProductCard";
 import SectionHeader from "../../components/customer/HomePageComponents/SectionHeader";
-import { normalizeProducts, isDiscount } from "../../utils/tmpProducts";
 import ProductsRow from "../../components/customer/HomePageComponents/ProductsRow";
 import Footer from "../../components/customer/HomePageComponents/Footer";
+import { catalogApi, normalizeCatalogPage, unwrapCatalogPayload } from "../../api/catalog";
+import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
+import { campaignsApi, unwrapCampaignPayload } from "../../api/campaigns";
+import { hasProductDiscount, toProductCard } from "../../utils/catalogProducts";
+import {
+  mapAccountMall,
+  mapAccountShop,
+  mapCatalogCategory,
+  mapDisplayedAd,
+} from "../../utils/customerBackendMappers";
 
-const imgsUrl = [
-  { id: 1, image: "/video.gif", alt: "adv1" },
-  {
-    id: 2,
-    image: "https://template.canva.com/EAFdkOY1eMU/1/0/1600w-ewRm6zuOTts.jpg",
-    alt: "adv2",
-  },
-  {
-    id: 3,
-    image: "https://template.canva.com/EAFygIBpY9A/1/0/1280w-OJGt1T4cr94.jpg",
-    alt: "adv3",
-  },
-];
+function asBackendId(value) {
+  return value == null || value === "" ? null : Number(value);
+}
+
+function HeroFallback({ loading, error }) {
+  return (
+    <section
+      className="relative grid w-full place-items-center bg-neutral-50 text-center"
+      style={{
+        height:
+          "calc(100svh - var(--app-header-h, 72px) - var(--app-catbar-h, 56px))",
+      }}
+    >
+      <div className="px-6">
+        <p className="text-xs font-light tracking-[0.35em] text-black/40 uppercase">
+          سوقنا
+        </p>
+        <h1 className="mt-3 text-2xl font-light tracking-wide text-black md:text-4xl">
+          {loading ? "جاري تحميل العروض..." : "لا توجد عروض معروضة حالياً"}
+        </h1>
+        {error ? (
+          <p className="mt-3 text-sm font-light text-black/50">
+            تعذر تحميل عروض الصفحة الرئيسية من الخادم.
+          </p>
+        ) : null}
+      </div>
+    </section>
+  );
+}
 
 function HomePage() {
-  const categories = useMemo(() => normalizeCategories(rawCategories), []);
-  const malls = useMemo(() => normalizeMalls(rawMalls), []);
-  const stores = useMemo(() => normalizeStores(rawStores), []);
-  const products = useMemo(() => normalizeProducts(rawProducts), []);
-
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedMallId, setSelectedMallId] = useState(null);
   const [selectedStoreId, setSelectedStoreId] = useState(null);
 
-  const deals = useMemo(() => products.filter(isDiscount).slice(0, 3), [products]);
+  const [categories, setCategories] = useState([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [categoriesError, setCategoriesError] = useState("");
 
-  const featured = useMemo(
-    () => products.filter((p) => (p.status || "").includes("وصل حديثاً")).slice(0, 3),
+  const [malls, setMalls] = useState([]);
+  const [stores, setStores] = useState([]);
+  const [mallStoreLoading, setMallStoreLoading] = useState(false);
+  const [mallStoreError, setMallStoreError] = useState("");
+
+  const [heroSlides, setHeroSlides] = useState([]);
+  const [adsLoading, setAdsLoading] = useState(false);
+  const [adsError, setAdsError] = useState("");
+
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [productsError, setProductsError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setCategoriesLoading(true);
+    setCategoriesError("");
+
+    catalogApi.categories.all({ isActive: true })
+      .then((response) => {
+        if (cancelled) return;
+        setCategories((unwrapCatalogPayload(response) || []).map(mapCatalogCategory));
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCategories([]);
+          setCategoriesError("تعذر تحميل التصنيفات.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setCategoriesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setMallStoreLoading(true);
+    setMallStoreError("");
+
+    Promise.allSettled([
+      accountsApi.malls.byStatus("ACTIVE"),
+      accountsApi.shops.all({ status: "ACTIVE" }),
+    ])
+      .then(([mallsResult, shopsResult]) => {
+        if (cancelled) return;
+        setMalls(
+          mallsResult.status === "fulfilled"
+            ? (unwrapAccountPayload(mallsResult.value) || []).map(mapAccountMall)
+            : []
+        );
+        setStores(
+          shopsResult.status === "fulfilled"
+            ? (unwrapAccountPayload(shopsResult.value) || []).map(mapAccountShop)
+            : []
+        );
+
+        if (mallsResult.status === "rejected" || shopsResult.status === "rejected") {
+          setMallStoreError("تعذر تحميل المولات والمتاجر.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setMallStoreLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAdsLoading(true);
+    setAdsError("");
+
+    campaignsApi.ads.displayed()
+      .then((response) => {
+        if (cancelled) return;
+        setHeroSlides(
+          (unwrapCampaignPayload(response) || [])
+            .map(mapDisplayedAd)
+            .filter(Boolean)
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHeroSlides([]);
+          setAdsError("تعذر تحميل العروض.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAdsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const filter = {};
+    const categoryId = asBackendId(selectedCategoryId);
+    const mallId = asBackendId(selectedMallId);
+    const storeId = asBackendId(selectedStoreId);
+
+    if (categoryId) filter.categoryId = categoryId;
+    if (storeId) {
+      filter.storeId = storeId;
+    } else if (mallId) {
+      filter.mallId = mallId;
+    }
+
+    setProductsLoading(true);
+    setProductsError("");
+
+    catalogApi.products.publicPage(filter, { page: 0, size: 30 })
+      .then((response) => {
+        if (!cancelled) {
+          setProducts(normalizeCatalogPage(response).content.map(toProductCard));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setProducts([]);
+          setProductsError("تعذر تحميل المنتجات.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setProductsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCategoryId, selectedMallId, selectedStoreId]);
+
+  const deals = useMemo(
+    () => products.filter((product) => hasProductDiscount(product)).slice(0, 5),
     [products]
   );
 
+  const featured = useMemo(() => products.slice(0, 5), [products]);
+
   const bestSellers = useMemo(() => products.slice(0, 10), [products]);
-  const forYou = useMemo(() => products.slice(10, 20), [products]);
+  const forYou = useMemo(() => products.slice(5, 15), [products]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -65,11 +223,30 @@ function HomePage() {
         onSelectStore={setSelectedStoreId}
       />
 
+      {categoriesError || mallStoreError ? (
+        <div className="border-b border-black/5 bg-white px-6 py-3 text-center text-sm font-light text-black/50">
+          {categoriesError || mallStoreError}
+        </div>
+      ) : mallStoreLoading && !malls.length && !stores.length ? (
+        <div className="border-b border-black/5 bg-white px-6 py-3 text-center text-sm font-light text-black/40">
+          جاري تحميل المولات والمتاجر...
+        </div>
+      ) : null}
+
       {/* Hero Section */}
-      <AdvSection imgsUrl={imgsUrl} intervalMs={5000} page="home" />
+      {heroSlides.length ? (
+        <AdvSection imgsUrl={heroSlides} intervalMs={5000} page="home" />
+      ) : (
+        <HeroFallback loading={adsLoading} error={adsError} />
+      )}
 
       {/* Categories Banner */}
       <CategoriesBanner categories={categories} onSelectCategory={setSelectedCategoryId} />
+      {!categories.length && categoriesLoading ? (
+        <div className="px-6 py-8 text-center text-sm font-light text-black/50">
+          جاري تحميل التصنيفات...
+        </div>
+      ) : null}
 
       {/* Featured */}
       <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 py-8 sm:py-10 md:py-14">
@@ -79,6 +256,14 @@ function HomePage() {
             <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
           ))}
         </div>
+        {!featured.length && productsLoading ? (
+          <div className="mt-6 text-sm text-black/50">جاري تحميل المنتجات...</div>
+        ) : null}
+        {!featured.length && !productsLoading ? (
+          <div className="mt-6 text-sm text-black/50">
+            {productsError || "لا توجد منتجات متاحة حالياً."}
+          </div>
+        ) : null}
       </section>
 
       {/* Deals */}
@@ -135,6 +320,16 @@ function HomePage() {
                 <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
               ))}
             </div>
+            {!deals.length && productsLoading ? (
+              <div className="py-8 text-center text-sm font-light text-black/50">
+                جاري تحميل العروض...
+              </div>
+            ) : null}
+            {!deals.length && !productsLoading ? (
+              <div className="py-8 text-center text-sm font-light text-black/50">
+                لا توجد عروض متاحة حالياً.
+              </div>
+            ) : null}
           </div>
         </div>
       </section>

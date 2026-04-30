@@ -186,7 +186,7 @@ function AdRequestFormDialog({ open, onOpenChange, template, request, onSuccess 
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs" style={{ color: "var(--blue-10)" }}>
                     <span>الموقع: <strong>{tpl.position}</strong></span>
                     <span>نسبة الصورة: <strong>{tpl.imageRatio}</strong></span>
-                    <span>السعر: <strong>{tpl.price} ₪</strong></span>
+                    <span>السعر: <strong>{tpl.pricePerHour} ₪</strong></span>
                     <span>من {tpl.startDate} إلى {tpl.endDate}</span>
                   </div>
                 </div>
@@ -323,7 +323,7 @@ function PayDialog({ open, onOpenChange, request, onSuccess }) {
                 </div>
                 <div className="flex justify-between">
                   <span style={{ color: "var(--gray-10)" }}>المبلغ</span>
-                  <span className="font-bold" style={{ color: "var(--green-11)" }}>{request.template?.price} ₪</span>
+                  <span className="font-bold" style={{ color: "var(--green-11)" }}>{request.template?.pricePerHour} ₪</span>
                 </div>
                 <div className="flex justify-between">
                   <span style={{ color: "var(--gray-10)" }}>الفترة</span>
@@ -469,7 +469,7 @@ export default function Ads() {
                     <td className="px-4 py-3 text-xs font-medium" style={{ color: "var(--gray-11)" }}>{t.position}</td>
                     <td className="px-4 py-3 text-xs" style={{ color: "var(--gray-11)" }}>{t.imageRatio}</td>
                     <td className="px-4 py-3">
-                      <span className="font-bold" style={{ color: "var(--green-11)" }}>{t.price} ₪</span>
+                      <span className="font-bold" style={{ color: "var(--green-11)" }}>{t.pricePerHour} ₪</span>
                     </td>
                     <td className="px-4 py-3 text-xs" style={{ color: "var(--gray-11)" }}>
                       {t.startDate} → {t.endDate}

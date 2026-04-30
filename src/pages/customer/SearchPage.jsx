@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   IoArrowForward,
@@ -13,6 +13,9 @@ import rawStores from "../../assets/stores.json";
 import rawProducts from "../../assets/products.json";
 
 import { buildSearchIndex, searchInIndex } from "../../utils/searchUtils";
+import { catalogApi, normalizeCatalogPage } from "../../api/catalog";
+import { toProductCard } from "../../utils/catalogProducts";
+import CatalogFilters, { buildCatalogFilterPayload, hasCatalogFilters } from "../../components/customer/CatalogFilters";
 
 function useQueryParam(name) {
   const { search } = useLocation();
@@ -24,6 +27,17 @@ export default function SearchPage() {
 
   const q = useQueryParam("q");
   const mallIdParam = useQueryParam("mallId"); // ✅ optional
+  const [liveProducts, setLiveProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [filters, setFilters] = useState({
+    categoryId: "",
+    brandId: "",
+    minPrice: "",
+    maxPrice: "",
+    targetedAudience: "",
+    ageGroup: "",
+    selectedOptionsByAttribute: {},
+  });
 
   // ✅ filter raw data if mallId exists
   const scoped = useMemo(() => {
@@ -37,12 +51,66 @@ export default function SearchPage() {
     };
   }, [mallIdParam]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const hasFilters = hasCatalogFilters(filters);
+    if (q.trim().length < 2 && !hasFilters && !mallIdParam) {
+      setLiveProducts([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setLoadingProducts(true);
+    catalogApi.products.publicPage(
+      {
+        ...(q.trim().length >= 2 ? { q: q.trim() } : {}),
+        ...(mallIdParam ? { mallId: Number(mallIdParam) } : {}),
+        ...buildCatalogFilterPayload(filters),
+      },
+      { page: 0, size: 60 }
+    )
+      .then((response) => {
+        if (cancelled) return;
+        setLiveProducts(normalizeCatalogPage(response).content.map(toProductCard));
+      })
+      .catch(() => {
+        if (!cancelled) setLiveProducts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingProducts(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filters, mallIdParam, q]);
+
   const searchIndex = useMemo(
     () => buildSearchIndex({ rawMalls: scoped.malls, rawStores: scoped.stores, rawProducts: scoped.products }),
     [scoped]
   );
 
-  const results = useMemo(() => searchInIndex(q, searchIndex, { limit: 80 }), [q, searchIndex]);
+  const results = useMemo(() => {
+    const indexed = searchInIndex(q, searchIndex, { limit: 80 });
+    const hasLiveRequest = q.trim().length >= 2 || mallIdParam || hasCatalogFilters(filters);
+    const products = liveProducts.length || hasLiveRequest
+      ? liveProducts.map((product) => ({
+          type: "product",
+          id: product.id,
+          title: product.name,
+          subtitle: product.shortDescription || product.status || "",
+          imageUrl: product.imageUrl,
+          href: product.href,
+        }))
+      : indexed.products;
+    return {
+      ...indexed,
+      products,
+      all: [...indexed.malls, ...indexed.stores, ...products],
+    };
+  }, [filters, liveProducts, mallIdParam, q, searchIndex]);
+  const hasActiveCatalogQuery = q.trim().length >= 2 || mallIdParam || hasCatalogFilters(filters);
 
   return (
     <div dir="rtl" className="min-h-screen bg-white">
@@ -95,11 +163,15 @@ export default function SearchPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-10">
           <CountCard label="المولات" count={results.malls.length} icon={<IoBusinessOutline className="text-2xl" />} />
           <CountCard label="المتاجر" count={results.stores.length} icon={<IoStorefrontOutline className="text-2xl" />} />
-          <CountCard label="المنتجات" count={results.products.length} icon={<IoCartOutline className="text-2xl" />} />
+          <CountCard label="المنتجات" count={loadingProducts ? "..." : results.products.length} icon={<IoCartOutline className="text-2xl" />} />
+        </div>
+
+        <div className="mb-8">
+          <CatalogFilters filters={filters} onChange={setFilters} />
         </div>
 
         {/* States */}
-        {q.trim().length < 2 ? (
+        {q.trim().length < 2 && !hasActiveCatalogQuery ? (
           <EmptyState title="ابدأ البحث" desc="اكتب حرفين على الأقل لعرض النتائج" icon={<IoSearchOutline className="text-4xl text-black/30" />} />
         ) : results.all.length === 0 ? (
           <EmptyState title="لا توجد نتائج" desc={`لم نجد أي نتائج مطابقة لـ "${q}"`} sub="جرب كلمات بحث مختلفة أو تحقق من الإملاء" icon={<IoSearchOutline className="text-4xl text-black/30" />} />

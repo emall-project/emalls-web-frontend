@@ -3,6 +3,7 @@ import {
   clearAuthState,
   getAuthorizationHeaderValue,
 } from "../auth/session";
+import { createApiError } from "./apiErrors";
 
 function getAuthHeaders(headers = {}) {
   const token = getAuthorizationHeaderValue();
@@ -40,6 +41,8 @@ export async function requestJson(url, options = {}) {
     ...rawHeaders,
   });
 
+  console.log("sending request with option ", options)
+
   const response = await fetch(url, {
     credentials: "include",
     ...requestOptions,
@@ -66,13 +69,10 @@ export async function requestJson(url, options = {}) {
 
   const payload = await response.json().catch(() => null);
 
+  // leve this
+  console.log("response payload :", payload)
   if (!response.ok) {
-    const error = new Error(
-      payload?.message || payload?.error || "حدث خطأ في الطلب"
-    );
-    error.status = response.status;
-    error.payload = payload;
-    throw error;
+    throw createApiError(response, payload, "حدث خطأ في الطلب");
   }
 
   return payload;

@@ -12,7 +12,7 @@ import {
   POSITION_LABELS, REQUEST_STATUSES, REQUEST_STATUS_LABELS, REQUEST_STATUS_COLORS,
   PAYMENT_STATUS_LABELS, PAYMENT_STATUS_COLORS,
 } from "./constants";
-import AdTemplateFormDialog    from "./AdTemplateFormDialog";
+import AdTemplateFormDialog from "./AdTemplateFormDialog";
 import { AdRequestFormDialog, RejectDialog } from "./AdRequestDialogs";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -31,9 +31,9 @@ function Toast({ message, type = "success", onClose }) {
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl border text-sm font-medium"
       style={{
-        background:  type === "success" ? "var(--green-2)" : "var(--red-2)",
+        background: type === "success" ? "var(--green-2)" : "var(--red-2)",
         borderColor: type === "success" ? "var(--green-6)" : "var(--red-6)",
-        color:       type === "success" ? "var(--green-11)" : "var(--red-11)",
+        color: type === "success" ? "var(--green-11)" : "var(--red-11)",
       }}>
       {message}
       <button onClick={onClose} className="opacity-60 hover:opacity-100 ml-1">✕</button>
@@ -80,11 +80,11 @@ function SimpleSelect({ value, onChange, options, placeholder }) {
       <button type="button" onClick={() => setOpen((p) => !p)}
         className="w-full rounded-xl py-2.5 px-4 text-sm outline-none border transition-all flex items-center justify-between gap-2"
         style={{
-          background:  "var(--gray-a2)",
+          background: "var(--gray-a2)",
           borderColor: open ? "#3b82f6" : "var(--gray-a6)",
-          color:       selected ? "var(--gray-12)" : "var(--gray-9)",
-          direction:   "rtl",
-          boxShadow:   open ? "0 0 0 3px rgba(59,130,246,.15)" : "none",
+          color: selected ? "var(--gray-12)" : "var(--gray-9)",
+          direction: "rtl",
+          boxShadow: open ? "0 0 0 3px rgba(59,130,246,.15)" : "none",
         }}>
         <span className="flex items-center gap-2 truncate">
           {selected?.dot && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: selected.dot }} />}
@@ -92,7 +92,7 @@ function SimpleSelect({ value, onChange, options, placeholder }) {
         </span>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gray-9)" strokeWidth="2"
           style={{ flexShrink: 0, transform: open ? "rotate(180deg)" : "rotate(0)", transition: "transform .2s" }}>
-          <polyline points="6 9 12 15 18 9"/>
+          <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
 
@@ -117,7 +117,7 @@ function SimpleSelect({ value, onChange, options, placeholder }) {
                   <span className="flex-1">{opt.label}</span>
                   {isActive && (
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--blue-9)" strokeWidth="3" style={{ flexShrink: 0 }}>
-                      <polyline points="20 6 9 17 4 12"/>
+                      <polyline points="20 6 9 17 4 12" />
                     </svg>
                   )}
                 </button>
@@ -164,22 +164,22 @@ function Pagination({ page, totalPages, onPageChange }) {
 // ── Templates Tab ─────────────────────────────────────────────────────────────
 function TemplatesTab({ showToast, addOpen, setAddOpen }) {
   const themeContainer = useThemeContainer();
-  const [templates,   setTemplates]   = useState([]);
-  const [totalPages,  setTotalPages]  = useState(1);
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState("");
-  const [page,        setPage]        = useState(0);
-  const [search,      setSearch]      = useState("");
-  const [statusF,     setStatusF]     = useState("");
-  const [positionF,   setPositionF]   = useState("");
-  const [rowLoading,  setRowLoading]  = useState({});
-  const [editOpen,    setEditOpen]    = useState(false);
-  const [selected,    setSelected]    = useState(null);
+  const [templates, setTemplates] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [page, setPage] = useState(0);
+  const [search, setSearch] = useState("");
+  const [statusF, setStatusF] = useState("");
+  const [positionF, setPositionF] = useState("");
+  const [rowLoading, setRowLoading] = useState({});
+  const [editOpen, setEditOpen] = useState(false);
+  const [selected, setSelected] = useState(null);
 
   const fetch = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const res  = await adTemplatesApi.getAll({ page, size: 10, ...(search ? { name: search } : {}), ...(statusF ? { status: statusF } : {}), ...(positionF ? { position: positionF } : {}) });
+      const res = await adTemplatesApi.getAll({ page, size: 10, ...(search ? { name: search } : {}), ...(statusF ? { status: statusF } : {}), ...(positionF ? { position: positionF } : {}) });
       const data = res?.data || res?.content || [];
       const list = Array.isArray(data) ? data : (data?.content || []);
       setTemplates(list);
@@ -215,7 +215,7 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
 
   const menuStyle = { background: "var(--gray-1)", border: "1px solid var(--gray-a6)", color: "var(--gray-12)", boxShadow: "0 14px 40px rgba(0,0,0,.35)" };
 
-  const statusOptions   = TEMPLATE_STATUSES.map((s) => ({ value: s, label: TEMPLATE_STATUS_LABELS[s] }));
+  const statusOptions = TEMPLATE_STATUSES.map((s) => ({ value: s, label: TEMPLATE_STATUS_LABELS[s] }));
   const positionOptions = Object.entries(POSITION_LABELS).map(([v, l]) => ({ value: v, label: l }));
 
   return (
@@ -293,7 +293,7 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
                   </td>
                   <td className="px-5 py-4">
                     <div className="font-semibold text-sm flex items-center gap-1">
-                      <FiDollarSign size={12} style={{ color: "var(--gray-10)" }} /> ₪{t.price}
+                      <FiDollarSign size={12} style={{ color: "var(--gray-10)" }} /> ₪{t.pricePerHour}
                     </div>
                   </td>
                   <td className="px-5 py-4">
@@ -350,21 +350,21 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
 // ── Requests Tab ──────────────────────────────────────────────────────────────
 function RequestsTab({ showToast, addOpen, setAddOpen }) {
   const themeContainer = useThemeContainer();
-  const [requests,    setRequests]    = useState([]);
-  const [totalPages,  setTotalPages]  = useState(1);
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState("");
-  const [page,        setPage]        = useState(0);
-  const [statusF,     setStatusF]     = useState("");
-  const [rowLoading,  setRowLoading]  = useState({});
-  const [rejectOpen,  setRejectOpen]  = useState(false);
-  const [selected,    setSelected]    = useState(null);
+  const [requests, setRequests] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [page, setPage] = useState(0);
+  const [statusF, setStatusF] = useState("");
+  const [rowLoading, setRowLoading] = useState({});
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [selected, setSelected] = useState(null);
 
   const fetch = useCallback(async () => {
     setLoading(true); setError("");
     try {
-      const res  = await adRequestsApi.getAll({ page, size: 10, ...(statusF ? { status: statusF } : {}) });
-      const raw  = res?.data || res?.content || {};
+      const res = await adRequestsApi.getAll({ page, size: 10, ...(statusF ? { status: statusF } : {}) });
+      const raw = res?.data || res?.content || {};
       const list = Array.isArray(raw) ? raw : (raw?.content || []);
       setRequests(list);
       setTotalPages(raw?.meta?.totalPages || raw?.totalPages || 1);
@@ -489,7 +489,7 @@ function RequestsTab({ showToast, addOpen, setAddOpen }) {
                               </>
                             )}
                             {r.status !== "PENDING" && (
-                              <DDItem icon={<FiEye />} onSelect={() => {}}>عرض التفاصيل</DDItem>
+                              <DDItem icon={<FiEye />} onSelect={() => { }}>عرض التفاصيل</DDItem>
                             )}
                           </DropdownMenu.Content>
                         </DropdownMenu.Portal>
@@ -527,9 +527,9 @@ function DDItem({ children, icon, onSelect, danger }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function AdsManagement() {
   const [activeTab, setActiveTab] = useState("templates");
-  const [toast,     setToast]     = useState(null);
+  const [toast, setToast] = useState(null);
   const [addTemplateOpen, setAddTemplateOpen] = useState(false);
-  const [addRequestOpen,  setAddRequestOpen]  = useState(false);
+  const [addRequestOpen, setAddRequestOpen] = useState(false);
 
   const showToast = useCallback((message, type = "success") => setToast({ message, type }), []);
 
@@ -559,14 +559,14 @@ export default function AdsManagement() {
         <div className="flex gap-1 p-1 rounded-xl" style={{ background: "var(--gray-a3)" }}>
           {[
             { key: "templates", label: "📋 نماذج الإعلانات" },
-            { key: "requests",  label: "📨 طلبات الإعلانات"  },
+            { key: "requests", label: "📨 طلبات الإعلانات" },
           ].map((tab) => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               className="flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all"
               style={{
                 background: activeTab === tab.key ? "var(--gray-1)" : "transparent",
-                color:      activeTab === tab.key ? "var(--gray-12)" : "var(--gray-11)",
-                boxShadow:  activeTab === tab.key ? "0 1px 4px rgba(0,0,0,.08)" : "none",
+                color: activeTab === tab.key ? "var(--gray-12)" : "var(--gray-11)",
+                boxShadow: activeTab === tab.key ? "0 1px 4px rgba(0,0,0,.08)" : "none",
               }}>
               {tab.label}
             </button>
@@ -576,7 +576,7 @@ export default function AdsManagement() {
         {/* Tab Content */}
         {activeTab === "templates"
           ? <TemplatesTab showToast={showToast} addOpen={addTemplateOpen} setAddOpen={setAddTemplateOpen} />
-          : <RequestsTab  showToast={showToast} addOpen={addRequestOpen}  setAddOpen={setAddRequestOpen}  />
+          : <RequestsTab showToast={showToast} addOpen={addRequestOpen} setAddOpen={setAddRequestOpen} />
         }
       </div>
     </>

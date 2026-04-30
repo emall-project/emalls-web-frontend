@@ -5,6 +5,7 @@ import { mallsApi, citiesApi } from "./api";
 import { MALL_STATUSES, STATUS_LABELS } from "./constants";
 import { Spinner, CityDropdown } from "./ui";
 import { MediaUuidField, MediaUuidListField } from "../../../components/account/MediaUuidField";
+import { buildApiFormError, getApiErrorMessage } from "../../../utils/apiErrors";
 
 function useThemeContainer() {
   const [container, setContainer] = React.useState(null);
@@ -38,6 +39,32 @@ const inputCls =
   "w-full rounded-xl px-4 py-2.5 text-sm outline-none border transition-all " +
   "focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500";
 const labelCls = "block text-xs font-semibold mb-1.5";
+
+const FIELD_MAP = {
+  name: "name",
+  city: "cityId",
+  "city.cityId": "cityId",
+  cityId: "cityId",
+  location: "location",
+  capacity: "capacity",
+  status: "status",
+  description: "description",
+  logoUuid: "logoUuid",
+  mallImagesUuids: "mallImagesUuids",
+  image: "logoUuid",
+  file: "logoUuid",
+  media: "logoUuid",
+  contactInfo: "contactInfo",
+  "contactInfo.phone": "phone",
+  "contactInfo.email": "email",
+  services: "services",
+  restaurants: "restaurants",
+};
+
+function FieldError({ msg }) {
+  if (!msg) return null;
+  return <p className="mt-1 text-xs" style={{ color: "var(--red-9)" }}>{msg}</p>;
+}
 
 // ── Section wrapper ────────────────────────────────────────────────────────────
 function Section({ title, icon, children, collapsible = false }) {
@@ -147,7 +174,7 @@ export function CreateCityDialog({ open, onOpenChange, onCreated }) {
       onCreated?.(res?.content || res?.data);
       onOpenChange(false);
     } catch (e) {
-      setError(e.message || "فشل إنشاء المدينة");
+      setError(getApiErrorMessage(e, "فشل إنشاء المدينة"));
     } finally { setLoading(false); }
   };
 
@@ -221,6 +248,7 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
   const [cities,         setCities]         = useState([]);
   const [loadingCities,  setLoadingCities]  = useState(false);
   const [createCityOpen, setCreateCityOpen] = useState(false);
+  const [fieldErrors,    setFieldErrors]    = useState({});
 
   // Basic fields
   const [name,        setName]        = useState("");
@@ -257,6 +285,8 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
   useEffect(() => {
     if (!open) return;
     if (isEdit && mall) {
+      setError("");
+      setFieldErrors({});
       setName(mall.name || "");
       setCityId(String(mall.city?.cityId || ""));
       setLocation(mall.location || "");
@@ -277,6 +307,7 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
       setLogoFile(null);
       setMallImagesUuids([]); setMallImageFiles([]);
       setPhone(""); setEmail(""); setError("");
+      setFieldErrors({});
       setServices([]); setRestaurants([]);
     }
   }, [open, isEdit, mall]);
@@ -309,6 +340,7 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
     if (invalidRestaurant) { setError("اسم المطعم مطلوب لكل مطعم"); return scrollTop(); }
 
     setError(""); setLoading(true);
+    setFieldErrors({});
     try {
       const contactInfo = {};
       if (phone.trim()) contactInfo.phone = phone.trim();
@@ -350,7 +382,9 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
       onSuccess?.();
       onOpenChange(false);
     } catch (e) {
-      setError(e.message || "حدث خطأ، حاول مجدداً");
+      const formError = buildApiFormError(e, FIELD_MAP, "حدث خطأ، حاول مجدداً");
+      setError(formError.message);
+      setFieldErrors(formError.fieldErrors);
       if (bodyRef.current) bodyRef.current.scrollTop = 0;
     } finally {
       setLoading(false);
@@ -405,6 +439,7 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
                     <label className={labelCls} style={{ color: "var(--gray-11)" }}>اسم المول *</label>
                     <input className={inputCls} style={inp} value={name}
                       onChange={(e) => setName(e.target.value)} placeholder="مثال: سيتي سنتر" />
+                    <FieldError msg={fieldErrors.name} />
                   </div>
                   <div>
                     <label className={labelCls} style={{ color: "var(--gray-11)" }}>
@@ -413,6 +448,7 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
                     <CityDropdown value={cityId} onChange={setCityId}
                       cities={cities} loadingCities={loadingCities}
                       onRequestCreate={() => setCreateCityOpen(true)} />
+                    <FieldError msg={fieldErrors.cityId} />
                   </div>
                 </div>
 
@@ -422,11 +458,13 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
                     <label className={labelCls} style={{ color: "var(--gray-11)" }}>الموقع</label>
                     <input className={inputCls} style={inp} value={location}
                       onChange={(e) => setLocation(e.target.value)} placeholder="شارع الإرسال" />
+                    <FieldError msg={fieldErrors.location} />
                   </div>
                   <div>
                     <label className={labelCls} style={{ color: "var(--gray-11)" }}>السعة</label>
                     <input className={inputCls} style={inp} type="number" value={capacity}
                       onChange={(e) => setCapacity(e.target.value)} placeholder="500" />
+                    <FieldError msg={fieldErrors.capacity} />
                   </div>
                 </div>
 
@@ -442,6 +480,7 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
                       </option>
                     ))}
                   </select>
+                  <FieldError msg={fieldErrors.status} />
                 </div>
 
                 <MediaUuidField
@@ -452,6 +491,7 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
                   onFileChange={setLogoFile}
                   mode="admin"
                   pickerTitle="اختيار شعار المول"
+                  error={fieldErrors.logoUuid}
                 />
 
                 <MediaUuidListField
@@ -462,6 +502,7 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
                   onFilesChange={setMallImageFiles}
                   mode="admin"
                   pickerTitle="اختيار صور المول"
+                  error={fieldErrors.mallImagesUuids}
                 />
 
                 {/* Description */}
@@ -471,6 +512,7 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
                     style={{ ...inp, minHeight: 72, resize: "none" }}
                     value={description} onChange={(e) => setDescription(e.target.value)}
                     placeholder="وصف مختصر..." />
+                  <FieldError msg={fieldErrors.description} />
                 </div>
               </Section>
 
@@ -481,6 +523,7 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
                     <label className={labelCls} style={{ color: "var(--gray-11)" }}>رقم الهاتف</label>
                     <input className={inputCls} style={inpSection} value={phone}
                       onChange={(e) => setPhone(e.target.value)} placeholder="+970599..." />
+                    <FieldError msg={fieldErrors.phone} />
                   </div>
                   <div>
                     <label className={labelCls} style={{ color: "var(--gray-11)" }}>البريد الإلكتروني</label>
@@ -488,6 +531,7 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
                       style={{ ...inpSection, direction: "ltr", textAlign: "left" }}
                       value={email} onChange={(e) => setEmail(e.target.value)}
                       placeholder="info@mall.ps" />
+                    <FieldError msg={fieldErrors.email} />
                   </div>
                 </div>
               </Section>
@@ -506,6 +550,7 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
                       fields={SERVICE_FIELDS} />
                   ))}
                 </div>
+                <FieldError msg={fieldErrors.services} />
                 <button type="button" onClick={addService}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80 mt-1"
                   style={{ background: "var(--blue-a3)", color: "var(--blue-11)", border: "1px dashed var(--blue-a7)" }}>
@@ -527,6 +572,7 @@ export default function MallFormDialog({ open, onOpenChange, mall = null, onSucc
                       fields={RESTAURANT_FIELDS} />
                   ))}
                 </div>
+                <FieldError msg={fieldErrors.restaurants} />
                 <button type="button" onClick={addRestaurant}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold transition-opacity hover:opacity-80 mt-1"
                   style={{ background: "var(--orange-a3)", color: "var(--orange-11)", border: "1px dashed var(--orange-a7)" }}>

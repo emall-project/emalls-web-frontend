@@ -4,19 +4,54 @@ import { Link } from "react-router-dom";
 import { accountsApi } from "../../api/accounts";
 import { MediaUuidField } from "../../components/account/MediaUuidField";
 import { ShopRequestForm } from "../../components/account/ShopRequestForm";
+import { buildApiFormError } from "../../utils/apiErrors";
 
 const inputClass = "w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
 const inputStyle = { background: "var(--gray-a2)", borderColor: "var(--gray-a6)", color: "var(--gray-12)" };
 
-function Field({ label, required, children }) {
+function Field({ label, required, error, children }) {
   return (
     <div className="space-y-1.5">
       <label className="block text-xs font-semibold" style={{ color: "var(--gray-11)" }}>
         {label} {required ? <span style={{ color: "var(--red-9)" }}>*</span> : null}
       </label>
       {children}
+      {error ? <p className="text-xs" style={{ color: "var(--red-9)" }}>{error}</p> : null}
     </div>
   );
+}
+
+const FIELD_MAP = {
+  fullName: "owner.fullName",
+  username: "owner.username",
+  email: "owner.email",
+  password: "owner.password",
+  phone: "owner.number",
+  "phone.number": "owner.number",
+  "phone.prefix": "owner.prefix",
+  gender: "owner.gender",
+  age: "owner.age",
+  nationalIdNumber: "owner.nationalIdNumber",
+  profilePictureUuid: "owner.profilePictureUuid",
+  "shopRequest.mallId": "shop.mallId",
+  "shopRequest.name": "shop.name",
+  "shopRequest.category": "shop.category",
+  "shopRequest.location": "shop.location",
+  "shopRequest.description": "shop.description",
+  "shopRequest.contactInfo.phone": "shop.phone",
+  "shopRequest.contactInfo.email": "shop.email",
+  "shopRequest.logoUuid": "shop.logoUuid",
+  "shopRequest.licenseImageUuid": "shop.licenseImageUuid",
+  "shopRequest.shopPhotosUuids": "shop.shopPhotosUuids",
+};
+
+function splitFieldErrors(fieldErrors, prefix) {
+  return Object.entries(fieldErrors).reduce((acc, [key, value]) => {
+    if (key.startsWith(`${prefix}.`)) {
+      acc[key.slice(prefix.length + 1)] = value;
+    }
+    return acc;
+  }, {});
 }
 
 export default function ShopOwnerRequestPage() {
@@ -33,14 +68,34 @@ export default function ShopOwnerRequestPage() {
     profilePictureUuid: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingProfile, setUploadingProfile] = useState(false);
+  const [profileFile, setProfileFile] = useState(null);
   const [message, setMessage] = useState(null);
+  const [ownerFieldErrors, setOwnerFieldErrors] = useState({});
+  const [shopFieldErrors, setShopFieldErrors] = useState({});
 
-  const set = (key, value) => setOwner((previous) => ({ ...previous, [key]: value }));
+  const set = (key, value) => {
+    setOwnerFieldErrors((previous) => ({ ...previous, [key]: "" }));
+    setOwner((previous) => ({ ...previous, [key]: value }));
+  };
 
   const submit = async (shopRequest) => {
     setMessage(null);
-    if (!owner.fullName.trim() || !owner.username.trim() || !owner.number.trim() || !owner.password || !owner.age) {
-      setMessage({ type: "error", text: "املأ بيانات صاحب المتجر المطلوبة" });
+    setOwnerFieldErrors({});
+    setShopFieldErrors({});
+    const missing = {};
+    if (!owner.fullName.trim()) missing.fullName = "الاسم الكامل مطلوب";
+    if (!owner.username.trim()) missing.username = "اسم المستخدم مطلوب";
+    if (!owner.number.trim()) missing.number = "رقم الهاتف مطلوب";
+    if (!owner.password) missing.password = "كلمة المرور مطلوبة";
+    if (!owner.age) missing.age = "العمر مطلوب";
+    if (Object.keys(missing).length) {
+      setOwnerFieldErrors(missing);
+      setMessage({ type: "error", text: "راجع الحقول المحددة" });
+      return;
+    }
+    if (uploadingProfile) {
+      setMessage({ type: "error", text: "انتظر حتى ينتهي رفع صورة الملف الشخصي" });
       return;
     }
 
@@ -60,7 +115,10 @@ export default function ShopOwnerRequestPage() {
       });
       setMessage({ type: "success", text: "تم إرسال طلب صاحب المتجر للإدارة" });
     } catch (error) {
-      setMessage({ type: "error", text: error.message || "فشل إرسال الطلب" });
+      const formError = buildApiFormError(error, FIELD_MAP, "فشل إرسال الطلب");
+      setOwnerFieldErrors(splitFieldErrors(formError.fieldErrors, "owner"));
+      setShopFieldErrors(splitFieldErrors(formError.fieldErrors, "shop"));
+      setMessage({ type: "error", text: formError.message });
     } finally {
       setSubmitting(false);
     }
@@ -92,19 +150,19 @@ export default function ShopOwnerRequestPage() {
           <section className="space-y-5 rounded-3xl border p-5 sm:p-6" style={{ background: "var(--gray-1)", borderColor: "var(--gray-a6)" }}>
             <h2 className="text-lg font-bold" style={{ color: "var(--gray-12)" }}>بيانات صاحب المتجر</h2>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-              <Field label="الاسم الكامل" required>
+              <Field label="الاسم الكامل" required error={ownerFieldErrors.fullName}>
                 <input className={inputClass} style={inputStyle} value={owner.fullName} onChange={(event) => set("fullName", event.target.value)} />
               </Field>
-              <Field label="اسم المستخدم" required>
+              <Field label="اسم المستخدم" required error={ownerFieldErrors.username}>
                 <input className={inputClass} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} value={owner.username} onChange={(event) => set("username", event.target.value)} />
               </Field>
-              <Field label="البريد الإلكتروني">
+              <Field label="البريد الإلكتروني" error={ownerFieldErrors.email}>
                 <input type="email" className={inputClass} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} value={owner.email} onChange={(event) => set("email", event.target.value)} />
               </Field>
-              <Field label="كلمة المرور" required>
+              <Field label="كلمة المرور" required error={ownerFieldErrors.password}>
                 <input type="password" className={inputClass} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} value={owner.password} onChange={(event) => set("password", event.target.value)} />
               </Field>
-              <Field label="رقم الهاتف" required>
+              <Field label="رقم الهاتف" required error={ownerFieldErrors.number || ownerFieldErrors.prefix}>
                 <div className="flex gap-2" dir="ltr">
                   <select className={inputClass} style={{ ...inputStyle, maxWidth: 112 }} value={owner.prefix} onChange={(event) => set("prefix", event.target.value)}>
                     <option value="+970">+970</option>
@@ -113,17 +171,17 @@ export default function ShopOwnerRequestPage() {
                   <input className={inputClass} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} value={owner.number} onChange={(event) => set("number", event.target.value)} />
                 </div>
               </Field>
-              <Field label="العمر" required>
+              <Field label="العمر" required error={ownerFieldErrors.age}>
                 <input type="number" min="0" max="150" className={inputClass} style={inputStyle} value={owner.age} onChange={(event) => set("age", event.target.value)} />
               </Field>
-              <Field label="الجنس" required>
+              <Field label="الجنس" required error={ownerFieldErrors.gender}>
                 <select className={inputClass} style={inputStyle} value={owner.gender} onChange={(event) => set("gender", event.target.value)}>
                   <option value="MALE">ذكر</option>
                   <option value="FEMALE">أنثى</option>
                   <option value="NOT_SPECIFIED">غير محدد</option>
                 </select>
               </Field>
-              <Field label="رقم الهوية">
+              <Field label="رقم الهوية" error={ownerFieldErrors.nationalIdNumber}>
                 <input className={inputClass} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} value={owner.nationalIdNumber} onChange={(event) => set("nationalIdNumber", event.target.value)} />
               </Field>
             </div>
@@ -131,14 +189,27 @@ export default function ShopOwnerRequestPage() {
               label="صورة الملف الشخصي"
               value={owner.profilePictureUuid}
               onChange={(value) => set("profilePictureUuid", value)}
+              file={profileFile}
+              onFileChange={setProfileFile}
               allowPicker={false}
+              uploadMode="temp"
+              error={ownerFieldErrors.profilePictureUuid}
+              onUploadingChange={setUploadingProfile}
             />
             <Link to="/login" className="inline-block text-sm font-semibold" style={{ color: "var(--blue-11)" }}>العودة لتسجيل الدخول</Link>
           </section>
 
           <section className="rounded-3xl border p-5 sm:p-6" style={{ background: "var(--gray-1)", borderColor: "var(--gray-a6)" }}>
             <h2 className="mb-5 text-lg font-bold" style={{ color: "var(--gray-12)" }}>بيانات المتجر</h2>
-            <ShopRequestForm onSubmit={submit} submitting={submitting} allowPicker={false} submitLabel={submitting ? "جاري الإرسال" : "إرسال الطلب"} />
+            <ShopRequestForm
+              onSubmit={submit}
+              submitting={submitting}
+              allowPicker={false}
+              uploadMode="temp"
+              disabled={uploadingProfile}
+              externalFieldErrors={shopFieldErrors}
+              submitLabel={submitting ? "جاري الإرسال" : "إرسال الطلب"}
+            />
             {submitting ? (
               <div className="mt-3 inline-flex items-center gap-2 text-sm" style={{ color: "var(--gray-11)" }}>
                 <FiLoader className="animate-spin" />

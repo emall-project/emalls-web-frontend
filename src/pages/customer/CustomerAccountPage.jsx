@@ -3,18 +3,38 @@ import { FiAlertCircle, FiLoader, FiLogOut, FiRefreshCw, FiSave } from "react-ic
 import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
 import { MediaUuidField } from "../../components/account/MediaUuidField";
 import { useAuth } from "../../auth/AuthContext";
+import { buildApiFormError } from "../../utils/apiErrors";
 
 const inputClass = "w-full rounded-2xl border px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
 const inputStyle = { background: "var(--gray-a2)", borderColor: "var(--gray-a6)", color: "var(--gray-12)" };
 
-function Field({ label, children }) {
+function Field({ label, error, children }) {
   return (
     <div className="space-y-1.5">
       <label className="block text-xs font-semibold" style={{ color: "var(--gray-11)" }}>{label}</label>
       {children}
+      {error ? <p className="text-xs" style={{ color: "var(--red-9)" }}>{error}</p> : null}
     </div>
   );
 }
+
+const PROFILE_FIELD_MAP = {
+  fullName: "fullName",
+  email: "email",
+  phone: "number",
+  "phone.number": "number",
+  "phone.prefix": "prefix",
+  gender: "gender",
+  age: "age",
+  nationalIdNumber: "nationalIdNumber",
+  profilePictureUuid: "profilePictureUuid",
+};
+
+const PASSWORD_FIELD_MAP = {
+  currentPassword: "currentPassword",
+  newPassword: "newPassword",
+  confirmNewPassword: "confirmNewPassword",
+};
 
 export default function CustomerAccountPage() {
   const { session, logout } = useAuth();
@@ -34,10 +54,19 @@ export default function CustomerAccountPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
+  const [uploadingProfile, setUploadingProfile] = useState(false);
   const [message, setMessage] = useState(null);
+  const [profileFieldErrors, setProfileFieldErrors] = useState({});
+  const [passwordFieldErrors, setPasswordFieldErrors] = useState({});
 
-  const set = (key, value) => setForm((previous) => ({ ...previous, [key]: value }));
-  const setPassword = (key, value) => setPasswordForm((previous) => ({ ...previous, [key]: value }));
+  const set = (key, value) => {
+    setProfileFieldErrors((previous) => ({ ...previous, [key]: "" }));
+    setForm((previous) => ({ ...previous, [key]: value }));
+  };
+  const setPassword = (key, value) => {
+    setPasswordFieldErrors((previous) => ({ ...previous, [key]: "" }));
+    setPasswordForm((previous) => ({ ...previous, [key]: value }));
+  };
 
   const load = useCallback(async () => {
     if (!session?.userId) return;
@@ -76,6 +105,14 @@ export default function CustomerAccountPage() {
     event.preventDefault();
     setSaving(true);
     setMessage(null);
+    setProfileFieldErrors({});
+
+    if (uploadingProfile) {
+      setSaving(false);
+      setMessage({ type: "error", text: "انتظر حتى ينتهي رفع الصورة" });
+      return;
+    }
+
     try {
       await accountsApi.users.profile.updateInfo(session.userId, {
         fullName: form.fullName.trim() || null,
@@ -89,7 +126,9 @@ export default function CustomerAccountPage() {
       setMessage({ type: "success", text: "تم حفظ الملف الشخصي" });
       load();
     } catch (error) {
-      setMessage({ type: "error", text: error.message || "فشل حفظ الملف الشخصي" });
+      const formError = buildApiFormError(error, PROFILE_FIELD_MAP, "فشل حفظ الملف الشخصي");
+      setProfileFieldErrors(formError.fieldErrors);
+      setMessage({ type: "error", text: formError.message });
     } finally {
       setSaving(false);
     }
@@ -99,12 +138,15 @@ export default function CustomerAccountPage() {
     event.preventDefault();
     setChangingPassword(true);
     setMessage(null);
+    setPasswordFieldErrors({});
     try {
       await accountsApi.users.profile.changePassword(session.userId, passwordForm);
       setPasswordForm({ currentPassword: "", newPassword: "", confirmNewPassword: "" });
       setMessage({ type: "success", text: "تم تغيير كلمة المرور" });
     } catch (error) {
-      setMessage({ type: "error", text: error.message || "فشل تغيير كلمة المرور" });
+      const formError = buildApiFormError(error, PASSWORD_FIELD_MAP, "فشل تغيير كلمة المرور");
+      setPasswordFieldErrors(formError.fieldErrors);
+      setMessage({ type: "error", text: formError.message });
     } finally {
       setChangingPassword(false);
     }
@@ -161,13 +203,13 @@ export default function CustomerAccountPage() {
           <form onSubmit={saveProfile} className="space-y-5 rounded-3xl border p-6" style={{ background: "var(--gray-1)", borderColor: "var(--gray-a6)" }}>
             <h2 className="text-lg font-bold" style={{ color: "var(--gray-12)" }}>البيانات الشخصية</h2>
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="الاسم الكامل">
+              <Field label="الاسم الكامل" error={profileFieldErrors.fullName}>
                 <input className={inputClass} style={inputStyle} value={form.fullName} onChange={(event) => set("fullName", event.target.value)} />
               </Field>
-              <Field label="البريد الإلكتروني">
+              <Field label="البريد الإلكتروني" error={profileFieldErrors.email}>
                 <input type="email" className={inputClass} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} value={form.email} onChange={(event) => set("email", event.target.value)} />
               </Field>
-              <Field label="رقم الهاتف">
+              <Field label="رقم الهاتف" error={profileFieldErrors.number || profileFieldErrors.prefix}>
                 <div className="flex gap-2" dir="ltr">
                   <select className={inputClass} style={{ ...inputStyle, maxWidth: 112 }} value={form.prefix} onChange={(event) => set("prefix", event.target.value)}>
                     <option value="+970">+970</option>
@@ -176,17 +218,17 @@ export default function CustomerAccountPage() {
                   <input className={inputClass} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} value={form.number} onChange={(event) => set("number", event.target.value)} />
                 </div>
               </Field>
-              <Field label="العمر">
+              <Field label="العمر" error={profileFieldErrors.age}>
                 <input type="number" min="0" max="150" className={inputClass} style={inputStyle} value={form.age} onChange={(event) => set("age", event.target.value)} />
               </Field>
-              <Field label="الجنس">
+              <Field label="الجنس" error={profileFieldErrors.gender}>
                 <select className={inputClass} style={inputStyle} value={form.gender} onChange={(event) => set("gender", event.target.value)}>
                   <option value="MALE">ذكر</option>
                   <option value="FEMALE">أنثى</option>
                   <option value="NOT_SPECIFIED">غير محدد</option>
                 </select>
               </Field>
-              <Field label="رقم الهوية">
+              <Field label="رقم الهوية" error={profileFieldErrors.nationalIdNumber}>
                 <input className={inputClass} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} value={form.nationalIdNumber} onChange={(event) => set("nationalIdNumber", event.target.value)} />
               </Field>
             </div>
@@ -198,23 +240,26 @@ export default function CustomerAccountPage() {
               file={profileFile}
               onFileChange={setProfileFile}
               allowPicker={false}
+              uploadMode="temp"
+              error={profileFieldErrors.profilePictureUuid}
+              onUploadingChange={setUploadingProfile}
             />
 
-            <button type="submit" disabled={saving} className="inline-flex h-11 items-center gap-2 rounded-2xl px-5 text-sm font-semibold disabled:opacity-50" style={{ background: "var(--blue-9)", color: "#fff" }}>
+            <button type="submit" disabled={saving || uploadingProfile} className="inline-flex h-11 items-center gap-2 rounded-2xl px-5 text-sm font-semibold disabled:opacity-50" style={{ background: "var(--blue-9)", color: "#fff" }}>
               {saving ? <FiLoader className="animate-spin" /> : <FiSave />}
-              حفظ البيانات
+              {uploadingProfile ? "جاري رفع الصورة" : "حفظ البيانات"}
             </button>
           </form>
 
           <form onSubmit={changePassword} className="space-y-4 rounded-3xl border p-6" style={{ background: "var(--gray-1)", borderColor: "var(--gray-a6)" }}>
             <h2 className="text-lg font-bold" style={{ color: "var(--gray-12)" }}>كلمة المرور</h2>
-            <Field label="كلمة المرور الحالية">
+            <Field label="كلمة المرور الحالية" error={passwordFieldErrors.currentPassword}>
               <input type="password" className={inputClass} style={inputStyle} value={passwordForm.currentPassword} onChange={(event) => setPassword("currentPassword", event.target.value)} required />
             </Field>
-            <Field label="كلمة المرور الجديدة">
+            <Field label="كلمة المرور الجديدة" error={passwordFieldErrors.newPassword}>
               <input type="password" className={inputClass} style={inputStyle} value={passwordForm.newPassword} onChange={(event) => setPassword("newPassword", event.target.value)} required />
             </Field>
-            <Field label="تأكيد كلمة المرور">
+            <Field label="تأكيد كلمة المرور" error={passwordFieldErrors.confirmNewPassword}>
               <input type="password" className={inputClass} style={inputStyle} value={passwordForm.confirmNewPassword} onChange={(event) => setPassword("confirmNewPassword", event.target.value)} required />
             </Field>
             <button type="submit" disabled={changingPassword} className="inline-flex h-11 items-center gap-2 rounded-2xl px-5 text-sm font-semibold disabled:opacity-50" style={{ background: "var(--gray-12)", color: "var(--gray-1)" }}>

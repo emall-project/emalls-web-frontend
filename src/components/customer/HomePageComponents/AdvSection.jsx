@@ -5,6 +5,7 @@ function AdvSection({ imgsUrl = [], intervalMs = 4000, href = "#" }) {
 
   useEffect(() => {
     if (!imgsUrl?.length) return;
+    setIndex((current) => (current >= imgsUrl.length ? 0 : current));
     const id = setInterval(() => {
       setIndex((i) => (i + 1) % imgsUrl.length);
     }, intervalMs);
@@ -14,7 +15,8 @@ function AdvSection({ imgsUrl = [], intervalMs = 4000, href = "#" }) {
 
   if (!imgsUrl?.length) return null;
 
-  const currentImg = imgsUrl[index];
+  const currentImg = imgsUrl[index] || imgsUrl[0];
+  const currentHref = currentImg?.href || href;
 
   return (
     <section
@@ -26,10 +28,10 @@ function AdvSection({ imgsUrl = [], intervalMs = 4000, href = "#" }) {
       }}
     >
       <a
-        href={href}
+        href={currentHref}
         className="block relative overflow-hidden h-full w-full bg-white"
         onClick={(e) => {
-          if (!href || href === "#") e.preventDefault();
+          if (!currentHref || currentHref === "#") e.preventDefault();
         }}
       >
         {/* image */}

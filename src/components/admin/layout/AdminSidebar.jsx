@@ -66,6 +66,9 @@ export function AdminSidebar({ open, onClose }) {
         <AdminLink to="/admin/users" icon={<FiUsers />} label="إدارة المستخدمين" />
         <AdminLink to="/admin/cities" icon={<FiMapPin />} label="إدارة المدن" />
         <AdminLink to="/admin/roles" icon={<FiShield />} label="إدارة الأدوار" />
+        <AdminLink to="/admin/catalog" icon={<FiPackage />} label="إدارة الكتالوج" end />
+        <AdminLink to="/admin/catalog/products" icon={<FiShoppingBag />} label="منتجات الكتالوج" />
+        <AdminLink to="/admin/catalog/comments" icon={<FiClipboard />} label="تعليقات المنتجات" />
         <AdminLink to="/admin/ads" icon={<FiTag />} label="إدارة الإعلانات" />
         <AdminLink to="/admin/files" icon={<FiFolder />} label="إدارة الملفات" />
         <AdminLink to="/admin/orders" icon={<FiPackage />} label="إدارة الطلبات" />

@@ -1,19 +1,50 @@
-import React, { useState } from "react";
-import { FiShoppingCart, FiMinus, FiPlus } from "react-icons/fi";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { FiHeart, FiLoader, FiShoppingCart, FiMinus, FiPlus } from "react-icons/fi";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import * as Dialog from "@radix-ui/react-dialog";
-import { isDiscount, discountAmount, isOutOfStock } from "../../../utils/tmpProducts";
+import { isDiscount as isTmpDiscount, discountAmount, isOutOfStock } from "../../../utils/tmpProducts";
+import { hasProductDiscount, toProductCard } from "../../../utils/catalogProducts";
+import { useAuth } from "../../../auth/AuthContext";
+import { catalogApi } from "../../../api/catalog";
 
 export default function ProductCard({ p, onAddToCart }) {
-  const discount = isDiscount(p);
-  const save = discountAmount(p);
-  const out = isOutOfStock(p);
+  const navigate = useNavigate();
+  const { isAuthenticated, isCustomer } = useAuth();
+  const product = toProductCard(p);
+  const discount = hasProductDiscount(p) || isTmpDiscount(p);
+  const save = product.oldPrice ? Math.max(0, product.oldPrice - product.price).toFixed(2) : discountAmount(p);
+  const out = product.outOfStock || isOutOfStock(p);
 
   const [open, setOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
+  const [favorite, setFavorite] = useState(Boolean(p?.favorite));
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!isCustomer || !product.id) {
+      setFavorite(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    catalogApi.favorites.exists(product.id)
+      .then((response) => {
+        if (!cancelled) setFavorite(Boolean(response?.data?.favorite ?? response?.favorite));
+      })
+      .catch(() => {
+        if (!cancelled) setFavorite(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isCustomer, product.id]);
 
   const handleAdd = () => {
-    onAddToCart?.({ ...p, quantity });
+    onAddToCart?.({ ...product, quantity });
     setOpen(false);
     setQuantity(1);
   };
@@ -21,10 +52,47 @@ export default function ProductCard({ p, onAddToCart }) {
   const incrementQty = () => setQuantity((q) => Math.min(q + 1, 99));
   const decrementQty = () => setQuantity((q) => Math.max(q - 1, 1));
 
+  const toggleFavorite = async (event) => {
+    event.stopPropagation();
+
+    if (!isAuthenticated || !isCustomer) {
+      navigate("/login");
+      return;
+    }
+
+    if (!product.id) return;
+
+    setFavoriteLoading(true);
+    try {
+      if (favorite) {
+        await catalogApi.favorites.deleteProduct(product.id);
+        setFavorite(false);
+      } else {
+        await catalogApi.favorites.create(product.id);
+        setFavorite(true);
+      }
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
   return (
     <div className="group relative bg-white overflow-hidden transition-all duration-500 hover:-translate-y-0.5 border border-black/5">
+      <button
+        type="button"
+        onClick={toggleFavorite}
+        className="absolute left-2 top-2 z-20 flex h-8 w-8 items-center justify-center border border-black/10 bg-white/90 text-black transition hover:bg-black hover:text-white"
+        title="المفضلة"
+      >
+        {favoriteLoading ? <FiLoader className="animate-spin" size={14} /> : <FiHeart size={15} fill={favorite ? "currentColor" : "none"} />}
+      </button>
+
       {/* image */}
-      <div className="relative bg-neutral-50 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => navigate(product.href)}
+        className="relative block w-full bg-neutral-50 overflow-hidden text-right"
+      >
         {discount && (
           <div className="absolute top-2 sm:top-3 right-2 sm:right-3 bg-black text-white text-[9px] sm:text-[10px] font-semibold tracking-wider px-2 py-0.5 sm:px-2.5 sm:py-1 z-10">
             وفر ₪{save}
@@ -40,24 +108,28 @@ export default function ProductCard({ p, onAddToCart }) {
         )}
 
         <img
-          src={p.imageUrl}
-          alt={p.name}
+          src={product.imageUrl}
+          alt={product.name}
           className="w-full aspect-square object-cover transition-transform duration-700 group-hover:scale-[1.03]"
           loading="lazy"
         />
 
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all duration-500" />
-      </div>
+      </button>
 
       {/* content - more compact */}
       <div className="p-2 sm:p-2.5 md:p-3 text-right">
-        <p className="text-xs sm:text-sm font-semibold tracking-wide text-black line-clamp-2 min-h-[1.8rem] sm:min-h-[2rem]">
-          {p.name}
-        </p>
+        <button
+          type="button"
+          onClick={() => navigate(product.href)}
+          className="block w-full text-right text-xs sm:text-sm font-semibold tracking-wide text-black line-clamp-2 min-h-[1.8rem] sm:min-h-[2rem] hover:underline"
+        >
+          {product.name}
+        </button>
 
-        {p.status && (
+        {product.status && (
           <p className="mt-0.5 sm:mt-1 text-[9px] sm:text-[10px] tracking-wide text-black/60 line-clamp-1 font-semibold">
-            {p.status}
+            {product.status}
           </p>
         )}
 
@@ -66,12 +138,12 @@ export default function ProductCard({ p, onAddToCart }) {
           <div className="text-right">
             <div className="flex items-baseline gap-1 sm:gap-1.5 justify-end">
               <p className="text-sm sm:text-base md:text-lg font-semibold text-black tracking-wide">
-                ₪{p.price}
+                ₪{product.price}
               </p>
 
               {discount && (
                 <p className="text-[9px] sm:text-[10px] md:text-xs text-black/40 line-through font-semibold">
-                  ₪{p.oldPrice}
+                  ₪{product.oldPrice}
                 </p>
               )}
             </div>
@@ -147,16 +219,16 @@ export default function ProductCard({ p, onAddToCart }) {
                 {/* Product info */}
                 <div className="mt-5 flex items-center gap-4">
                   <img
-                    src={p.imageUrl}
-                    alt={p.name}
+                    src={product.imageUrl}
+                    alt={product.name}
                     className="w-[72px] h-[72px] sm:w-20 sm:h-20 object-cover border border-black/10"
                   />
                   <div className="min-w-0 text-right flex-1">
                     <p className="font-semibold text-black line-clamp-2 text-sm sm:text-base">
-                      {p.name}
+                      {product.name}
                     </p>
                     <p className="text-base sm:text-lg text-black font-semibold mt-1">
-                      ₪{p.price}
+                      ₪{product.price}
                     </p>
                   </div>
                 </div>
@@ -202,7 +274,7 @@ export default function ProductCard({ p, onAddToCart }) {
                     المجموع
                   </span>
                   <span className="text-xl sm:text-2xl font-semibold text-black">
-                    ₪{(p.price * quantity).toFixed(2)}
+                    ₪{(product.price * quantity).toFixed(2)}
                   </span>
                 </div>
 

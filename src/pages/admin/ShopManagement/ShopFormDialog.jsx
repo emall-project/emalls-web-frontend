@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { FiX, FiAlertCircle, FiChevronDown, FiCheck, FiSearch } from "react-icons/fi";
 import { MediaUuidField, MediaUuidListField } from "../../../components/account/MediaUuidField";
+import { buildApiFormError } from "../../../utils/apiErrors";
 import { shopsApi, mallsApi, usersApi } from "./api";
 import { SHOP_STATUSES, SHOP_STATUS_LABELS, SHOP_CATEGORIES, CATEGORY_LABELS } from "./constants";
 
@@ -18,6 +19,34 @@ function Spinner({ size = 14 }) {
       <path d="M12 2a10 10 0 0 1 10 10" stroke="#fff" strokeWidth="3" strokeLinecap="round"/>
     </svg>
   );
+}
+
+const FIELD_MAP = {
+  name: "name",
+  mall: "mallId",
+  "mall.mallId": "mallId",
+  mallId: "mallId",
+  owner: "ownerId",
+  "owner.userId": "ownerId",
+  ownerId: "ownerId",
+  category: "category",
+  location: "location",
+  status: "status",
+  description: "description",
+  logoUuid: "logoUuid",
+  licenseImageUuid: "licenseImageUuid",
+  shopPhotosUuids: "shopPhotosUuids",
+  image: "logoUuid",
+  file: "logoUuid",
+  media: "logoUuid",
+  contactInfo: "contactInfo",
+  "contactInfo.phone": "phone",
+  "contactInfo.email": "email",
+};
+
+function FieldError({ msg }) {
+  if (!msg) return null;
+  return <p className="mt-1 text-xs" style={{ color: "var(--red-9)" }}>{msg}</p>;
 }
 
 // ── Simple select dropdown ────────────────────────────────────────────────────
@@ -160,6 +189,7 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
   const [loadingMalls, setLoadingMalls] = useState(false);
   const [users,        setUsers]        = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [fieldErrors,  setFieldErrors]  = useState({});
 
   const [name,        setName]        = useState("");
   const [mallId,      setMallId]      = useState("");
@@ -204,6 +234,7 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
   // Reset / populate
   useEffect(() => {
     if (!open) return;
+    setFieldErrors({});
     if (isEdit && shop) {
       setName(shop.name || ""); setMallId(String(shop.mall?.mallId || ""));
       setOwnerId(String(shop.owner?.userId || "")); setCategory(shop.category || "");
@@ -220,27 +251,30 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
       setStatus("ACTIVE"); setDescription(""); setLogoUuid(""); setLogoFile(null);
       setLicenseImageUuid(""); setLicenseImageFile(null); setShopPhotosUuids([]); setShopPhotoFiles([]);
       setPhone(""); setEmail(""); setError("");
+      setFieldErrors({});
     }
   }, [open, isEdit, shop]);
 
   const scrollTop = () => { if (bodyRef.current) bodyRef.current.scrollTop = 0; };
 
   const handleSubmit = async () => {
-    if (!name.trim())        { setError("اسم المتجر مطلوب");  return scrollTop(); }
-    if (!isEdit && !mallId)  { setError("يجب اختيار المول");  return scrollTop(); }
-    if (!isEdit && !ownerId) { setError("يجب اختيار المالك"); return scrollTop(); }
-    if (!category)           { setError("فئة المتجر مطلوبة"); return scrollTop(); }
-    if (!location.trim())    { setError("موقع المتجر مطلوب"); return scrollTop(); }
+    if (!name.trim())        { setFieldErrors({ name: "اسم المتجر مطلوب" }); setError("راجع الحقول المحددة");  return scrollTop(); }
+    if (!isEdit && !mallId)  { setFieldErrors({ mallId: "يجب اختيار المول" }); setError("راجع الحقول المحددة");  return scrollTop(); }
+    if (!isEdit && !ownerId) { setFieldErrors({ ownerId: "يجب اختيار المالك" }); setError("راجع الحقول المحددة"); return scrollTop(); }
+    if (!category)           { setFieldErrors({ category: "فئة المتجر مطلوبة" }); setError("راجع الحقول المحددة"); return scrollTop(); }
+    if (!location.trim())    { setFieldErrors({ location: "موقع المتجر مطلوب" }); setError("راجع الحقول المحددة"); return scrollTop(); }
     if (!isEdit && !licenseImageUuid.trim()) {
-      setError("صورة الرخصة مطلوبة");
+      setFieldErrors({ licenseImageUuid: "صورة الرخصة مطلوبة" });
+      setError("راجع الحقول المحددة");
       return scrollTop();
     }
     if (!isEdit && shopPhotosUuids.length === 0) {
-      setError("يجب اختيار صورة واحدة على الأقل للمتجر");
+      setFieldErrors({ shopPhotosUuids: "يجب اختيار صورة واحدة على الأقل للمتجر" });
+      setError("راجع الحقول المحددة");
       return scrollTop();
     }
 
-    setError(""); setLoading(true);
+    setError(""); setFieldErrors({}); setLoading(true);
     try {
       const contactInfo = {};
       if (phone.trim()) contactInfo.phone = phone.trim();
@@ -271,7 +305,10 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
       }
       onSuccess?.(); onOpenChange(false);
     } catch (e) {
-      setError(e.message || "حدث خطأ، حاول مجدداً"); scrollTop();
+      const formError = buildApiFormError(e, FIELD_MAP, "حدث خطأ، حاول مجدداً");
+      setError(formError.message);
+      setFieldErrors(formError.fieldErrors);
+      scrollTop();
     } finally { setLoading(false); }
   };
 
@@ -326,6 +363,7 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
                 <label className={labelCls} style={{ color: "var(--gray-11)" }}>اسم المتجر *</label>
                 <input className={inputCls} style={inp} value={name}
                   onChange={(e) => setName(e.target.value)} placeholder="مثال: Fashion Hub" />
+                <FieldError msg={fieldErrors.name} />
               </div>
               <div>
                 <label className={labelCls} style={{ color: "var(--gray-11)" }}>
@@ -343,6 +381,7 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
                 ) : (
                   <SelectField value={mallId} onChange={setMallId} options={mallOptions} placeholder="اختر المول" />
                 )}
+                <FieldError msg={fieldErrors.mallId} />
               </div>
             </div>
 
@@ -356,10 +395,12 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
                   value={ownerId} onChange={setOwnerId}
                   users={users} loadingUsers={loadingUsers}
                 />
+                <FieldError msg={fieldErrors.ownerId} />
               </div>
               <div>
                 <label className={labelCls} style={{ color: "var(--gray-11)" }}>الفئة</label>
                 <SelectField value={category} onChange={setCategory} options={categoryOptions} placeholder="اختر الفئة" />
+                <FieldError msg={fieldErrors.category} />
               </div>
             </div>
 
@@ -369,10 +410,12 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
                 <label className={labelCls} style={{ color: "var(--gray-11)" }}>الموقع في المول</label>
                 <input className={inputCls} style={inp} value={location}
                   onChange={(e) => setLocation(e.target.value)} placeholder="الطابق 1، قسم A" />
+                <FieldError msg={fieldErrors.location} />
               </div>
               <div>
                 <label className={labelCls} style={{ color: "var(--gray-11)" }}>الحالة</label>
                 <SelectField value={status} onChange={setStatus} options={statusOptions} placeholder="اختر الحالة" />
+                <FieldError msg={fieldErrors.status} />
               </div>
             </div>
 
@@ -384,6 +427,7 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
               onFileChange={setLogoFile}
               mode="admin"
               pickerTitle="اختيار شعار المتجر"
+              error={fieldErrors.logoUuid}
             />
 
             <MediaUuidField
@@ -395,6 +439,7 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
               onFileChange={setLicenseImageFile}
               mode="admin"
               pickerTitle="اختيار صورة الرخصة"
+              error={fieldErrors.licenseImageUuid}
             />
 
             <MediaUuidListField
@@ -406,6 +451,7 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
               onFilesChange={setShopPhotoFiles}
               mode="admin"
               pickerTitle="اختيار صور المتجر"
+              error={fieldErrors.shopPhotosUuids}
             />
 
             {/* Description */}
@@ -414,6 +460,7 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
               <textarea className={inputCls} style={{ ...inp, minHeight: 72, resize: "none" }}
                 value={description} onChange={(e) => setDescription(e.target.value)}
                 placeholder="وصف مختصر عن المتجر..." />
+              <FieldError msg={fieldErrors.description} />
             </div>
 
             {/* Contact */}
@@ -424,11 +471,13 @@ export default function ShopFormDialog({ open, onOpenChange, shop = null, onSucc
                   <label className={labelCls} style={{ color: "var(--gray-11)" }}>رقم الهاتف</label>
                   <input className={inputCls} style={{ ...inp, background: "var(--gray-a3)" }}
                     value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+970599..." />
+                  <FieldError msg={fieldErrors.phone} />
                 </div>
                 <div>
                   <label className={labelCls} style={{ color: "var(--gray-11)" }}>البريد الإلكتروني</label>
                   <input className={inputCls} style={{ ...inp, background: "var(--gray-a3)", direction: "ltr", textAlign: "left" }}
                     value={email} onChange={(e) => setEmail(e.target.value)} placeholder="info@shop.ps" />
+                  <FieldError msg={fieldErrors.email} />
                 </div>
               </div>
             </div>

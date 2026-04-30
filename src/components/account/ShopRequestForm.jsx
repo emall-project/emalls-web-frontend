@@ -7,13 +7,14 @@ import { MediaUuidField, MediaUuidListField } from "./MediaUuidField";
 const inputClass = "w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
 const inputStyle = { background: "var(--gray-a2)", borderColor: "var(--gray-a6)", color: "var(--gray-12)" };
 
-function Field({ label, required, children }) {
+function Field({ label, required, error, children }) {
   return (
     <div className="space-y-1.5">
       <label className="block text-xs font-semibold" style={{ color: "var(--gray-11)" }}>
         {label} {required ? <span style={{ color: "var(--red-9)" }}>*</span> : null}
       </label>
       {children}
+      {error ? <p className="text-xs" style={{ color: "var(--red-9)" }}>{error}</p> : null}
     </div>
   );
 }
@@ -25,9 +26,15 @@ export function ShopRequestForm({
   allowPicker = false,
   pickerMode = "admin",
   storeId,
+  uploadMode = allowPicker ? "picker" : "temp",
+  disabled = false,
+  externalError = "",
+  externalFieldErrors = {},
 }) {
   const [malls, setMalls] = useState([]);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [uploadCount, setUploadCount] = useState(0);
   const [form, setForm] = useState({
     mallId: "",
     name: "",
@@ -43,8 +50,16 @@ export function ShopRequestForm({
   const [logoFile, setLogoFile] = useState(null);
   const [licenseFile, setLicenseFile] = useState(null);
   const [photoFiles, setPhotoFiles] = useState([]);
+  const mediaUploading = uploadCount > 0;
 
-  const set = (key, value) => setForm((previous) => ({ ...previous, [key]: value }));
+  const set = (key, value) => {
+    setFieldErrors((previous) => ({ ...previous, [key]: "" }));
+    setForm((previous) => ({ ...previous, [key]: value }));
+  };
+  const setUploading = (isUploading) => {
+    setUploadCount((previous) => Math.max(0, previous + (isUploading ? 1 : -1)));
+  };
+  const fieldError = (key) => fieldErrors[key] || externalFieldErrors[key];
 
   useEffect(() => {
     accountsApi.malls.all()
@@ -58,13 +73,15 @@ export function ShopRequestForm({
   const submit = async (event) => {
     event.preventDefault();
     setError("");
+    setFieldErrors({});
 
-    if (!form.mallId) return setError("يجب اختيار المول");
-    if (!form.name.trim()) return setError("اسم المتجر مطلوب");
-    if (!form.category) return setError("فئة المتجر مطلوبة");
-    if (!form.location.trim()) return setError("موقع المتجر مطلوب");
-    if (!form.licenseImageUuid.trim()) return setError("صورة الرخصة مطلوبة");
-    if (!form.shopPhotosUuids.length) return setError("يجب اختيار صورة واحدة على الأقل للمتجر");
+    if (mediaUploading) return setError("انتظر حتى ينتهي رفع الملفات");
+    if (!form.mallId) { setFieldErrors({ mallId: "يجب اختيار المول" }); return setError("راجع الحقول المحددة"); }
+    if (!form.name.trim()) { setFieldErrors({ name: "اسم المتجر مطلوب" }); return setError("راجع الحقول المحددة"); }
+    if (!form.category) { setFieldErrors({ category: "فئة المتجر مطلوبة" }); return setError("راجع الحقول المحددة"); }
+    if (!form.location.trim()) { setFieldErrors({ location: "موقع المتجر مطلوب" }); return setError("راجع الحقول المحددة"); }
+    if (!form.licenseImageUuid.trim()) { setFieldErrors({ licenseImageUuid: "صورة الرخصة مطلوبة" }); return setError("راجع الحقول المحددة"); }
+    if (!form.shopPhotosUuids.length) { setFieldErrors({ shopPhotosUuids: "يجب اختيار صورة واحدة على الأقل للمتجر" }); return setError("راجع الحقول المحددة"); }
 
     const contactInfo = {};
     if (form.phone.trim()) contactInfo.phone = form.phone.trim();
@@ -85,15 +102,15 @@ export function ShopRequestForm({
 
   return (
     <form className="space-y-5" onSubmit={submit}>
-      {error ? (
+      {error || externalError ? (
         <div className="flex items-start gap-2 rounded-2xl border px-4 py-3 text-sm" style={{ background: "var(--red-a2)", borderColor: "var(--red-a6)", color: "var(--red-11)" }}>
           <FiAlertCircle size={16} className="mt-0.5 shrink-0" />
-          {error}
+          {error || externalError}
         </div>
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="المول" required>
+        <Field label="المول" required error={fieldError("mallId")}>
           <select className={inputClass} style={inputStyle} value={form.mallId} onChange={(event) => set("mallId", event.target.value)}>
             <option value="">اختر المول</option>
             {malls.map((mall) => (
@@ -103,10 +120,10 @@ export function ShopRequestForm({
             ))}
           </select>
         </Field>
-        <Field label="اسم المتجر" required>
+        <Field label="اسم المتجر" required error={fieldError("name")}>
           <input className={inputClass} style={inputStyle} value={form.name} onChange={(event) => set("name", event.target.value)} />
         </Field>
-        <Field label="الفئة" required>
+        <Field label="الفئة" required error={fieldError("category")}>
           <select className={inputClass} style={inputStyle} value={form.category} onChange={(event) => set("category", event.target.value)}>
             <option value="">اختر الفئة</option>
             {SHOP_CATEGORIES.map((category) => (
@@ -114,18 +131,18 @@ export function ShopRequestForm({
             ))}
           </select>
         </Field>
-        <Field label="الموقع داخل المول" required>
+        <Field label="الموقع داخل المول" required error={fieldError("location")}>
           <input className={inputClass} style={inputStyle} value={form.location} onChange={(event) => set("location", event.target.value)} />
         </Field>
-        <Field label="هاتف التواصل">
+        <Field label="هاتف التواصل" error={fieldError("phone")}>
           <input className={inputClass} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} value={form.phone} onChange={(event) => set("phone", event.target.value)} />
         </Field>
-        <Field label="بريد التواصل">
+        <Field label="بريد التواصل" error={fieldError("email")}>
           <input type="email" className={inputClass} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} value={form.email} onChange={(event) => set("email", event.target.value)} />
         </Field>
       </div>
 
-      <Field label="وصف المتجر">
+      <Field label="وصف المتجر" error={fieldError("description")}>
         <textarea className={inputClass} style={{ ...inputStyle, minHeight: 84, resize: "vertical" }} value={form.description} onChange={(event) => set("description", event.target.value)} />
       </Field>
 
@@ -139,6 +156,10 @@ export function ShopRequestForm({
         mode={pickerMode}
         storeId={storeId}
         pickerTitle="اختيار شعار المتجر"
+        uploadMode={uploadMode}
+        disabled={disabled || submitting}
+        error={fieldError("logoUuid")}
+        onUploadingChange={setUploading}
       />
 
       <MediaUuidField
@@ -152,6 +173,10 @@ export function ShopRequestForm({
         mode={pickerMode}
         storeId={storeId}
         pickerTitle="اختيار صورة الرخصة"
+        uploadMode={uploadMode}
+        disabled={disabled || submitting}
+        error={fieldError("licenseImageUuid")}
+        onUploadingChange={setUploading}
       />
 
       <MediaUuidListField
@@ -165,11 +190,15 @@ export function ShopRequestForm({
         mode={pickerMode}
         storeId={storeId}
         pickerTitle="اختيار صور المتجر"
+        uploadMode={uploadMode}
+        disabled={disabled || submitting}
+        error={fieldError("shopPhotosUuids")}
+        onUploadingChange={setUploading}
       />
 
-      <button type="submit" disabled={submitting} className="inline-flex h-11 items-center gap-2 rounded-2xl px-5 text-sm font-semibold transition hover:opacity-90 disabled:opacity-50" style={{ background: "var(--blue-9)", color: "#fff" }}>
+      <button type="submit" disabled={submitting || disabled || mediaUploading} className="inline-flex h-11 items-center gap-2 rounded-2xl px-5 text-sm font-semibold transition hover:opacity-90 disabled:opacity-50" style={{ background: "var(--blue-9)", color: "#fff" }}>
         {submitting ? <FiLoader className="animate-spin" /> : <FiSend />}
-        {submitLabel}
+        {mediaUploading ? "جاري رفع الملفات" : submitLabel}
       </button>
     </form>
   );

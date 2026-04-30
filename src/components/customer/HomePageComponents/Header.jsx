@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { FiShoppingCart } from "react-icons/fi";
 import { GrFavorite } from "react-icons/gr";
 import { VscAccount } from "react-icons/vsc";
@@ -6,15 +6,37 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../../auth/AuthContext";
 import { getHomePathForRole } from "../../../auth/session";
+import { catalogApi, unwrapCatalogPayload } from "../../../api/catalog";
 import HeaderSearch from "./HeaderSearch";
 
 function Header() {
   const navigate = useNavigate();
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated, role, isCustomer } = useAuth();
+  const [favoritesCount, setFavoritesCount] = useState(0);
 
   const handleAccountClick = () => {
     navigate(isAuthenticated ? getHomePathForRole(role) : "/login");
   };
+
+  useEffect(() => {
+    if (!isCustomer) {
+      setFavoritesCount(0);
+      return;
+    }
+
+    let cancelled = false;
+    catalogApi.favorites.count()
+      .then((response) => {
+        if (!cancelled) setFavoritesCount(Number(unwrapCatalogPayload(response)?.count || 0));
+      })
+      .catch(() => {
+        if (!cancelled) setFavoritesCount(0);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isCustomer]);
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-black/10">
@@ -46,13 +68,15 @@ function Header() {
             {/* Favorites */}
             <button
               aria-label="favorites"
+              type="button"
+              onClick={() => navigate(isCustomer ? "/favorites" : "/login")}
               className="group relative flex flex-col items-center gap-1 transition-all duration-300"
             >
               <div className="relative">
                 <GrFavorite className="text-black text-xl md:text-2xl transition-all duration-300 group-hover:scale-110" />
                 {/* Subtle badge */}
                 <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-black text-white text-[10px] font-medium rounded-full flex items-center justify-center">
-                  3
+                  {favoritesCount}
                 </span>
               </div>
               <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-medium group-hover:text-black transition-colors">
@@ -67,10 +91,6 @@ function Header() {
             >
               <div className="relative">
                 <FiShoppingCart className="text-black text-xl md:text-2xl transition-all duration-300 group-hover:scale-110" />
-                {/* Subtle badge */}
-                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-black text-white text-[10px] font-medium rounded-full flex items-center justify-center">
-                  5
-                </span>
               </div>
               <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-medium group-hover:text-black transition-colors">
                 السلة

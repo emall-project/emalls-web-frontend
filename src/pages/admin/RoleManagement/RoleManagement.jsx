@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { FiAlertCircle, FiEdit2, FiLoader, FiPlus, FiRefreshCw, FiTrash2 } from "react-icons/fi";
 import { accountsApi, normalizePage } from "../../../api/accounts";
+import { buildApiFormError, getApiErrorMessage } from "../../../utils/apiErrors";
 
 const inputClass = "w-full rounded-xl border px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
 const inputStyle = { background: "var(--gray-a2)", borderColor: "var(--gray-a6)", color: "var(--gray-12)" };
@@ -32,6 +33,7 @@ export default function RoleManagement() {
   const [toast, setToast] = useState(null);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ code: "", name: "" });
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const showToast = (message, type = "success") => setToast({ message, type });
 
@@ -44,7 +46,7 @@ export default function RoleManagement() {
       setRoles(data.content);
       setTotalPages(data.totalPages || 1);
     } catch (requestError) {
-      setError(requestError.message || "فشل تحميل الأدوار");
+      setError(getApiErrorMessage(requestError, "فشل تحميل الأدوار"));
       setRoles([]);
     } finally {
       setLoading(false);
@@ -58,21 +60,25 @@ export default function RoleManagement() {
   const resetForm = () => {
     setEditing(null);
     setForm({ code: "", name: "" });
+    setFieldErrors({});
   };
 
   const edit = (role) => {
     setEditing(role);
+    setFieldErrors({});
     setForm({ code: role.code || "", name: role.name || "" });
   };
 
   const submit = async (event) => {
     event.preventDefault();
     if (!form.code.trim()) {
+      setFieldErrors({ code: "كود الدور مطلوب" });
       showToast("كود الدور مطلوب", "error");
       return;
     }
 
     setSaving(true);
+    setFieldErrors({});
     try {
       const body = { code: form.code.trim(), name: form.name.trim() || null };
       if (editing) {
@@ -84,7 +90,9 @@ export default function RoleManagement() {
       resetForm();
       load();
     } catch (requestError) {
-      showToast(requestError.message || "فشل حفظ الدور", "error");
+      const formError = buildApiFormError(requestError, { role: "code", code: "code", name: "name" }, "فشل حفظ الدور");
+      setFieldErrors(formError.fieldErrors);
+      showToast(formError.message, "error");
     } finally {
       setSaving(false);
     }
@@ -100,7 +108,7 @@ export default function RoleManagement() {
       showToast("تم حذف الدور");
       load();
     } catch (requestError) {
-      showToast(requestError.message || "فشل حذف الدور", "error");
+      showToast(getApiErrorMessage(requestError, "فشل حذف الدور"), "error");
     }
   };
 
@@ -119,8 +127,14 @@ export default function RoleManagement() {
       </div>
 
       <form onSubmit={submit} className="grid gap-3 rounded-2xl border p-4 sm:grid-cols-[1fr_1fr_auto]" style={{ background: "var(--gray-1)", borderColor: "var(--gray-a7)" }}>
-        <input className={inputClass} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} value={form.code} onChange={(event) => setForm((previous) => ({ ...previous, code: event.target.value }))} placeholder="ROLE_CUSTOMER" />
-        <input className={inputClass} style={inputStyle} value={form.name} onChange={(event) => setForm((previous) => ({ ...previous, name: event.target.value }))} placeholder="اسم الدور" />
+        <div>
+          <input className={inputClass} style={{ ...inputStyle, direction: "ltr", textAlign: "left" }} value={form.code} onChange={(event) => { setFieldErrors((previous) => ({ ...previous, code: "" })); setForm((previous) => ({ ...previous, code: event.target.value })); }} placeholder="ROLE_CUSTOMER" />
+          {fieldErrors.code ? <p className="mt-1 text-xs" style={{ color: "var(--red-9)" }}>{fieldErrors.code}</p> : null}
+        </div>
+        <div>
+          <input className={inputClass} style={inputStyle} value={form.name} onChange={(event) => { setFieldErrors((previous) => ({ ...previous, name: "" })); setForm((previous) => ({ ...previous, name: event.target.value })); }} placeholder="اسم الدور" />
+          {fieldErrors.name ? <p className="mt-1 text-xs" style={{ color: "var(--red-9)" }}>{fieldErrors.name}</p> : null}
+        </div>
         <div className="flex gap-2">
           <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-50" style={{ background: "var(--blue-9)", color: "#fff" }}>
             {saving ? <FiLoader className="animate-spin" /> : editing ? <FiEdit2 /> : <FiPlus />}

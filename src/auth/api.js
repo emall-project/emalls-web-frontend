@@ -3,6 +3,7 @@ import {
   getRefreshToken,
   persistAuthState,
 } from "./session";
+import { createApiError } from "../utils/apiErrors";
 
 const AUTH_BASE = "/accounts/api/auth";
 const AUTH_HEADER = "Authorization";
@@ -15,12 +16,7 @@ function extractAccessToken(response) {
 
 async function buildRequestError(response, fallbackMessage) {
   const payload = await response.json().catch(() => null);
-  const error = new Error(
-    payload?.message || payload?.error || fallbackMessage || "حدث خطأ في المصادقة"
-  );
-  error.status = response.status;
-  error.payload = payload;
-  return error;
+  return createApiError(response, payload, fallbackMessage || "حدث خطأ في المصادقة");
 }
 
 async function requestAuth(path, options = {}, fallbackMessage) {

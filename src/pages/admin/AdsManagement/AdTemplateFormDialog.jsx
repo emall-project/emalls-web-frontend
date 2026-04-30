@@ -153,7 +153,7 @@ export default function AdTemplateFormDialog({ open, onOpenChange, template = nu
   const [description, setDescription] = useState("");
   const [position,    setPosition]    = useState("HOME_TOP");
   const [imageRatio,  setImageRatio]  = useState("16:9");
-  const [price,       setPrice]       = useState("");
+  const [pricePerHour,setPricePerHour]       = useState("");
   const [startDate,   setStartDate]   = useState("");
   const [endDate,     setEndDate]     = useState("");
   const [status,      setStatus]      = useState("ACTIVE");
@@ -165,13 +165,13 @@ export default function AdTemplateFormDialog({ open, onOpenChange, template = nu
       setDescription(template.description || "");
       setPosition(template.position || "HOME_TOP");
       setImageRatio(template.imageRatio || "16:9");
-      setPrice(template.price ?? "");
+      setPricePerHour(template.pricePerHour ?? "");
       setStartDate(template.startDate || "");
       setEndDate(template.endDate || "");
       setStatus(template.status || "ACTIVE");
     } else {
       setName(""); setDescription(""); setPosition("HOME_TOP");
-      setImageRatio("16:9"); setPrice(""); setStartDate(""); setEndDate("");
+      setImageRatio("16:9"); setPricePerHour(""); setStartDate(""); setEndDate("");
       setStatus("ACTIVE"); setError(""); setFieldErrors({});
     }
   }, [open, isEdit, template]);
@@ -181,7 +181,7 @@ export default function AdTemplateFormDialog({ open, onOpenChange, template = nu
 
   const handleSubmit = async () => {
     if (!name.trim())   { setError("اسم النموذج مطلوب"); return scrollTop(); }
-    if (!price)         { setError("السعر مطلوب");             return scrollTop(); }
+    if (!pricePerHour)         { setError("السعر مطلوب");             return scrollTop(); }
     if (!startDate)     { setError("تاريخ البداية مطلوب");    return scrollTop(); }
     if (!endDate)       { setError("تاريخ النهاية مطلوب");    return scrollTop(); }
     if (!imageRatio)    { setError("نسبة الصورة مطلوبة");     return scrollTop(); }
@@ -191,7 +191,7 @@ export default function AdTemplateFormDialog({ open, onOpenChange, template = nu
     try {
       const body = {
         name: name.trim(), description: description.trim() || null,
-        position, imageRatio, price: Number(price),
+        position, imageRatio, pricePerHour: Number(pricePerHour),
         startDate, endDate,
         ...(isEdit ? {} : { status }),
       };
@@ -296,12 +296,12 @@ export default function AdTemplateFormDialog({ open, onOpenChange, template = nu
               </div>
             </div>
 
-            {/* Price */}
+            {/* pricePerHour */}
             <div>
               <label className={labelCls} style={{ color: "var(--gray-11)" }}>السعر (₪) *</label>
-              <input className={inputCls} style={inp} type="number" min="0" value={price}
-                onChange={(e) => { setPrice(e.target.value); clearErr("price"); }} placeholder="مثال: 500" />
-              <FieldError msg={fieldErrors.price} />
+              <input className={inputCls} style={inp} type="number" min="0" value={pricePerHour}
+                onChange={(e) => { setPricePerHour(e.target.value); clearErr("pricePerHour"); }} placeholder="مثال: 500" />
+              <FieldError msg={fieldErrors.pricePerHour} />
             </div>
 
             {/* Start + End Date */}

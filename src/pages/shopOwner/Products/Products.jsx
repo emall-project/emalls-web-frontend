@@ -102,6 +102,48 @@ function normalizeVariantMedia(media = []) {
   }));
 }
 
+function unwrapData(response) {
+  return response?.data ?? response ?? null;
+}
+
+function buildProductBasePayload(form) {
+  return {
+    name: form.name.trim(),
+    slug: form.slug.trim(),
+    isActive: form.isActive,
+    targetedAudience: form.targetedAudience || undefined,
+    ageGroup: form.ageGroup || undefined,
+    categoryId: form.categoryId ? Number(form.categoryId) : undefined,
+    brandId: form.brandId ? Number(form.brandId) : undefined,
+    shortDescription: form.shortDescription.trim() || undefined,
+    description: form.description.trim() || undefined,
+    tags: form.tags.map((t) => ({ name: t })),
+  };
+}
+
+function buildVariantPayload(variant, productAttrIds) {
+  return {
+    ...(variant.id ? { id: variant.id } : {}),
+    name: variant.name.trim(),
+    basePrice: variant.basePrice,
+    isDefault: variant.isDefault,
+    attributes: productAttrIds
+      .map((attrId) => {
+        const entry = (variant.attributes || []).find(
+          (item) => String(item.attributeId) === String(attrId)
+        );
+        return entry?.optionId
+          ? { attributeId: Number(attrId), optionId: Number(entry.optionId) }
+          : null;
+      })
+      .filter(Boolean),
+    media: normalizeVariantMedia(variant.media || []).map((medium) => ({
+      mediumId: medium.mediumId,
+      sortOrder: medium.sortOrder,
+    })),
+  };
+}
+
 function Spinner({ size = 16 }) {
   return <FiLoader size={size} className="animate-spin" style={{ color: "var(--blue-9)" }} />;
 }
@@ -628,8 +670,8 @@ function emptyForm() {
     name: "",
     slug: "",
     isActive: true,
-    targetedAudience: "",
-    ageGroup: "",
+    targetedAudience: "ALL",
+    ageGroup: "ALL",
     categoryId: "",
     brandId: "",
     shortDescription: "",
@@ -1233,38 +1275,32 @@ function ProductFormDialog({ open, onOpenChange, product, onSuccess, storeId }) 
         throw new Error(`أضف وسائط للمتغير ${missingMediaIndex + 1}`);
       }
 
-      const body = {
-        name: form.name.trim(),
-        slug: form.slug.trim(),
-        isActive: form.isActive,
-        targetedAudience: form.targetedAudience || undefined,
-        ageGroup: form.ageGroup || undefined,
-        categoryId: form.categoryId ? Number(form.categoryId) : undefined,
-        brandId: form.brandId ? Number(form.brandId) : undefined,
-        shortDescription: form.shortDescription.trim() || undefined,
-        description: form.description.trim() || undefined,
-        tags: form.tags.map((t) => ({ name: t })),
-        variants: form.variants.map((v) => ({
-          ...(v.id ? { id: v.id } : {}),
-          name: v.name.trim(),
-          basePrice: v.basePrice,
-          isDefault: v.isDefault,
-          attributes: productAttrIds
-            .map(attrId => {
-              const entry = (v.attributes || []).find(a => String(a.attributeId) === String(attrId));
-              return entry?.optionId ? { attributeId: Number(attrId), optionId: Number(entry.optionId) } : null;
-            })
-            .filter(Boolean),
-          media: normalizeVariantMedia(v.media || []).map((medium) => ({
-            mediumId: medium.mediumId,
-            sortOrder: medium.sortOrder,
-          })),
-        })),
-      };
+      const body = buildProductBasePayload(form);
+      const variants = form.variants.map((variant) =>
+        buildVariantPayload(variant, productAttrIds)
+      );
+
       if (isEdit) {
+        if (variants.some((variant) => !variant.id)) {
+          throw new Error("إضافة متغيرات جديدة بعد إنشاء المنتج غير مدعومة من الخلفية حاليًا");
+        }
+
         await productsApi.update(storeId, { id: product.id, ...body });
+        const currentVariantIds = new Set(variants.map((variant) => String(variant.id)));
+        const originalVariantIds = (product.variants || [])
+          .map((variant) => variant.id)
+          .filter(Boolean);
+
+        await Promise.all(
+          variants.map((variant) => productsApi.updateVariant(storeId, product.id, variant))
+        );
+        await Promise.all(
+          originalVariantIds
+            .filter((variantId) => !currentVariantIds.has(String(variantId)))
+            .map((variantId) => productsApi.deleteVariant(storeId, product.id, variantId))
+        );
       } else {
-        await productsApi.create(storeId, body);
+        await productsApi.create(storeId, { ...body, variants });
       }
       onSuccess?.();
       onOpenChange(false);
@@ -1477,17 +1513,32 @@ function ProductFormDialog({ open, onOpenChange, product, onSuccess, storeId }) 
                         <FiPlus size={12} />
                         خاصية جديدة
                       </button>
-                      <button
-                        type="button"
-                        onClick={addVariant}
-                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition hover:opacity-80"
-                        style={{ background: "var(--blue-a3)", color: "var(--blue-11)" }}
-                      >
-                        <FiPlus size={12} />
-                        إضافة متغير
-                      </button>
+                      {!isEdit && (
+                        <button
+                          type="button"
+                          onClick={addVariant}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition hover:opacity-80"
+                          style={{ background: "var(--blue-a3)", color: "var(--blue-11)" }}
+                        >
+                          <FiPlus size={12} />
+                          إضافة متغير
+                        </button>
+                      )}
                     </div>
                   </div>
+
+                  {isEdit ? (
+                    <div
+                      className="mb-3 rounded-xl border px-4 py-3 text-xs leading-6"
+                      style={{
+                        background: "var(--amber-a2, var(--yellow-a2))",
+                        borderColor: "var(--amber-a6, var(--yellow-a6))",
+                        color: "var(--amber-11, var(--yellow-11))",
+                      }}
+                    >
+                      يمكن تعديل أو حذف المتغيرات الحالية فقط. إضافة متغير جديد بعد إنشاء المنتج تحتاج endpoint من الخلفية.
+                    </div>
+                  ) : null}
 
                   {/* Product-level attribute selector */}
                   {attrOptions.length > 0 && (
@@ -1672,8 +1723,16 @@ function DeleteDialog({ open, onOpenChange, product, onConfirm, loading }) {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
-export default function Products() {
-  const { selectedStoreId } = useAuth();
+export default function Products({
+  storeIdOverride = null,
+  title = "إدارة المنتجات",
+  subtitle = "إدارة منتجات المتجر",
+  headerExtra = null,
+  summaryContent = null,
+  emptyStoreMessage = "لا يوجد متجر نشط لهذا الحساب.",
+}) {
+  const { selectedStoreId: authSelectedStoreId } = useAuth();
+  const selectedStoreId = storeIdOverride ?? authSelectedStoreId;
   const [products, setProducts] = useState([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
@@ -1753,9 +1812,18 @@ export default function Products() {
 
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
 
-  const handleEdit = (product) => {
-    setSelectedProduct(product);
-    setFormOpen(true);
+  const handleEdit = async (product) => {
+    if (!selectedStoreId) return;
+    setRowLoading((previous) => ({ ...previous, [product.id]: true }));
+    try {
+      const response = await productsApi.getById(selectedStoreId, product.id);
+      setSelectedProduct(unwrapData(response));
+      setFormOpen(true);
+    } catch (error) {
+      showToast(error.message || "فشل في تحميل بيانات المنتج", "error");
+    } finally {
+      setRowLoading((previous) => ({ ...previous, [product.id]: false }));
+    }
   };
 
   const handleAdd = () => {
@@ -1791,20 +1859,19 @@ export default function Products() {
 
     setRowLoading((p) => ({ ...p, [product.id]: true }));
     try {
+      const fullProduct = unwrapData(await productsApi.getById(selectedStoreId, product.id)) || product;
       await productsApi.update(selectedStoreId, {
-        id: product.id,
-        name: product.name,
-        slug: product.slug,
+        id: fullProduct.id,
+        name: fullProduct.name,
+        slug: fullProduct.slug,
+        targetedAudience: fullProduct.targetedAudience || "ALL",
+        ageGroup: fullProduct.ageGroup || "ALL",
         isActive: !product.isActive,
-        tags: product.tags || [],
-        variants: (product.variants || []).map((v) => ({
-          ...(v.id ? { id: v.id } : {}),
-          name: v.name,
-          basePrice: v.basePrice,
-          isDefault: v.isDefault,
-          attributes: v.attributes || [],
-          media: v.media || [],
-        })),
+        categoryId: fullProduct.categoryId,
+        brandId: fullProduct.brandId,
+        shortDescription: fullProduct.shortDescription || fullProduct.name,
+        description: fullProduct.description || fullProduct.shortDescription || fullProduct.name,
+        tags: fullProduct.tags || [],
       });
       showToast(`تم ${!product.isActive ? "تفعيل" : "تعطيل"} المنتج`);
       fetchProducts();
@@ -1823,6 +1890,13 @@ export default function Products() {
         <StyleInjector />
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         <div dir="rtl" className="p-3 sm:p-6">
+          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold" style={{ color: "var(--gray-12)" }}>{title}</h1>
+              <p className="mt-0.5 text-sm" style={{ color: "var(--gray-11)" }}>{subtitle}</p>
+            </div>
+            {headerExtra ? <div className="flex flex-wrap items-center gap-3">{headerExtra}</div> : null}
+          </div>
           <div
             className="rounded-2xl border px-5 py-4 text-sm"
             style={{
@@ -1831,7 +1905,7 @@ export default function Products() {
               color: "var(--gray-11)",
             }}
           >
-            لا يوجد متجر نشط لهذا الحساب.
+            {emptyStoreMessage}
           </div>
         </div>
       </>
@@ -1847,22 +1921,27 @@ export default function Products() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold" style={{ color: "var(--gray-12)" }}>إدارة المنتجات</h1>
+            <h1 className="text-2xl font-bold" style={{ color: "var(--gray-12)" }}>{title}</h1>
             <p className="mt-0.5 text-sm" style={{ color: "var(--gray-11)" }}>
-              {totalElements > 0 ? `${totalElements} منتج` : "إدارة منتجات المتجر"}
+              {totalElements > 0 ? `${totalElements} منتج` : subtitle}
             </p>
           </div>
-          <button
-            onClick={handleAdd}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition hover:opacity-90"
-            style={{ background: "#2563eb", color: "#fff" }}
-          >
-            <FiPlus />
-            إضافة منتج
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            {headerExtra}
+            <button
+              onClick={handleAdd}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition hover:opacity-90"
+              style={{ background: "#2563eb", color: "#fff" }}
+            >
+              <FiPlus />
+              إضافة منتج
+            </button>
+          </div>
         </div>
 
         {/* Search + Filters */}
+        {summaryContent}
+
         <div className="rounded-2xl p-4 space-y-3" style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
           <div className="flex flex-wrap gap-3">
             {/* Name search */}
@@ -2035,6 +2114,11 @@ export default function Products() {
                             {defVariant.basePrice != null
                               ? `${Number(defVariant.basePrice).toLocaleString("ar")} ر.س`
                               : "—"}
+                          </div>
+                        )}
+                        {!defVariant && product.basePrice != null && (
+                          <div className="text-xs mt-0.5" style={{ color: "var(--gray-10)" }}>
+                            {Number(product.discountedPrice ?? product.basePrice).toLocaleString("ar")} ر.س
                           </div>
                         )}
                       </td>

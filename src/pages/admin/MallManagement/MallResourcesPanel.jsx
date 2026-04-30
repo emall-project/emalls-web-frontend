@@ -2,15 +2,17 @@ import { useCallback, useEffect, useState } from "react";
 import { FiEdit2, FiLoader, FiPlus, FiRefreshCw, FiTrash2 } from "react-icons/fi";
 import { accountsApi, unwrapAccountPayload } from "../../../api/accounts";
 import { MediaUuidField } from "../../../components/account/MediaUuidField";
+import { buildApiFormError, getApiErrorMessage } from "../../../utils/apiErrors";
 
 const inputClass = "w-full rounded-xl border px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
 const inputStyle = { background: "var(--gray-a2)", borderColor: "var(--gray-a6)", color: "var(--gray-12)" };
 
-function Field({ label, children }) {
+function Field({ label, error, children }) {
   return (
     <div className="space-y-1.5">
       <label className="block text-xs font-semibold" style={{ color: "var(--gray-11)" }}>{label}</label>
       {children}
+      {error ? <p className="text-xs" style={{ color: "var(--red-9)" }}>{error}</p> : null}
     </div>
   );
 }
@@ -51,6 +53,8 @@ export function MallResourcesPanel({ mallId }) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
+  const [serviceFieldErrors, setServiceFieldErrors] = useState({});
+  const [restaurantFieldErrors, setRestaurantFieldErrors] = useState({});
   const [serviceForm, setServiceForm] = useState({ serviceId: null, name: "", description: "", isActive: true });
   const [restaurantForm, setRestaurantForm] = useState({
     restaurantId: null,
@@ -76,7 +80,7 @@ export function MallResourcesPanel({ mallId }) {
       setServices(Array.isArray(nextServices) ? nextServices : []);
       setRestaurants(Array.isArray(nextRestaurants) ? nextRestaurants : []);
     } catch (error) {
-      setMessage({ type: "error", text: error.message || "فشل تحميل خدمات ومطاعم المول" });
+      setMessage({ type: "error", text: getApiErrorMessage(error, "فشل تحميل خدمات ومطاعم المول") });
     } finally {
       setLoading(false);
     }
@@ -86,12 +90,22 @@ export function MallResourcesPanel({ mallId }) {
     load();
   }, [load]);
 
-  const resetService = () => setServiceForm({ serviceId: null, name: "", description: "", isActive: true });
-  const resetRestaurant = () => setRestaurantForm({ restaurantId: null, name: "", cuisineType: "", locationInMall: "", description: "", logoUuid: "", logoFile: null, isActive: true });
+  const resetService = () => {
+    setServiceForm({ serviceId: null, name: "", description: "", isActive: true });
+    setServiceFieldErrors({});
+  };
+  const resetRestaurant = () => {
+    setRestaurantForm({ restaurantId: null, name: "", cuisineType: "", locationInMall: "", description: "", logoUuid: "", logoFile: null, isActive: true });
+    setRestaurantFieldErrors({});
+  };
 
   const saveService = async (event) => {
     event.preventDefault();
-    if (!serviceForm.name.trim()) return setMessage({ type: "error", text: "اسم الخدمة مطلوب" });
+    setServiceFieldErrors({});
+    if (!serviceForm.name.trim()) {
+      setServiceFieldErrors({ name: "اسم الخدمة مطلوب" });
+      return setMessage({ type: "error", text: "اسم الخدمة مطلوب" });
+    }
     setSaving(true);
     try {
       const body = {
@@ -107,7 +121,9 @@ export function MallResourcesPanel({ mallId }) {
       resetService();
       load();
     } catch (error) {
-      setMessage({ type: "error", text: error.message || "فشل حفظ الخدمة" });
+      const formError = buildApiFormError(error, { name: "name", description: "description", isActive: "isActive" }, "فشل حفظ الخدمة");
+      setServiceFieldErrors(formError.fieldErrors);
+      setMessage({ type: "error", text: formError.message });
     } finally {
       setSaving(false);
     }
@@ -115,7 +131,11 @@ export function MallResourcesPanel({ mallId }) {
 
   const saveRestaurant = async (event) => {
     event.preventDefault();
-    if (!restaurantForm.name.trim()) return setMessage({ type: "error", text: "اسم المطعم مطلوب" });
+    setRestaurantFieldErrors({});
+    if (!restaurantForm.name.trim()) {
+      setRestaurantFieldErrors({ name: "اسم المطعم مطلوب" });
+      return setMessage({ type: "error", text: "اسم المطعم مطلوب" });
+    }
     setSaving(true);
     try {
       const body = {
@@ -134,7 +154,18 @@ export function MallResourcesPanel({ mallId }) {
       resetRestaurant();
       load();
     } catch (error) {
-      setMessage({ type: "error", text: error.message || "فشل حفظ المطعم" });
+      const formError = buildApiFormError(error, {
+        name: "name",
+        cuisineType: "cuisineType",
+        locationInMall: "locationInMall",
+        description: "description",
+        logoUuid: "logoUuid",
+        image: "logoUuid",
+        file: "logoUuid",
+        media: "logoUuid",
+      }, "فشل حفظ المطعم");
+      setRestaurantFieldErrors(formError.fieldErrors);
+      setMessage({ type: "error", text: formError.message });
     } finally {
       setSaving(false);
     }
@@ -188,11 +219,11 @@ export function MallResourcesPanel({ mallId }) {
           />
           <form onSubmit={saveService} className="space-y-3 rounded-2xl border p-4" style={{ borderColor: "var(--gray-a6)", background: "var(--gray-a1, var(--gray-1))" }}>
             <h3 className="text-sm font-bold" style={{ color: "var(--gray-12)" }}>{serviceForm.serviceId ? "تعديل خدمة" : "إضافة خدمة"}</h3>
-            <Field label="اسم الخدمة">
-              <input className={inputClass} style={inputStyle} value={serviceForm.name} onChange={(event) => setServiceForm((previous) => ({ ...previous, name: event.target.value }))} />
+            <Field label="اسم الخدمة" error={serviceFieldErrors.name}>
+              <input className={inputClass} style={inputStyle} value={serviceForm.name} onChange={(event) => { setServiceFieldErrors((previous) => ({ ...previous, name: "" })); setServiceForm((previous) => ({ ...previous, name: event.target.value })); }} />
             </Field>
-            <Field label="الوصف">
-              <textarea className={inputClass} style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} value={serviceForm.description} onChange={(event) => setServiceForm((previous) => ({ ...previous, description: event.target.value }))} />
+            <Field label="الوصف" error={serviceFieldErrors.description}>
+              <textarea className={inputClass} style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} value={serviceForm.description} onChange={(event) => { setServiceFieldErrors((previous) => ({ ...previous, description: "" })); setServiceForm((previous) => ({ ...previous, description: event.target.value })); }} />
             </Field>
             <label className="flex items-center gap-2 text-sm" style={{ color: "var(--gray-11)" }}>
               <input type="checkbox" checked={serviceForm.isActive} onChange={(event) => setServiceForm((previous) => ({ ...previous, isActive: event.target.checked }))} />
@@ -228,18 +259,18 @@ export function MallResourcesPanel({ mallId }) {
           <form onSubmit={saveRestaurant} className="space-y-3 rounded-2xl border p-4" style={{ borderColor: "var(--gray-a6)", background: "var(--gray-a1, var(--gray-1))" }}>
             <h3 className="text-sm font-bold" style={{ color: "var(--gray-12)" }}>{restaurantForm.restaurantId ? "تعديل مطعم" : "إضافة مطعم"}</h3>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="اسم المطعم">
-                <input className={inputClass} style={inputStyle} value={restaurantForm.name} onChange={(event) => setRestaurantForm((previous) => ({ ...previous, name: event.target.value }))} />
+              <Field label="اسم المطعم" error={restaurantFieldErrors.name}>
+                <input className={inputClass} style={inputStyle} value={restaurantForm.name} onChange={(event) => { setRestaurantFieldErrors((previous) => ({ ...previous, name: "" })); setRestaurantForm((previous) => ({ ...previous, name: event.target.value })); }} />
               </Field>
-              <Field label="نوع المطبخ">
-                <input className={inputClass} style={inputStyle} value={restaurantForm.cuisineType} onChange={(event) => setRestaurantForm((previous) => ({ ...previous, cuisineType: event.target.value }))} />
+              <Field label="نوع المطبخ" error={restaurantFieldErrors.cuisineType}>
+                <input className={inputClass} style={inputStyle} value={restaurantForm.cuisineType} onChange={(event) => { setRestaurantFieldErrors((previous) => ({ ...previous, cuisineType: "" })); setRestaurantForm((previous) => ({ ...previous, cuisineType: event.target.value })); }} />
               </Field>
-              <Field label="الموقع">
-                <input className={inputClass} style={inputStyle} value={restaurantForm.locationInMall} onChange={(event) => setRestaurantForm((previous) => ({ ...previous, locationInMall: event.target.value }))} />
+              <Field label="الموقع" error={restaurantFieldErrors.locationInMall}>
+                <input className={inputClass} style={inputStyle} value={restaurantForm.locationInMall} onChange={(event) => { setRestaurantFieldErrors((previous) => ({ ...previous, locationInMall: "" })); setRestaurantForm((previous) => ({ ...previous, locationInMall: event.target.value })); }} />
               </Field>
             </div>
-            <Field label="الوصف">
-              <textarea className={inputClass} style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} value={restaurantForm.description} onChange={(event) => setRestaurantForm((previous) => ({ ...previous, description: event.target.value }))} />
+            <Field label="الوصف" error={restaurantFieldErrors.description}>
+              <textarea className={inputClass} style={{ ...inputStyle, minHeight: 70, resize: "vertical" }} value={restaurantForm.description} onChange={(event) => { setRestaurantFieldErrors((previous) => ({ ...previous, description: "" })); setRestaurantForm((previous) => ({ ...previous, description: event.target.value })); }} />
             </Field>
             <MediaUuidField
               label="شعار المطعم"
@@ -249,6 +280,7 @@ export function MallResourcesPanel({ mallId }) {
               onFileChange={(file) => setRestaurantForm((previous) => ({ ...previous, logoFile: file }))}
               mode="admin"
               pickerTitle="اختيار شعار المطعم"
+              error={restaurantFieldErrors.logoUuid}
             />
             <label className="flex items-center gap-2 text-sm" style={{ color: "var(--gray-11)" }}>
               <input type="checkbox" checked={restaurantForm.isActive} onChange={(event) => setRestaurantForm((previous) => ({ ...previous, isActive: event.target.checked }))} />

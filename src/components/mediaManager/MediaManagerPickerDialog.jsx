@@ -31,12 +31,12 @@ export function MediaManagerPickerDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal container={themeContainer}>
         <Dialog.Overlay
-          className="fixed inset-0 z-[10040]"
+          className="fixed inset-0 z-[20040]"
           style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}
         />
         <Dialog.Content
           dir="rtl"
-          className="fixed inset-0 z-[10041] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[20041] flex items-center justify-center p-4"
           aria-describedby={undefined}
         >
           <div

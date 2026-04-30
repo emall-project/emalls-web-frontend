@@ -1,32 +1,101 @@
 // src/components/HomePageComponents/HeaderSearch.jsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { IoIosSearch, IoIosClose } from "react-icons/io";
 import { useNavigate } from "react-router-dom";
 
-import { buildSearchIndex, searchInIndex } from "../../../utils/searchUtils";
-
-import rawMalls from "../../../assets/malls.json";
-import rawStores from "../../../assets/stores.json";
-import rawProducts from "../../../assets/products.json";
+import { catalogApi, normalizeCatalogPage } from "../../../api/catalog";
+import { accountsApi, unwrapAccountPayload } from "../../../api/accounts";
+import { toProductCard } from "../../../utils/catalogProducts";
+import {
+  mapAccountMall,
+  mapAccountShop,
+  toMallSearchItem,
+  toShopSearchItem,
+} from "../../../utils/customerBackendMappers";
 
 export default function HeaderSearch() {
   const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-
-  const searchIndex = useMemo(
-    () => buildSearchIndex({ rawMalls, rawStores, rawProducts }),
-    []
-  );
-
-  const results = useMemo(
-    () => searchInIndex(query, searchIndex, { limit: 12 }),
-    [query, searchIndex]
-  );
+  const [liveProducts, setLiveProducts] = useState([]);
+  const [liveMalls, setLiveMalls] = useState([]);
+  const [liveStores, setLiveStores] = useState([]);
+  const [loadingSearch, setLoadingSearch] = useState(false);
 
   const shouldOpen = query.trim().length >= 2;
+
+  useEffect(() => {
+    let cancelled = false;
+    const q = query.trim();
+
+    if (q.length < 2) {
+      setLiveProducts([]);
+      setLiveMalls([]);
+      setLiveStores([]);
+      setLoadingSearch(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setLoadingSearch(true);
+    const timeout = setTimeout(() => {
+      Promise.allSettled([
+        catalogApi.products.publicPage({ q }, { page: 0, size: 8 }),
+        accountsApi.malls.all({ name: q, status: "ACTIVE" }),
+        accountsApi.shops.all({ name: q, status: "ACTIVE" }),
+      ])
+        .then(([productsResult, mallsResult, shopsResult]) => {
+          if (cancelled) return;
+
+          setLiveProducts(
+            productsResult.status === "fulfilled"
+              ? normalizeCatalogPage(productsResult.value).content.map(toProductCard)
+              : []
+          );
+          setLiveMalls(
+            mallsResult.status === "fulfilled"
+              ? (unwrapAccountPayload(mallsResult.value) || []).map(mapAccountMall)
+              : []
+          );
+          setLiveStores(
+            shopsResult.status === "fulfilled"
+              ? (unwrapAccountPayload(shopsResult.value) || []).map(mapAccountShop)
+              : []
+          );
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingSearch(false);
+        });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [query]);
+
+  const results = useMemo(() => {
+    const malls = liveMalls.map(toMallSearchItem);
+    const stores = liveStores.map((store) => toShopSearchItem(store, liveMalls));
+    const products = liveProducts.map((product) => ({
+      type: "product",
+      id: product.id,
+      title: product.name,
+      subtitle: product.shortDescription || product.status || "",
+      imageUrl: product.imageUrl,
+      href: product.href,
+    }));
+
+    return {
+      malls,
+      stores,
+      products,
+      all: [...malls, ...stores, ...products],
+    };
+  }, [liveMalls, liveProducts, liveStores]);
 
   return (
     <div className="flex-1 min-w-0">
@@ -128,6 +197,13 @@ export default function HeaderSearch() {
                   اكتب حرفين على الأقل للبحث
                 </p>
               </div>
+            ) : loadingSearch && results.all.length === 0 ? (
+              <div className="p-12 text-center">
+                <IoIosSearch className="mx-auto text-5xl text-black/20 mb-4" />
+                <p className="text-black/60 font-light text-sm tracking-wide">
+                  جاري البحث...
+                </p>
+              </div>
             ) : results.all.length === 0 ? (
               <div className="p-12 text-center">
                 <IoIosSearch className="mx-auto text-5xl text-black/20 mb-4" />
@@ -162,7 +238,7 @@ export default function HeaderSearch() {
 
                 {results.products.length > 0 && (
                   <Group
-                    title="المنتجات"
+                    title={loadingSearch ? "المنتجات - جاري التحديث" : "المنتجات"}
                     items={results.products}
                     onPick={(item) => {
                       navigate(item.href);

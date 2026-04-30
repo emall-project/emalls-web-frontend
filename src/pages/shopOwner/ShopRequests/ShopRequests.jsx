@@ -3,20 +3,46 @@ import { FiAlertCircle, FiCheckCircle } from "react-icons/fi";
 import { accountsApi } from "../../../api/accounts";
 import { useAuth } from "../../../auth/AuthContext";
 import { ShopRequestForm } from "../../../components/account/ShopRequestForm";
+import { buildApiFormError } from "../../../utils/apiErrors";
+
+const FIELD_MAP = {
+  "shopRequest.mallId": "mallId",
+  "shopRequest.name": "name",
+  "shopRequest.category": "category",
+  "shopRequest.location": "location",
+  "shopRequest.description": "description",
+  "shopRequest.contactInfo.phone": "phone",
+  "shopRequest.contactInfo.email": "email",
+  "shopRequest.logoUuid": "logoUuid",
+  "shopRequest.licenseImageUuid": "licenseImageUuid",
+  "shopRequest.shopPhotosUuids": "shopPhotosUuids",
+  mallId: "mallId",
+  name: "name",
+  category: "category",
+  location: "location",
+  description: "description",
+  logoUuid: "logoUuid",
+  licenseImageUuid: "licenseImageUuid",
+  shopPhotosUuids: "shopPhotosUuids",
+};
 
 export default function ShopRequests() {
   const { selectedStoreId } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const submit = async (shopRequest) => {
     setSubmitting(true);
     setMessage(null);
+    setFieldErrors({});
     try {
       await accountsApi.shopOwnerRequests.createExistingOwnerShopRequest({ shopRequest });
       setMessage({ type: "success", text: "تم إرسال طلب المتجر للإدارة" });
     } catch (error) {
-      setMessage({ type: "error", text: error.message || "فشل إرسال الطلب" });
+      const formError = buildApiFormError(error, FIELD_MAP, "فشل إرسال الطلب");
+      setFieldErrors(formError.fieldErrors);
+      setMessage({ type: "error", text: formError.message });
     } finally {
       setSubmitting(false);
     }
@@ -50,6 +76,7 @@ export default function ShopRequests() {
           allowPicker={!!selectedStoreId}
           pickerMode="store"
           storeId={selectedStoreId}
+          externalFieldErrors={fieldErrors}
         />
       </div>
     </div>

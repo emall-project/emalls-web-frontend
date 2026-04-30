@@ -26,6 +26,10 @@ function getInternalFileBase() {
   return `${MEDIA_BASE}/internal/files`;
 }
 
+function getTempFileBase() {
+  return `${MEDIA_BASE}/temps/files`;
+}
+
 function getExtensionFromName(filename = "") {
   const parts = String(filename).split(".");
   return parts.length > 1 ? parts.pop().toLowerCase() : "";
@@ -88,6 +92,7 @@ async function tryCompleteUpload(fileId, file) {
 
 export function getMediaPreviewUrl(file) {
   return (
+    file?.localPreviewUrl ||
     file?.smallFileUrl ||
     file?.mediumFileUrl ||
     file?.originalFileUrl ||
@@ -282,6 +287,39 @@ export const mediaManagerApi = {
       originalFileUrl: savedFile?.originalFileUrl || "",
       mediumFileUrl: savedFile?.mediumFileUrl || "",
       smallFileUrl: savedFile?.smallFileUrl || "",
+    };
+  },
+
+  async uploadTempFile(file) {
+    const payload = await requestJson(`${getTempFileBase()}/upload-url`, {
+      method: "POST",
+      body: JSON.stringify({
+        name: file.name,
+      }),
+    });
+
+    const uploadDetails = unwrap(payload);
+    const fileId = uploadDetails?.fileId;
+    const uploadUrl = uploadDetails?.uploadUrl;
+
+    if (!fileId || !uploadUrl) {
+      throw new Error("فشل تجهيز رفع الملف");
+    }
+
+    await uploadToPresignedUrl(uploadUrl, file);
+    const completed = await tryCompleteUpload(fileId, file).catch(() => false);
+
+    return {
+      id: fileId,
+      fileId,
+      name: file.name,
+      mimeType: file.type || null,
+      extension: getExtensionFromName(file.name) || null,
+      size: file.size,
+      status: completed ? "APPROVED" : "PENDING",
+      originalFileUrl: "",
+      mediumFileUrl: "",
+      smallFileUrl: "",
     };
   },
 };

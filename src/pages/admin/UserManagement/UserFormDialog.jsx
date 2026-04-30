@@ -3,6 +3,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { FiX, FiEye, FiEyeOff } from "react-icons/fi";
 import { accountsApi, unwrapAccountPayload } from "../../../api/accounts";
 import { MediaUuidField } from "../../../components/account/MediaUuidField";
+import { buildApiFormError } from "../../../utils/apiErrors";
 import { usersApi } from "./api";
 import { ROLE_OPTIONS, ACTIVE_OPTIONS, getRoleId, getPhonePrefix, getPhoneNumber } from "./constants";
 import { useThemeContainer, Spinner, TextInput, CustomDropdown, dialogSurface } from "./ui";
@@ -23,18 +24,6 @@ const FIELD_MAP = {
   nationalIdNumber:  "nationalIdNumber",
   profilePictureUuid: "profilePictureUuid",
 };
-
-// Translate backend message codes to Arabic
-function translateCode(code = "") {
-  const c = code.toLowerCase();
-  if (c.includes("notblank") || c.includes("notnull") || c.includes("required")) return "هذا الحقل مطلوب";
-  if (c.includes("email"))    return "صيغة البريد الإلكتروني غير صحيحة";
-  if (c.includes("size"))     return "الطول غير مناسب";
-  if (c.includes("pattern"))  return "الصيغة غير صحيحة";
-  if (c.includes("min"))      return "القيمة أصغر من الحد المسموح";
-  if (c.includes("max"))      return "القيمة أكبر من الحد المسموح";
-  return "قيمة غير صحيحة";
-}
 
 function FieldError({ msg }) {
   if (!msg) return null;
@@ -153,17 +142,9 @@ export default function UserFormDialog({ open, onOpenChange, user, onSuccess, sh
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
-      // Map field-level errors if available
-      if (error.errorCodes?.length) {
-        const mapped = {};
-        error.errorCodes.forEach(({ field, message }) => {
-          const key = FIELD_MAP[field] || field;
-          mapped[key] = translateCode(message);
-        });
-        setFieldErrors(mapped);
-      } else {
-        showToast(error.message || "خطأ في الطلب", "error");
-      }
+      const formError = buildApiFormError(error, FIELD_MAP, "خطأ في الطلب");
+      setFieldErrors(formError.fieldErrors);
+      showToast(formError.message, "error");
     } finally {
       setSubmitting(false);
     }

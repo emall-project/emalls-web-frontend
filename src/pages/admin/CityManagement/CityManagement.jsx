@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { FiAlertCircle, FiEdit2, FiLoader, FiPlus, FiRefreshCw } from "react-icons/fi";
 import { accountsApi, normalizePage } from "../../../api/accounts";
+import { buildApiFormError, getApiErrorMessage } from "../../../utils/apiErrors";
 
 const inputClass = "w-full rounded-xl border px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
 const inputStyle = { background: "var(--gray-a2)", borderColor: "var(--gray-a6)", color: "var(--gray-12)" };
@@ -32,6 +33,7 @@ export default function CityManagement() {
   const [toast, setToast] = useState(null);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: "", baseFee: "0", isActive: true });
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const showToast = (message, type = "success") => setToast({ message, type });
 
@@ -44,7 +46,7 @@ export default function CityManagement() {
       setCities(data.content);
       setTotalPages(data.totalPages || 1);
     } catch (requestError) {
-      setError(requestError.message || "فشل تحميل المدن");
+      setError(getApiErrorMessage(requestError, "فشل تحميل المدن"));
       setCities([]);
     } finally {
       setLoading(false);
@@ -58,10 +60,12 @@ export default function CityManagement() {
   const resetForm = () => {
     setEditing(null);
     setForm({ name: "", baseFee: "0", isActive: true });
+    setFieldErrors({});
   };
 
   const edit = (city) => {
     setEditing(city);
+    setFieldErrors({});
     setForm({
       name: city.name || "",
       baseFee: city.baseFee ?? "0",
@@ -72,11 +76,13 @@ export default function CityManagement() {
   const submit = async (event) => {
     event.preventDefault();
     if (!form.name.trim()) {
+      setFieldErrors({ name: "اسم المدينة مطلوب" });
       showToast("اسم المدينة مطلوب", "error");
       return;
     }
 
     setSaving(true);
+    setFieldErrors({});
     try {
       const body = {
         name: form.name.trim(),
@@ -94,7 +100,9 @@ export default function CityManagement() {
       resetForm();
       load();
     } catch (requestError) {
-      showToast(requestError.message || "فشل حفظ المدينة", "error");
+      const formError = buildApiFormError(requestError, { name: "name", baseFee: "baseFee" }, "فشل حفظ المدينة");
+      setFieldErrors(formError.fieldErrors);
+      showToast(formError.message, "error");
     } finally {
       setSaving(false);
     }
@@ -110,7 +118,7 @@ export default function CityManagement() {
       showToast("تم تحديث حالة المدينة");
       load();
     } catch (requestError) {
-      showToast(requestError.message || "فشل تحديث الحالة", "error");
+      showToast(getApiErrorMessage(requestError, "فشل تحديث الحالة"), "error");
     }
   };
 
@@ -129,8 +137,14 @@ export default function CityManagement() {
       </div>
 
       <form onSubmit={submit} className="grid gap-3 rounded-2xl border p-4 sm:grid-cols-[1fr_160px_140px_auto]" style={{ background: "var(--gray-1)", borderColor: "var(--gray-a7)" }}>
-        <input className={inputClass} style={inputStyle} value={form.name} onChange={(event) => setForm((previous) => ({ ...previous, name: event.target.value }))} placeholder="اسم المدينة" />
-        <input type="number" min="0" step="0.01" className={inputClass} style={inputStyle} value={form.baseFee} onChange={(event) => setForm((previous) => ({ ...previous, baseFee: event.target.value }))} placeholder="الرسوم" />
+        <div>
+          <input className={inputClass} style={inputStyle} value={form.name} onChange={(event) => { setFieldErrors((previous) => ({ ...previous, name: "" })); setForm((previous) => ({ ...previous, name: event.target.value })); }} placeholder="اسم المدينة" />
+          {fieldErrors.name ? <p className="mt-1 text-xs" style={{ color: "var(--red-9)" }}>{fieldErrors.name}</p> : null}
+        </div>
+        <div>
+          <input type="number" min="0" step="0.01" className={inputClass} style={inputStyle} value={form.baseFee} onChange={(event) => { setFieldErrors((previous) => ({ ...previous, baseFee: "" })); setForm((previous) => ({ ...previous, baseFee: event.target.value })); }} placeholder="الرسوم" />
+          {fieldErrors.baseFee ? <p className="mt-1 text-xs" style={{ color: "var(--red-9)" }}>{fieldErrors.baseFee}</p> : null}
+        </div>
         <label className="flex items-center gap-2 text-sm" style={{ color: "var(--gray-11)" }}>
           <input type="checkbox" checked={form.isActive} onChange={(event) => setForm((previous) => ({ ...previous, isActive: event.target.checked }))} />
           نشطة

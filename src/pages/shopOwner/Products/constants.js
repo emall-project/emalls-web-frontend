@@ -1,7 +1,7 @@
 export const AUDIENCE_OPTIONS = [
   { value: "MALE",   label: "ذكر"   },
   { value: "FEMALE", label: "أنثى"  },
-  { value: "UNISEX", label: "للجميع" },
+  { value: "ALL",    label: "للجميع" },
 ];
 
 export const AGE_GROUP_OPTIONS = [
