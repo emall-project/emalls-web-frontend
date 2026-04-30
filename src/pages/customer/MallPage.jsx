@@ -1,11 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import rawMalls from "../../assets/malls.json";
-import rawCategories from "../../assets/categories.json";
-import rawStores from "../../assets/stores.json";
-import rawProducts from "../../assets/products.json";
-
 import Header from "../../components/customer/HomePageComponents/Header";
 import CategoryBar from "../../components/customer/HomePageComponents/CategoryBar";
 import FeaturedShops from "../../components/customer/MallPageComponents/FeaturedShops";
@@ -19,36 +14,26 @@ import AdvSection from "../../components/customer/HomePageComponents/AdvSection"
 
 import MallSearch from "../../components/customer/MallPageComponents/MallSearch";
 
-import {
-  normalizeMalls,
-  normalizeStores,
-  getMallById,
-  getMallStores,
-} from "../../utils/tmpMallsAndStores";
-import { normalizeCategories } from "../../utils/tmpCategories";
-import { normalizeProducts, mallProduct, isDiscount } from "../../utils/tmpProducts";
+import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
 import { catalogApi, normalizeCatalogPage, unwrapCatalogPayload } from "../../api/catalog";
-import { getMediaPreviewUrl } from "../../api/mediaManager";
 import { hasProductDiscount, toProductCard } from "../../utils/catalogProducts";
 import CatalogFilters, { buildCatalogFilterPayload } from "../../components/customer/CatalogFilters";
+import { mapAccountMall, mapAccountShop, mapCatalogCategory, mapMallRestaurant, mapMallService } from "../../utils/customerBackendMappers";
 
 function MallPage() {
   const { mallId } = useParams();
-
-  const mallsData = useMemo(() => normalizeMalls(rawMalls), []);
-  const mallData = useMemo(() => getMallById(mallId, mallsData), [mallId, mallsData]);
-
-  const fallbackCategories = useMemo(() => normalizeCategories(rawCategories), []);
+  const [mallData, setMallData] = useState(null);
+  const [mallLoading, setMallLoading] = useState(false);
+  const [mallError, setMallError] = useState("");
   const [liveCategories, setLiveCategories] = useState([]);
-  const categories = liveCategories.length ? liveCategories : fallbackCategories;
-
-  const allStores = useMemo(() => normalizeStores(rawStores), []);
-  const storesOfThisMall = useMemo(() => getMallStores(allStores, mallId), [allStores, mallId]);
-
-  const allProducts = useMemo(() => normalizeProducts(rawProducts), []);
-  const fallbackMallProducts = useMemo(() => mallProduct(allProducts, mallId), [allProducts, mallId]);
+  const [categoriesError, setCategoriesError] = useState("");
+  const categories = liveCategories;
+  const [storesOfThisMall, setStoresOfThisMall] = useState([]);
+  const [storesError, setStoresError] = useState("");
   const [liveProducts, setLiveProducts] = useState([]);
-  const mallAllProducts = liveProducts.length ? liveProducts : fallbackMallProducts;
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [productsError, setProductsError] = useState("");
+  const mallAllProducts = liveProducts;
 
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedStoreId, setSelectedStoreId] = useState(null);
@@ -63,24 +48,65 @@ function MallPage() {
   });
 
   const filteredMallProducts = useMemo(() => {
-    let list = mallAllProducts;
-
-    if (liveProducts.length) {
-      return list;
-    }
-
-    if (selectedStoreId) {
-      list = list.filter((p) => String(p.storeId) === String(selectedStoreId));
-    }
-    if (selectedCategoryId) {
-      list = list.filter((p) => String(p.categoryId) === String(selectedCategoryId));
-    }
-    return list;
-  }, [liveProducts.length, mallAllProducts, selectedStoreId, selectedCategoryId]);
+    return mallAllProducts;
+  }, [mallAllProducts]);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([
+    setMallLoading(true);
+    setMallError("");
+    setStoresError("");
+
+    Promise.allSettled([
+      accountsApi.malls.byId(mallId),
+      accountsApi.shops.activeByMall(mallId),
+      accountsApi.mallServices.activeByMall(mallId),
+      accountsApi.mallRestaurants.activeByMall(mallId),
+    ])
+      .then(([mallResult, shopsResult, servicesResult, restaurantsResult]) => {
+        if (cancelled) return;
+
+        if (mallResult.status === "fulfilled") {
+          const mall = mapAccountMall(unwrapAccountPayload(mallResult.value));
+          mall.services =
+            servicesResult.status === "fulfilled"
+              ? (unwrapAccountPayload(servicesResult.value) || []).map(mapMallService)
+              : mall.services || [];
+          mall.restaurants =
+            restaurantsResult.status === "fulfilled"
+              ? (unwrapAccountPayload(restaurantsResult.value) || []).map(mapMallRestaurant)
+              : mall.restaurants || [];
+          setMallData(mall);
+          setMallError("");
+        } else {
+          setMallData(null);
+          setMallError("تعذر تحميل بيانات المول.");
+        }
+
+        if (shopsResult.status === "fulfilled") {
+          setStoresOfThisMall((unwrapAccountPayload(shopsResult.value) || []).map(mapAccountShop));
+        } else {
+          setStoresOfThisMall([]);
+          setStoresError("تعذر تحميل متاجر المول.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setMallLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mallId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setProductsLoading(true);
+    setProductsError("");
+    setCategoriesError("");
+
+    Promise.allSettled([
       catalogApi.categories.all({ isActive: true }),
       catalogApi.products.publicPage(
         {
@@ -92,22 +118,25 @@ function MallPage() {
         { page: 0, size: 40 }
       ),
     ])
-      .then(([categoriesResponse, productsResponse]) => {
+      .then(([categoriesResult, productsResult]) => {
         if (cancelled) return;
-        setLiveCategories((unwrapCatalogPayload(categoriesResponse) || []).map((category) => ({
-          id: String(category.id),
-          name: category.name,
-          description: category.description || "",
-          parentId: category.parentId == null ? null : String(category.parentId),
-          imageUrl: getMediaPreviewUrl(category.image),
-        })));
-        setLiveProducts(normalizeCatalogPage(productsResponse).content.map(toProductCard));
-      })
-      .catch(() => {
-        if (!cancelled) {
+
+        if (categoriesResult.status === "fulfilled") {
+          setLiveCategories((unwrapCatalogPayload(categoriesResult.value) || []).map(mapCatalogCategory));
+        } else {
           setLiveCategories([]);
-          setLiveProducts([]);
+          setCategoriesError("تعذر تحميل تصنيفات المول.");
         }
+
+        if (productsResult.status === "fulfilled") {
+          setLiveProducts(normalizeCatalogPage(productsResult.value).content.map(toProductCard));
+        } else {
+          setLiveProducts([]);
+          setProductsError("تعذر تحميل منتجات المول.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setProductsLoading(false);
       });
 
     return () => {
@@ -120,7 +149,7 @@ function MallPage() {
   const deals = useMemo(() => {
     const excludeIds = new Set(mallFeaturedProducts.map((p) => String(p.id)));
     return filteredMallProducts
-      .filter((product) => hasProductDiscount(product) || isDiscount(product))
+      .filter((product) => hasProductDiscount(product))
       .filter((p) => !excludeIds.has(String(p.id)))
       .slice(0, 2);
   }, [filteredMallProducts, mallFeaturedProducts]);
@@ -133,11 +162,21 @@ function MallPage() {
     return filteredMallProducts.filter((p) => !excludeIds.has(String(p.id))).slice(0, 20);
   }, [filteredMallProducts, mallFeaturedProducts, deals]);
 
+  if (mallLoading && !mallData) {
+    return (
+      <div dir="rtl" className="min-h-screen flex items-center justify-center p-6">
+        <div className="text-center">
+          <p className="text-lg font-semibold text-black mb-2">جاري تحميل بيانات المول...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!mallData) {
     return (
       <div dir="rtl" className="min-h-screen flex items-center justify-center p-6">
         <div className="text-center">
-          <p className="text-lg font-semibold text-black mb-2">المول غير موجود أو غير فعّال</p>
+          <p className="text-lg font-semibold text-black mb-2">{mallError || "المول غير موجود أو غير فعّال"}</p>
           <p className="text-sm text-black/60">معرّف المول: {mallId}</p>
         </div>
       </div>
@@ -162,13 +201,18 @@ function MallPage() {
 
       <MallInfoDialog mall={mallData} stores={storesOfThisMall} />
 
-      {/* ✅ Search inside mall
-      <MallSearch mallId={mallId} /> */} 
+      <MallSearch mallId={mallId} />
 
       <FeaturedShops shops={storesOfThisMall} mallName={mallData.name} />
 
       <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-8 md:py-12">
         <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mb-8 md:mb-12" />
+
+        {storesError || categoriesError || productsError ? (
+          <div className="mb-6 border border-black/10 bg-white px-4 py-3 text-right text-sm font-light text-black/60">
+            {storesError || categoriesError || productsError}
+          </div>
+        ) : null}
 
         <div className="mb-8">
           <CatalogFilters filters={filters} onChange={setFilters} compact />
@@ -182,6 +226,9 @@ function MallPage() {
                 <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
               ))}
             </div>
+            {!mallFeaturedProducts.length && productsLoading ? (
+              <div className="mt-6 text-sm text-black/50">جاري تحميل المنتجات...</div>
+            ) : null}
           </div>
 
           <div className="bg-white">
@@ -191,6 +238,9 @@ function MallPage() {
                 <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
               ))}
             </div>
+            {!deals.length && !productsLoading ? (
+              <div className="mt-6 text-sm text-black/40">لا توجد عروض متاحة حالياً.</div>
+            ) : null}
           </div>
         </div>
 

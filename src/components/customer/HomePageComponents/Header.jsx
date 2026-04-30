@@ -2,20 +2,41 @@ import React, { useEffect, useState } from "react";
 import { FiShoppingCart } from "react-icons/fi";
 import { GrFavorite } from "react-icons/gr";
 import { VscAccount } from "react-icons/vsc";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../../auth/AuthContext";
 import { getHomePathForRole } from "../../../auth/session";
+import { useCart } from "../../../cart/CartContext";
 import { catalogApi, unwrapCatalogPayload } from "../../../api/catalog";
+import CartDrawer from "../commerce/CartDrawer";
 import HeaderSearch from "./HeaderSearch";
 
 function Header() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, role, isCustomer } = useAuth();
+  const { totalCartQuantity } = useCart();
   const [favoritesCount, setFavoritesCount] = useState(0);
+  const [cartOpen, setCartOpen] = useState(false);
 
   const handleAccountClick = () => {
-    navigate(isAuthenticated ? getHomePathForRole(role) : "/login");
+    if (isCustomer && isAuthenticated) {
+      navigate("/account");
+      return;
+    }
+
+    navigate(isAuthenticated ? getHomePathForRole(role) : "/login", {
+      state: { from: location },
+    });
+  };
+
+  const handleCartClick = () => {
+    if (!isCustomer || !isAuthenticated) {
+      navigate("/login", { state: { from: location } });
+      return;
+    }
+
+    setCartOpen(true);
   };
 
   useEffect(() => {
@@ -87,10 +108,17 @@ function Header() {
             {/* Cart */}
             <button
               aria-label="cart"
+              type="button"
+              onClick={handleCartClick}
               className="group relative flex flex-col items-center gap-1 transition-all duration-300"
             >
               <div className="relative">
                 <FiShoppingCart className="text-black text-xl md:text-2xl transition-all duration-300 group-hover:scale-110" />
+                {isCustomer && totalCartQuantity > 0 ? (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-4 rounded-full bg-black px-1.5 text-center text-[10px] font-medium leading-4 text-white">
+                    {totalCartQuantity}
+                  </span>
+                ) : null}
               </div>
               <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-medium group-hover:text-black transition-colors">
                 السلة
@@ -118,6 +146,7 @@ function Header() {
 
       {/* Bottom subtle shadow */}
       <div className="h-px bg-gradient-to-r from-transparent via-black/5 to-transparent"></div>
+      <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
     </header>
   );
 }

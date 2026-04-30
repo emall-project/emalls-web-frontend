@@ -1,22 +1,20 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Header from "../../components/customer/HomePageComponents/Header";
 import Footer from "../../components/customer/HomePageComponents/Footer";
 import ProductCard from "../../components/customer/HomePageComponents/ProductCard";
 import SectionHeader from "../../components/customer/HomePageComponents/SectionHeader";
-import rawStores from "../../assets/stores.json";
-import { normalizeStores } from "../../utils/tmpMallsAndStores";
+import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
 import { catalogApi, normalizeCatalogPage } from "../../api/catalog";
 import { toProductCard } from "../../utils/catalogProducts";
 import CatalogFilters, { buildCatalogFilterPayload } from "../../components/customer/CatalogFilters";
+import { mapAccountShop } from "../../utils/customerBackendMappers";
 
 export default function StorePage() {
   const { storeId } = useParams();
-  const stores = useMemo(() => normalizeStores(rawStores), []);
-  const store = useMemo(
-    () => stores.find((item) => String(item.id) === String(storeId)),
-    [storeId, stores]
-  );
+  const [store, setStore] = useState(null);
+  const [storeLoading, setStoreLoading] = useState(false);
+  const [storeError, setStoreError] = useState("");
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -29,6 +27,32 @@ export default function StorePage() {
     ageGroup: "",
     selectedOptionsByAttribute: {},
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    setStoreLoading(true);
+    setStoreError("");
+
+    accountsApi.shops.byId(storeId)
+      .then((response) => {
+        if (!cancelled) {
+          setStore(mapAccountShop(unwrapAccountPayload(response)));
+        }
+      })
+      .catch((requestError) => {
+        if (!cancelled) {
+          setStore(null);
+          setStoreError(requestError.message || "تعذر تحميل بيانات المتجر");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setStoreLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [storeId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,10 +88,12 @@ export default function StorePage() {
       <main className="mx-auto max-w-400 2xl:max-w-[1920px] px-4 py-8 sm:px-6 md:px-12">
         <div className="mb-8 border-b border-black/10 pb-6 text-right">
           <h1 className="text-3xl font-light tracking-wide text-black">
-            {store?.name || `متجر #${storeId}`}
+            {storeLoading && !store ? "جاري تحميل المتجر..." : store?.name || `متجر #${storeId}`}
           </h1>
-          {store?.specialist ? (
-            <p className="mt-2 text-sm text-black/50">{store.specialist}</p>
+          {store?.category || store?.mallName ? (
+            <p className="mt-2 text-sm text-black/50">
+              {[store?.category, store?.mallName ? `في ${store.mallName}` : ""].filter(Boolean).join(" • ")}
+            </p>
           ) : null}
         </div>
 
@@ -77,6 +103,7 @@ export default function StorePage() {
           <CatalogFilters filters={filters} onChange={setFilters} compact />
         </div>
 
+        {storeError ? <div className="mt-6 border border-black/10 bg-white px-4 py-3 text-sm text-black/60">{storeError}</div> : null}
         {error ? <div className="mt-6 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
         {loading ? <div className="mt-8 text-sm text-black/50">جاري تحميل المنتجات...</div> : null}
 

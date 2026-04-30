@@ -2,6 +2,17 @@ import React, { useState } from "react";
 import { IoClose } from "react-icons/io5";
 import * as Dialog from "@radix-ui/react-dialog";
 
+function descriptionSections(mall) {
+  if (Array.isArray(mall?.aboutSections) && mall.aboutSections.length) {
+    return mall.aboutSections;
+  }
+
+  return String(mall?.description || "")
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 export default function DialogContent({ mall, stores }) {
   const [activeTab, setActiveTab] = useState("about");
 
@@ -81,20 +92,27 @@ export default function DialogContent({ mall, stores }) {
 
 // About Tab Component
 function AboutTab({ mall }) {
-  const aboutSections = mall?.aboutSections || [];
+  const aboutSections = descriptionSections(mall);
   const mainImage =
-    mall?.images?.[2]?.image ||
-    "https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?w=800&q=80";
+    mall?.images?.[0]?.image ||
+    mall?.logoUrl ||
+    "";
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 md:gap-8 items-start">
       {/* Image */}
       <div className="w-full lg:w-[480px] flex-shrink-0">
-        <img
-          src={mainImage}
-          alt={mall?.name || "Mall Interior"}
-          className="w-full h-[300px] sm:h-[400px] lg:h-[500px] object-cover"
-        />
+        {mainImage ? (
+          <img
+            src={mainImage}
+            alt={mall?.name || "Mall Interior"}
+            className="w-full h-[300px] sm:h-[400px] lg:h-[500px] object-cover"
+          />
+        ) : (
+          <div className="flex h-[300px] sm:h-[400px] lg:h-[500px] items-center justify-center border border-black/10 text-black/30">
+            لا توجد صورة للمول
+          </div>
+        )}
       </div>
 
       {/* Text Content */}
@@ -108,18 +126,6 @@ function AboutTab({ mall }) {
               {section}
             </p>
           ))
-        ) : mall?.description ? (
-          <>
-            <p className="text-sm sm:text-base md:text-lg font-semibold leading-relaxed text-black/80">
-              {mall.description[0]}
-            </p>
-            <p className="text-sm sm:text-base md:text-lg font-semibold leading-relaxed text-black/80">
-              {mall.description[1]}
-            </p>
-            <p className="text-sm sm:text-base md:text-lg font-semibold leading-relaxed text-black/80">
-              {mall.description[2]}
-            </p>
-          </>
         ) : (
           <p className="text-sm sm:text-base md:text-lg font-semibold leading-relaxed text-black/40">
             لا توجد معلومات متاحة حالياً
@@ -132,36 +138,23 @@ function AboutTab({ mall }) {
 
 // Services Tab Component
 function ServicesTab({ mall }) {
-  const servicesObj = mall?.services || {};
-
-  const servicesArray = Object.entries(servicesObj)
-    .filter(([_, service]) => service.available)
-    .map(([key, service]) => ({
-      title: service.name,
-      description: service.description || "",
-      key,
+  const displayServices = (Array.isArray(mall?.services) ? mall.services : [])
+    .filter((service) => service?.isActive !== false)
+    .map((service) => ({
+      title: service?.name || "خدمة",
+      description: service?.description || "",
+      key: service?.serviceId || service?.id || service?.name,
     }));
 
-  const defaultServices = [
-    {
-      title: "واي فاي",
-      description: "استمتع بخدمة واي فاي مجانية وسريعة في جميع أرجاء المول.",
-    },
-    {
-      title: "الأمن",
-      description: "نظام أمن متكامل يعمل على مدار الساعة لراحتك وسلامتك.",
-    },
-    {
-      title: "مواقف السيارات",
-      description: "مواقف واسعة وآمنة تمتد عبر 5 طوابق للوصول المريح.",
-    },
-    {
-      title: "الإعلانات",
-      description: "شاشات إعلانية في جميع الطوابق والمداخل.",
-    },
-  ];
-
-  const displayServices = servicesArray.length > 0 ? servicesArray : defaultServices;
+  if (displayServices.length === 0) {
+    return (
+      <div className="text-center py-12 text-black/40">
+        <p className="text-base sm:text-lg md:text-xl font-semibold">
+          لا توجد خدمات منشورة حالياً
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -255,12 +248,48 @@ function StoresTab({ stores = [] }) {
   );
 }
 
-function RestaurantsTab() {
+function RestaurantsTab({ mall }) {
+  const restaurants = Array.isArray(mall?.restaurants) ? mall.restaurants : [];
+
+  if (restaurants.length === 0) {
+    return (
+      <div className="text-center py-12 text-black/40">
+        <p className="text-base sm:text-lg md:text-xl font-semibold">
+          لا توجد مطاعم منشورة حالياً
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="text-center py-12 text-black/40">
-      <p className="text-base sm:text-lg md:text-xl font-semibold">
-        قريباً - معلومات المطاعم
-      </p>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+      {restaurants.map((restaurant) => (
+        <div
+          key={restaurant?.restaurantId || restaurant?.id || restaurant?.name}
+          className="overflow-hidden border border-black/10 bg-white"
+        >
+          {restaurant?.logoUrl ? (
+            <img
+              src={restaurant.logoUrl}
+              alt={restaurant?.name || "restaurant"}
+              className="h-48 w-full object-cover"
+            />
+          ) : null}
+
+          <div className="space-y-2 p-4 text-right">
+            <h3 className="text-base sm:text-lg font-semibold text-black">{restaurant?.name}</h3>
+            {restaurant?.cuisineType ? (
+              <p className="text-sm text-black/60">{restaurant.cuisineType}</p>
+            ) : null}
+            {restaurant?.locationInMall ? (
+              <p className="text-sm text-black/50">{restaurant.locationInMall}</p>
+            ) : null}
+            {restaurant?.description ? (
+              <p className="text-sm leading-6 text-black/70">{restaurant.description}</p>
+            ) : null}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Theme } from "@radix-ui/themes";
 import { useEffect, useState } from "react";
 import { AuthProvider } from "./auth/AuthContext";
+import { CartProvider } from "./cart/CartContext";
 import { ROLE_ADMIN, ROLE_CUSTOMER, ROLE_SHOP_OWNER } from "./auth/session";
 import { RedirectAuthenticated, RequireAuth } from "./components/auth/RequireAuth";
 
@@ -15,6 +16,12 @@ import LoginPage from "./pages/auth/LoginPage.jsx";
 import SignupPage from "./pages/customer/SignupPage.jsx";
 import CustomerAccountPage from "./pages/customer/CustomerAccountPage.jsx";
 import ShopOwnerRequestPage from "./pages/auth/ShopOwnerRequestPage.jsx";
+import CartPage from "./pages/customer/CartPage.jsx";
+import MallCartPage from "./pages/customer/MallCartPage.jsx";
+import OrdersPage from "./pages/customer/OrdersPage.jsx";
+import OrderDetailsPage from "./pages/customer/OrderDetailsPage.jsx";
+import ReturnsPage from "./pages/customer/ReturnsPage.jsx";
+import ReturnDetailsPage from "./pages/customer/ReturnDetailsPage.jsx";
 
 import { AdminLayout } from "./components/admin/layout/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -37,6 +44,8 @@ import ShopProfile from "./pages/shopOwner/ShopProfile/ShopProfile";
 import Products from "./pages/shopOwner/Products/Products";
 import ComingSoon from "./pages/shopOwner/ComingSoon";
 import Ads from "./pages/shopOwner/Ads/Ads";
+import Offers from "./pages/shopOwner/Offers/Offers.jsx";
+import Subscription from "./pages/shopOwner/Subscription/Subscription.jsx";
 import ShopOwnerFileManager from "./pages/shopOwner/FileManager/FileManager.jsx";
 import ShopRequests from "./pages/shopOwner/ShopRequests/ShopRequests.jsx";
 
@@ -57,8 +66,9 @@ export default function App() {
   return (
     <Theme appearance={appearance} accentColor="blue" radius="large">
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
+        <CartProvider>
+          <BrowserRouter>
+            <Routes>
             {/* Customer */}
             <Route path="/" element={<HomePage />} />
             <Route path="/search" element={<SearchPage />} />
@@ -89,6 +99,54 @@ export default function App() {
               element={(
                 <RequireAuth roles={[ROLE_CUSTOMER]}>
                   <CustomerAccountPage />
+                </RequireAuth>
+              )}
+            />
+            <Route
+              path="/cart"
+              element={(
+                <RequireAuth roles={[ROLE_CUSTOMER]}>
+                  <CartPage />
+                </RequireAuth>
+              )}
+            />
+            <Route
+              path="/cart/mall/:mallId"
+              element={(
+                <RequireAuth roles={[ROLE_CUSTOMER]}>
+                  <MallCartPage />
+                </RequireAuth>
+              )}
+            />
+            <Route
+              path="/orders"
+              element={(
+                <RequireAuth roles={[ROLE_CUSTOMER]}>
+                  <OrdersPage />
+                </RequireAuth>
+              )}
+            />
+            <Route
+              path="/orders/:shopOrderId"
+              element={(
+                <RequireAuth roles={[ROLE_CUSTOMER]}>
+                  <OrderDetailsPage />
+                </RequireAuth>
+              )}
+            />
+            <Route
+              path="/returns"
+              element={(
+                <RequireAuth roles={[ROLE_CUSTOMER]}>
+                  <ReturnsPage />
+                </RequireAuth>
+              )}
+            />
+            <Route
+              path="/returns/:returnRequestId"
+              element={(
+                <RequireAuth roles={[ROLE_CUSTOMER]}>
+                  <ReturnDetailsPage />
                 </RequireAuth>
               )}
             />
@@ -139,13 +197,14 @@ export default function App() {
               <Route path="returns" element={<ComingSoon title="إدارة الإرجاعات" />} />
               <Route path="ads" element={<Ads />} />
               <Route path="finance" element={<ComingSoon title="المستحقات المالية" />} />
-              <Route path="offers" element={<ComingSoon title="إدارة العروض" />} />
-              <Route path="subscription" element={<ComingSoon title="إدارة الاشتراك" />} />
+              <Route path="offers" element={<Offers />} />
+              <Route path="subscription" element={<Subscription />} />
             </Route>
 
             <Route path="*" element={<div style={{ padding: 16 }}>Page Not Found</div>} />
-          </Routes>
-        </BrowserRouter>
+            </Routes>
+          </BrowserRouter>
+        </CartProvider>
       </AuthProvider>
     </Theme>
   );

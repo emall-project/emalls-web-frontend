@@ -1,4 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import { useEffect, useState } from "react";
 import { FiX } from "react-icons/fi";
 import { MediaManagerWidget } from "./MediaManagerWidget";
 
@@ -14,9 +15,15 @@ export function MediaManagerPickerDialog({
   confirmLabel = "إضافة",
   onConfirm,
 }) {
+  const [themeContainer, setThemeContainer] = useState(null);
+
+  useEffect(() => {
+    setThemeContainer(document.querySelector(".radix-themes") || document.body);
+  }, []);
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
+      <Dialog.Portal container={themeContainer}>
         <Dialog.Overlay
           className="fixed inset-0 z-[20040]"
           style={{

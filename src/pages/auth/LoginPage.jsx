@@ -93,7 +93,10 @@ export default function LoginPage() {
       const isRoleCompatible =
         (nextRole === ROLE_ADMIN && fromPath.startsWith("/admin")) ||
         (nextRole === ROLE_SHOP_OWNER && fromPath.startsWith("/shop-owner")) ||
-        (nextRole === ROLE_CUSTOMER && fromPath.startsWith("/account"));
+        (nextRole === ROLE_CUSTOMER &&
+          !!fromPath &&
+          !fromPath.startsWith("/admin") &&
+          !fromPath.startsWith("/shop-owner"));
 
       navigate(isRoleCompatible ? fromPath : defaultHome, { replace: true });
     } catch (requestError) {

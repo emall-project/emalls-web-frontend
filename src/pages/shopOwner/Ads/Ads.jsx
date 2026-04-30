@@ -1,274 +1,159 @@
-import { useState, useEffect, useCallback, useRef } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { FiPlus, FiEdit2, FiX, FiAlertCircle, FiLoader, FiCreditCard, FiEye, FiUpload } from "react-icons/fi";
-import { shopAdsApi } from "./api";
-import { mediaApi } from "../../../api/mediaApi";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FiAlertCircle,
+  FiCalendar,
+  FiCheckCircle,
+  FiCreditCard,
+  FiEdit2,
+  FiEye,
+  FiImage,
+  FiLoader,
+  FiPlus,
+  FiTrash2,
+  FiX,
+} from "react-icons/fi";
+import { campaignsApi, unwrapCampaignPayload } from "../../../api/campaigns";
+import { MediaUuidField } from "../../../components/account/MediaUuidField";
+import { CampaignPaymentDialog } from "../../../components/campaigns/CampaignPaymentDialog";
+import { useAuth } from "../../../auth/AuthContext";
+import { buildApiFormError, getApiErrorMessage } from "../../../utils/apiErrors";
+import {
+  CAMPAIGN_IMAGE_RATIOS,
+  CAMPAIGN_POSITION_LABELS,
+  REQUEST_PAYMENT_STATUS_LABELS,
+  REQUEST_STATUS_LABELS,
+  TEMPLATE_STATUS_LABELS,
+  formatDateTime,
+  formatMoney,
+  getCampaignLabel,
+  getCampaignStatusTone,
+  toDateTimeLocalInput,
+} from "../../../utils/campaigns";
+import { getMediaPreviewUrl } from "../../../api/mediaManager";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+const cardStyle = {
+  background: "var(--gray-1)",
+  border: "1px solid var(--gray-a6)",
+};
+
+const inputClass =
+  "w-full rounded-xl border px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
+
+const inputStyle = {
+  background: "var(--gray-a2)",
+  borderColor: "var(--gray-a6)",
+  color: "var(--gray-12)",
+};
+
+const REQUEST_FIELD_MAP = {
+  "adRequest.title": "title",
+  "adRequest.templateId": "templateId",
+  "adRequest.shopId": "shopId",
+  "adRequest.imageUrl": "adRequestImageUuid",
+  "adRequest.adRequestImageUuid": "adRequestImageUuid",
+  "adRequest.startDate": "startDate",
+  "adRequest.endDate": "endDate",
+  title: "title",
+  templateId: "templateId",
+  shopId: "shopId",
+  adRequestImageUuid: "adRequestImageUuid",
+  startDate: "startDate",
+  endDate: "endDate",
+};
+
 function useThemeContainer() {
-  const [c, setC] = useState(null);
-  useEffect(() => { setC(document.querySelector(".radix-themes") || document.body); }, []);
-  return c;
+  const [container, setContainer] = useState(null);
+
+  useEffect(() => {
+    setContainer(document.querySelector(".radix-themes") || document.body);
+  }, []);
+
+  return container;
 }
 
 function Spinner({ size = 16 }) {
   return <FiLoader size={size} className="animate-spin" style={{ color: "var(--blue-9)" }} />;
 }
 
-function Toast({ message, type = "success", onClose }) {
-  useEffect(() => { const t = setTimeout(onClose, 3500); return () => clearTimeout(t); }, [onClose]);
+function StatusBadge({ status, labels }) {
+  const tone = getCampaignStatusTone(status);
+
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-9999 flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl border text-sm font-medium"
-      style={{
-        background: type === "success" ? "var(--green-2)" : "var(--red-2)",
-        borderColor: type === "success" ? "var(--green-6)" : "var(--red-6)",
-        color: type === "success" ? "var(--green-11)" : "var(--red-11)",
-      }}>
-      {message}
-      <button onClick={onClose} className="opacity-60 hover:opacity-100 ml-1">✕</button>
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+      style={{ background: tone.bg, color: tone.fg }}
+    >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: tone.dot }} />
+      {getCampaignLabel(status, labels)}
+    </span>
+  );
+}
+
+function InfoMessage({ icon: Icon = FiAlertCircle, color = "var(--blue-11)", background = "var(--blue-a2)", border = "var(--blue-a5)", children }) {
+  return (
+    <div
+      className="flex items-start gap-2 rounded-xl border px-4 py-3 text-sm"
+      style={{ color, background, borderColor: border }}
+    >
+      <Icon size={15} className="mt-0.5 shrink-0" />
+      <div>{children}</div>
     </div>
   );
 }
 
-function FieldLabel({ children, required }) {
+function EmptyState({ title, description }) {
   return (
-    <label className="block text-xs font-semibold mb-1.5" style={{ color: "var(--gray-11)" }}>
-      {children}{required && <span style={{ color: "var(--red-9)" }}> *</span>}
-    </label>
+    <div className="rounded-2xl border px-6 py-10 text-center" style={cardStyle}>
+      <div className="text-base font-semibold" style={{ color: "var(--gray-12)" }}>
+        {title}
+      </div>
+      {description ? (
+        <div className="mt-2 text-sm" style={{ color: "var(--gray-11)" }}>
+          {description}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
-// ── Badges ────────────────────────────────────────────────────────────────────
-const REQUEST_STATUS_MAP = {
-  PENDING:  { bg: "var(--yellow-a3)", fg: "var(--yellow-11)", dot: "var(--yellow-9)", label: "قيد المراجعة" },
-  APPROVED: { bg: "var(--green-a3)",  fg: "var(--green-11)",  dot: "var(--green-9)",  label: "مقبول" },
-  REJECTED: { bg: "var(--red-a3)",    fg: "var(--red-11)",    dot: "var(--red-9)",    label: "مرفوض" },
-};
-
-const PAYMENT_MAP = {
-  UNPAID: { bg: "var(--orange-a3)", fg: "var(--orange-11)", label: "غير مدفوع" },
-  PAID:   { bg: "var(--green-a3)",  fg: "var(--green-11)",  label: "مدفوع" },
-};
-
-function RequestStatusBadge({ status }) {
-  const s = REQUEST_STATUS_MAP[status] || { bg: "var(--gray-a3)", fg: "var(--gray-11)", dot: "var(--gray-9)", label: status };
-  return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
-      style={{ background: s.bg, color: s.fg }}>
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: s.dot }} />
-      {s.label}
-    </span>
-  );
-}
-
-function PaymentBadge({ status }) {
-  const p = PAYMENT_MAP[status] || { bg: "var(--gray-a3)", fg: "var(--gray-11)", label: status };
-  return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium"
-      style={{ background: p.bg, color: p.fg }}>
-      {p.label}
-    </span>
-  );
-}
-
-// ── Ad Request Form Dialog ────────────────────────────────────────────────────
-function AdRequestFormDialog({ open, onOpenChange, template, request, onSuccess }) {
+function DialogShell({ open, onOpenChange, title, description, children, maxWidth = "max-w-3xl" }) {
   const themeContainer = useThemeContainer();
-  const isEdit = !!request;
-  const tpl = isEdit ? request.template : template;
-  const fileInputRef = useRef(null);
-
-  const [title, setTitle] = useState("");
-  const [imageId, setImageId] = useState("");       // UUID saved, sent to backend
-  const [previewUrl, setPreviewUrl] = useState(""); // mediumFileUrl for display only
-  const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (open) {
-      setError("");
-      setTitle(isEdit ? request.title : "");
-      setPreviewUrl("");
-      if (isEdit && request.imageUrl) {
-        setImageId(request.imageUrl);
-        // Load preview for existing UUID
-        mediaApi.getById(request.imageUrl)
-          .then(r => setPreviewUrl(r?.data?.mediumFileUrl || r?.data?.originalFileUrl || ""))
-          .catch(() => {});
-      } else {
-        setImageId("");
-      }
-    }
-  }, [open, request, isEdit]);
-
-  const handleFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true); setError("");
-    try {
-      const res = await mediaApi.upload(file);
-      setImageId(res.data.id);                      // UUID — this goes to backend
-      setPreviewUrl(res.data.mediumFileUrl);         // signed URL — display only
-    } catch (err) {
-      setError(err.message || "فشل رفع الصورة");
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!title.trim()) return setError("العنوان مطلوب");
-    if (!imageId) return setError("يرجى رفع صورة الإعلان");
-    setSaving(true); setError("");
-    try {
-      if (isEdit) {
-        await shopAdsApi.update({
-          adRequestId: request.adRequestId,
-          shopId: 1,
-          title: title.trim(),
-          imageUrl: imageId,
-        });
-      } else {
-        await shopAdsApi.create({
-          templateId: template.adTemplateId,
-          shopId: 1,
-          title: title.trim(),
-          imageUrl: imageId,
-        });
-      }
-      onSuccess?.();
-      onOpenChange(false);
-    } catch (err) {
-      setError(err.message || "حدث خطأ");
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal container={themeContainer}>
-        <Dialog.Overlay className="fixed inset-0 z-9990"
-          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }} />
-        <Dialog.Content dir="rtl" className="fixed inset-0 z-9991 flex items-center justify-center p-4"
-          aria-describedby={undefined}>
-          <div className="w-full max-w-lg rounded-2xl shadow-2xl flex flex-col max-h-[90vh]"
-            style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
-
-            <div className="flex items-center justify-between px-6 py-4 border-b shrink-0"
-              style={{ borderColor: "var(--gray-a6)" }}>
-              <Dialog.Title className="text-lg font-bold" style={{ color: "var(--gray-12)" }}>
-                {isEdit ? "تعديل طلب الإعلان" : "طلب إعلان"}
-              </Dialog.Title>
+        <Dialog.Overlay
+          className="fixed inset-0 z-[20040]"
+          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}
+        />
+        <Dialog.Content
+          dir="rtl"
+          className="fixed inset-0 z-[20041] flex items-center justify-center p-4"
+          aria-describedby={undefined}
+        >
+          <div
+            className={`flex w-full ${maxWidth} max-h-[92vh] flex-col overflow-hidden rounded-2xl border shadow-2xl`}
+            style={cardStyle}
+          >
+            <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: "var(--gray-a6)" }}>
+              <div>
+                <Dialog.Title className="text-lg font-bold" style={{ color: "var(--gray-12)" }}>
+                  {title}
+                </Dialog.Title>
+                {description ? (
+                  <p className="mt-1 text-sm" style={{ color: "var(--gray-11)" }}>
+                    {description}
+                  </p>
+                ) : null}
+              </div>
               <Dialog.Close asChild>
-                <button type="button" className="p-2 rounded-lg hover:opacity-70 transition-opacity"
-                  style={{ color: "var(--gray-11)" }}>
+                <button type="button" className="rounded-lg p-2 transition hover:opacity-70" style={{ color: "var(--gray-11)" }}>
                   <FiX size={18} />
                 </button>
               </Dialog.Close>
             </div>
-
-            <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
-              {error && (
-                <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm"
-                  style={{ background: "var(--red-a3)", color: "var(--red-11)", border: "1px solid var(--red-a6)" }}>
-                  <FiAlertCircle size={15} /><span>{error}</span>
-                </div>
-              )}
-
-              {/* Template info — read only */}
-              {tpl && (
-                <div className="rounded-xl p-4 space-y-2"
-                  style={{ background: "var(--blue-a2)", border: "1px solid var(--blue-a4)" }}>
-                  <p className="font-semibold text-sm" style={{ color: "var(--blue-11)" }}>{tpl.name}</p>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs" style={{ color: "var(--blue-10)" }}>
-                    <span>الموقع: <strong>{tpl.position}</strong></span>
-                    <span>نسبة الصورة: <strong>{tpl.imageRatio}</strong></span>
-                    <span>السعر: <strong>{tpl.pricePerHour} ₪</strong></span>
-                    <span>من {tpl.startDate} إلى {tpl.endDate}</span>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <FieldLabel required>عنوان الإعلان</FieldLabel>
-                <input
-                  className="w-full rounded-[10px] px-3 py-2.5 text-sm outline-none border transition"
-                  style={{ background: "var(--gray-a2)", borderColor: "var(--gray-a6)", color: "var(--gray-12)", direction: "rtl", textAlign: "right" }}
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  placeholder="مثال: تخفيضات الصيف"
-                  required
-                />
-              </div>
-
-              {/* Image upload */}
-              <div>
-                <FieldLabel required>صورة الإعلان</FieldLabel>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-
-                {/* Upload button / preview */}
-                {previewUrl || imageId ? (
-                  <div className="relative rounded-xl overflow-hidden border" style={{ borderColor: "var(--gray-a5)" }}>
-                    {previewUrl && (
-                      <img src={previewUrl} alt="معاينة" className="w-full object-cover max-h-40" />
-                    )}
-                    {!previewUrl && imageId && (
-                      <div className="flex items-center justify-center h-20 text-xs" style={{ color: "var(--gray-10)" }}>
-                        تم الرفع ✓ ({imageId.slice(0, 8)}...)
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploading}
-                      className="absolute bottom-2 left-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition hover:opacity-90"
-                      style={{ background: "rgba(0,0,0,0.6)", color: "#fff" }}
-                    >
-                      {uploading ? <Spinner size={12} /> : <FiUpload size={12} />}
-                      تغيير الصورة
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="w-full flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed transition hover:opacity-80 disabled:opacity-50"
-                    style={{ borderColor: "var(--gray-a6)", color: "var(--gray-10)" }}
-                  >
-                    {uploading ? <Spinner size={20} /> : <FiUpload size={20} />}
-                    <span className="text-sm font-medium">
-                      {uploading ? "جاري الرفع..." : "اضغط لرفع صورة الإعلان"}
-                    </span>
-                    <span className="text-xs" style={{ color: "var(--gray-9)" }}>PNG, JPG, WEBP</span>
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <Dialog.Close asChild>
-                  <button type="button" className="px-5 py-2.5 rounded-xl text-sm font-medium border transition hover:opacity-80"
-                    style={{ borderColor: "var(--gray-a6)", color: "var(--gray-12)" }}>
-                    إلغاء
-                  </button>
-                </Dialog.Close>
-                <button type="submit" disabled={saving}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition hover:opacity-90 disabled:opacity-50"
-                  style={{ background: "#2563eb", color: "#fff" }}>
-                  {saving && <Spinner size={14} />}
-                  {isEdit ? "حفظ التعديلات" : "إرسال الطلب"}
-                </button>
-              </div>
-            </form>
+            <div className="overflow-y-auto p-6">{children}</div>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
@@ -276,355 +161,784 @@ function AdRequestFormDialog({ open, onOpenChange, template, request, onSuccess 
   );
 }
 
-// ── Pay Confirm Dialog ────────────────────────────────────────────────────────
-function PayDialog({ open, onOpenChange, request, onSuccess }) {
-  const themeContainer = useThemeContainer();
+function TemplateSummary({ template }) {
+  if (!template) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-xl border px-4 py-3 text-sm" style={{ background: "var(--blue-a2)", borderColor: "var(--blue-a5)" }}>
+      <div className="font-semibold" style={{ color: "var(--blue-11)" }}>
+        {template.name}
+      </div>
+      <div className="mt-2 grid gap-2 text-xs sm:grid-cols-2" style={{ color: "var(--blue-10)" }}>
+        <div>الموضع: {getCampaignLabel(template.position, CAMPAIGN_POSITION_LABELS)}</div>
+        <div>النسبة: {template.imageRatio}</div>
+        <div>السعر لكل ساعة: {formatMoney(template.pricePerHour, "ILS")}</div>
+        <div>الحالة: {getCampaignLabel(template.status, TEMPLATE_STATUS_LABELS)}</div>
+      </div>
+    </div>
+  );
+}
+
+function AdRequestFormDialog({ open, onOpenChange, storeId, templates, request, onSaved }) {
+  const isEdit = !!request;
+  const [form, setForm] = useState({
+    templateId: "",
+    title: "",
+    adRequestImageUuid: "",
+    startDate: "",
+    endDate: "",
+  });
+  const [imageFile, setImageFile] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setError("");
+    setFieldErrors({});
+    setUploading(false);
+
+    if (request) {
+      setForm({
+        templateId: String(request.templateId || request.template?.adTemplateId || ""),
+        title: request.title || "",
+        adRequestImageUuid: String(request.adRequestImageUuid || ""),
+        startDate: toDateTimeLocalInput(request.startDate),
+        endDate: toDateTimeLocalInput(request.endDate),
+      });
+      setImageFile(request.adRequestImage || null);
+      return;
+    }
+
+    setForm({
+      templateId: "",
+      title: "",
+      adRequestImageUuid: "",
+      startDate: "",
+      endDate: "",
+    });
+    setImageFile(null);
+  }, [open, request]);
+
+  const selectedTemplate = useMemo(
+    () =>
+      templates.find(
+        (template) =>
+          String(template.adTemplateId) === String(form.templateId)
+        ) || null,
+    [form.templateId, templates]
+  );
+
+  const setValue = (key, value) => {
+    setForm((previous) => ({ ...previous, [key]: value }));
+    setFieldErrors((previous) => ({ ...previous, [key]: "" }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setError("");
+    setFieldErrors({});
+
+    try {
+      const payload = {
+        ...(isEdit ? { adRequestId: request.adRequestId } : {}),
+        shopId: Number(storeId),
+        templateId: Number(form.templateId),
+        title: form.title.trim(),
+        adRequestImageUuid: form.adRequestImageUuid,
+        startDate: form.startDate,
+        endDate: form.endDate,
+      };
+
+      if (isEdit) {
+        await campaignsApi.requests.update(payload);
+      } else {
+        await campaignsApi.requests.create(payload);
+      }
+
+      onSaved?.();
+      onOpenChange(false);
+    } catch (requestError) {
+      const mapped = buildApiFormError(requestError, REQUEST_FIELD_MAP, "فشل حفظ طلب الإعلان");
+      setError(mapped.message);
+      setFieldErrors(mapped.fieldErrors);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <DialogShell
+      open={open}
+      onOpenChange={onOpenChange}
+      title={isEdit ? "تعديل طلب الإعلان" : "إنشاء طلب إعلان"}
+      description="أدخل بيانات الإعلان بما يطابق متطلبات النموذج المحدد."
+      maxWidth="max-w-2xl"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error ? <InfoMessage color="var(--red-11)" background="var(--red-a2)" border="var(--red-a5)">{error}</InfoMessage> : null}
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold" style={{ color: "var(--gray-11)" }}>
+              النموذج الإعلاني
+            </label>
+            <select
+              className={inputClass}
+              style={inputStyle}
+              value={form.templateId}
+              onChange={(event) => setValue("templateId", event.target.value)}
+              disabled={isEdit}
+            >
+              <option value="">اختر نموذجًا</option>
+              {templates.map((template) => (
+                <option key={template.adTemplateId} value={template.adTemplateId}>
+                  {template.name} - {getCampaignLabel(template.position, CAMPAIGN_POSITION_LABELS)}
+                </option>
+              ))}
+            </select>
+            {fieldErrors.templateId ? (
+              <p className="mt-1 text-xs" style={{ color: "var(--red-9)" }}>
+                {fieldErrors.templateId}
+              </p>
+            ) : null}
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold" style={{ color: "var(--gray-11)" }}>
+              عنوان الإعلان
+            </label>
+            <input
+              className={inputClass}
+              style={inputStyle}
+              value={form.title}
+              onChange={(event) => setValue("title", event.target.value)}
+              placeholder="مثال: عروض الصيف"
+            />
+            {fieldErrors.title ? (
+              <p className="mt-1 text-xs" style={{ color: "var(--red-9)" }}>
+                {fieldErrors.title}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <TemplateSummary template={selectedTemplate} />
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold" style={{ color: "var(--gray-11)" }}>
+              بداية العرض
+            </label>
+            <input
+              type="datetime-local"
+              className={inputClass}
+              style={{ ...inputStyle, direction: "ltr", textAlign: "left" }}
+              value={form.startDate}
+              onChange={(event) => setValue("startDate", event.target.value)}
+            />
+            {fieldErrors.startDate ? (
+              <p className="mt-1 text-xs" style={{ color: "var(--red-9)" }}>
+                {fieldErrors.startDate}
+              </p>
+            ) : null}
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-semibold" style={{ color: "var(--gray-11)" }}>
+              نهاية العرض
+            </label>
+            <input
+              type="datetime-local"
+              className={inputClass}
+              style={{ ...inputStyle, direction: "ltr", textAlign: "left" }}
+              value={form.endDate}
+              onChange={(event) => setValue("endDate", event.target.value)}
+            />
+            {fieldErrors.endDate ? (
+              <p className="mt-1 text-xs" style={{ color: "var(--red-9)" }}>
+                {fieldErrors.endDate}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        <MediaUuidField
+          label="صورة الإعلان"
+          value={form.adRequestImageUuid}
+          onChange={(value) => setValue("adRequestImageUuid", value)}
+          file={imageFile}
+          onFileChange={setImageFile}
+          mode="store"
+          storeId={storeId}
+          allowPicker
+          showManualInput={false}
+          error={fieldErrors.adRequestImageUuid}
+          onUploadingChange={setUploading}
+        />
+
+        <div className="flex items-center justify-start gap-3 pt-2">
+          <button
+            type="submit"
+            disabled={submitting || uploading || !storeId}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+          >
+            {submitting ? <Spinner size={14} /> : null}
+            {isEdit ? "حفظ التعديلات" : "إرسال الطلب"}
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="rounded-xl border px-4 py-2 text-sm font-semibold transition hover:opacity-85"
+            style={{ borderColor: "var(--gray-a6)", color: "var(--gray-12)" }}
+          >
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </DialogShell>
+  );
+}
+
+function AdRequestDetailsDialog({ open, onOpenChange, request }) {
+  const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => { if (open) setError(""); }, [open]);
+  const loadPayments = useCallback(async () => {
+    if (!request?.adRequestId || !open) {
+      return;
+    }
 
-  const handlePay = async () => {
-    setLoading(true); setError("");
+    setLoading(true);
+    setError("");
+
     try {
-      await shopAdsApi.pay(request.adRequestId);
-      onSuccess?.();
-      onOpenChange(false);
-    } catch (err) {
-      setError(err.message || "فشل في تأكيد الدفع");
+      const response = await campaignsApi.requests.myPayments(request.adRequestId);
+      setPayments(unwrapCampaignPayload(response) || []);
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "فشل تحميل سجل الدفعات"));
+      setPayments([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [open, request?.adRequestId]);
+
+  useEffect(() => {
+    loadPayments();
+  }, [loadPayments]);
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal container={themeContainer}>
-        <Dialog.Overlay className="fixed inset-0 z-9990" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }} />
-        <Dialog.Content dir="rtl" className="fixed inset-0 z-9991 flex items-center justify-center p-4" aria-describedby={undefined}>
-          <div className="w-full max-w-sm rounded-2xl shadow-2xl p-6"
-            style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "var(--green-a3)" }}>
-                <FiCreditCard size={18} style={{ color: "var(--green-11)" }} />
+    <DialogShell
+      open={open}
+      onOpenChange={onOpenChange}
+      title={request?.title || "تفاصيل الإعلان"}
+      description="تفاصيل الطلب وحالة الدفع الخاصة به."
+    >
+      {request ? (
+        <div className="space-y-5">
+          <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
+            <div className="space-y-3 rounded-2xl border p-4" style={cardStyle}>
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge status={request.status} labels={REQUEST_STATUS_LABELS} />
+                <StatusBadge status={request.paymentStatus} labels={REQUEST_PAYMENT_STATUS_LABELS} />
               </div>
-              <div>
-                <h2 className="font-bold text-base" style={{ color: "var(--gray-12)" }}>تأكيد الدفع</h2>
-                <p className="text-xs" style={{ color: "var(--gray-10)" }}>{request?.template?.name}</p>
+              <div className="grid gap-3 text-sm sm:grid-cols-2">
+                <div>
+                  <div style={{ color: "var(--gray-10)" }}>المتجر</div>
+                  <div className="font-semibold" style={{ color: "var(--gray-12)" }}>
+                    {request.shop?.name || `متجر #${request.shopId}`}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: "var(--gray-10)" }}>النموذج</div>
+                  <div className="font-semibold" style={{ color: "var(--gray-12)" }}>
+                    {request.template?.name || `#${request.templateId}`}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: "var(--gray-10)" }}>بداية العرض</div>
+                  <div style={{ color: "var(--gray-12)" }}>{formatDateTime(request.startDate)}</div>
+                </div>
+                <div>
+                  <div style={{ color: "var(--gray-10)" }}>نهاية العرض</div>
+                  <div style={{ color: "var(--gray-12)" }}>{formatDateTime(request.endDate)}</div>
+                </div>
+                <div>
+                  <div style={{ color: "var(--gray-10)" }}>الإجمالي</div>
+                  <div style={{ color: "var(--gray-12)" }}>{formatMoney(request.totalPrice, "ILS")}</div>
+                </div>
+                <div>
+                  <div style={{ color: "var(--gray-10)" }}>موضع الإعلان</div>
+                  <div style={{ color: "var(--gray-12)" }}>
+                    {getCampaignLabel(request.template?.position, CAMPAIGN_POSITION_LABELS)}
+                  </div>
+                </div>
               </div>
+
+              {request.rejectionReason ? (
+                <InfoMessage color="var(--red-11)" background="var(--red-a2)" border="var(--red-a5)">
+                  سبب الرفض: {request.rejectionReason}
+                </InfoMessage>
+              ) : null}
             </div>
 
-            {request && (
-              <div className="rounded-xl p-3 mb-4 space-y-1.5 text-sm"
-                style={{ background: "var(--gray-a2)", border: "1px solid var(--gray-a5)" }}>
-                <div className="flex justify-between">
-                  <span style={{ color: "var(--gray-10)" }}>العنوان</span>
-                  <span className="font-medium" style={{ color: "var(--gray-12)" }}>{request.title}</span>
+            <div className="rounded-2xl border p-4" style={cardStyle}>
+              {getMediaPreviewUrl(request.adRequestImage) ? (
+                <img
+                  src={getMediaPreviewUrl(request.adRequestImage)}
+                  alt={request.title}
+                  className="h-56 w-full rounded-xl object-cover"
+                />
+              ) : (
+                <div className="flex h-56 items-center justify-center rounded-xl border" style={{ borderColor: "var(--gray-a6)" }}>
+                  <div className="text-center text-sm" style={{ color: "var(--gray-10)" }}>
+                    <FiImage className="mx-auto mb-2" size={22} />
+                    لا توجد معاينة متاحة
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span style={{ color: "var(--gray-10)" }}>المبلغ</span>
-                  <span className="font-bold" style={{ color: "var(--green-11)" }}>{request.template?.pricePerHour} ₪</span>
-                </div>
-                <div className="flex justify-between">
-                  <span style={{ color: "var(--gray-10)" }}>الفترة</span>
-                  <span style={{ color: "var(--gray-12)" }}>{request.template?.startDate} → {request.template?.endDate}</span>
-                </div>
+              )}
+              <div className="mt-3 text-xs" style={{ color: "var(--gray-10)" }}>
+                النسب المدعومة: {CAMPAIGN_IMAGE_RATIOS.join("، ")}
               </div>
-            )}
-
-            {error && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm mb-3"
-                style={{ background: "var(--red-a3)", color: "var(--red-11)" }}>
-                <FiAlertCircle size={14} />{error}
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <Dialog.Close asChild>
-                <button className="flex-1 py-2.5 rounded-xl text-sm font-medium border transition hover:opacity-80"
-                  style={{ borderColor: "var(--gray-a6)", color: "var(--gray-11)" }}>
-                  إلغاء
-                </button>
-              </Dialog.Close>
-              <button onClick={handlePay} disabled={loading}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition hover:opacity-90 disabled:opacity-50"
-                style={{ background: "var(--green-9)", color: "#fff" }}>
-                {loading ? <Spinner size={14} /> : <FiCreditCard size={14} />}
-                تأكيد الدفع
-              </button>
             </div>
           </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+
+          <div className="rounded-2xl border" style={cardStyle}>
+            <div className="border-b px-4 py-3 text-sm font-semibold" style={{ borderColor: "var(--gray-a6)", color: "var(--gray-12)" }}>
+              سجل الدفعات
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[540px] text-sm">
+                <thead style={{ background: "var(--gray-a2)", color: "var(--gray-11)" }}>
+                  <tr>
+                    <th className="px-4 py-3 text-right text-xs font-semibold">المبلغ</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold">الحالة</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold">طريقة الدفع</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold">تاريخ العملية</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center" style={{ color: "var(--gray-10)" }}>
+                        <span className="inline-flex items-center gap-2">
+                          <Spinner size={16} />
+                          جاري التحميل...
+                        </span>
+                      </td>
+                    </tr>
+                  ) : payments.length ? (
+                    payments.map((payment) => (
+                      <tr key={payment.paymentId} style={{ borderTop: "1px solid var(--gray-a5)" }}>
+                        <td className="px-4 py-3" style={{ color: "var(--gray-12)" }}>
+                          {formatMoney(payment.amount, payment.currency)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status={payment.paymentStatus} labels={REQUEST_PAYMENT_STATUS_LABELS} />
+                        </td>
+                        <td className="px-4 py-3" style={{ color: "var(--gray-12)" }}>
+                          {payment.paymentMethod || "-"}
+                        </td>
+                        <td className="px-4 py-3" style={{ color: "var(--gray-11)" }}>
+                          {formatDateTime(payment.paymentDate)}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-sm" style={{ color: "var(--gray-10)" }}>
+                        {error || "لا توجد دفعات مرتبطة بهذا الطلب حتى الآن."}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </DialogShell>
   );
 }
 
-// ── Status Filter Tabs ────────────────────────────────────────────────────────
-const STATUS_FILTERS = [
-  { value: "", label: "الكل" },
-  { value: "PENDING",  label: "قيد المراجعة" },
-  { value: "APPROVED", label: "مقبول" },
-  { value: "REJECTED", label: "مرفوض" },
-];
-
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Ads() {
+  const { selectedStoreId } = useAuth();
   const [templates, setTemplates] = useState([]);
-  const [templatesLoading, setTemplatesLoading] = useState(false);
-
-  const [ads, setAds] = useState([]);
-  const [adsLoading, setAdsLoading] = useState(false);
-  const [adsError, setAdsError] = useState("");
+  const [requests, setRequests] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
-
+  const [loading, setLoading] = useState(false);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [templatesError, setTemplatesError] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [formTemplate, setFormTemplate] = useState(null); // for new request
-  const [editRequest, setEditRequest] = useState(null);   // for edit
+  const [editingRequest, setEditingRequest] = useState(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsRequest, setDetailsRequest] = useState(null);
+  const [paymentState, setPaymentState] = useState(null);
+  const [rowLoadingId, setRowLoadingId] = useState(null);
 
-  const [payOpen, setPayOpen] = useState(false);
-  const [payTarget, setPayTarget] = useState(null);
-  const [toast, setToast] = useState(null);
-
-  const showToast = useCallback((message, type = "success") => setToast({ message, type }), []);
-
-  // Fetch templates once
-  useEffect(() => {
-    setTemplatesLoading(true);
-    shopAdsApi.getTemplates()
-      .then(r => {
-        const all = r?.data?.content || r?.data || [];
-        setTemplates(all.filter(t => t.status === "ACTIVE"));
-      })
-      .catch(() => {})
-      .finally(() => setTemplatesLoading(false));
-  }, []);
-
-  // Fetch my requests
-  const fetchAds = useCallback(async () => {
-    setAdsLoading(true); setAdsError("");
-    try {
-      const res = statusFilter
-        ? await shopAdsApi.getByStatus(statusFilter)
-        : await shopAdsApi.getAll();
-      setAds(res?.data || []);
-    } catch (e) {
-      setAdsError(e.message || "فشل في جلب البيانات");
-      setAds([]);
-    } finally {
-      setAdsLoading(false);
+  const loadTemplates = useCallback(async () => {
+    if (!selectedStoreId) {
+      setTemplates([]);
+      return;
     }
-  }, [statusFilter]);
 
-  useEffect(() => { fetchAds(); }, [fetchAds]);
+    setTemplatesLoading(true);
+    setTemplatesError("");
 
-  const handleRequestNew = (template) => {
-    setEditRequest(null);
-    setFormTemplate(template);
+    try {
+      const response = await campaignsApi.templates.active();
+      setTemplates(unwrapCampaignPayload(response) || []);
+    } catch (requestError) {
+      setTemplates([]);
+      setTemplatesError(getApiErrorMessage(requestError, "فشل تحميل النماذج الإعلانية"));
+    } finally {
+      setTemplatesLoading(false);
+    }
+  }, [selectedStoreId]);
+
+  const loadRequests = useCallback(async () => {
+    if (!selectedStoreId) {
+      setRequests([]);
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = statusFilter
+        ? await campaignsApi.requests.byShopStatus(selectedStoreId, statusFilter)
+        : await campaignsApi.requests.byShop(selectedStoreId);
+      setRequests(unwrapCampaignPayload(response) || []);
+    } catch (requestError) {
+      setRequests([]);
+      setError(getApiErrorMessage(requestError, "فشل تحميل طلبات الإعلانات"));
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedStoreId, statusFilter]);
+
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
+
+  useEffect(() => {
+    loadRequests();
+  }, [loadRequests]);
+
+  const openCreate = () => {
+    setEditingRequest(null);
     setFormOpen(true);
   };
 
-  const handleEdit = (ad) => {
-    setFormTemplate(null);
-    setEditRequest(ad);
+  const openEdit = (request) => {
+    setEditingRequest(request);
     setFormOpen(true);
   };
 
-  const handlePay = (ad) => { setPayTarget(ad); setPayOpen(true); };
+  const openDetails = (request) => {
+    setDetailsRequest(request);
+    setDetailsOpen(true);
+  };
+
+  const handleCancel = async (request) => {
+    if (!selectedStoreId || !window.confirm(`هل تريد إلغاء "${request.title}"؟`)) {
+      return;
+    }
+
+    setRowLoadingId(request.adRequestId);
+
+    try {
+      await campaignsApi.requests.cancel(request.adRequestId, selectedStoreId);
+      await loadRequests();
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "فشل إلغاء الطلب"));
+    } finally {
+      setRowLoadingId(null);
+    }
+  };
+
+  const handlePay = async (request) => {
+    setRowLoadingId(request.adRequestId);
+
+    try {
+      const response = await campaignsApi.requests.initiatePayment(request.adRequestId);
+      const payload = unwrapCampaignPayload(response);
+      setPaymentState({
+        adRequestId: request.adRequestId,
+        title: request.title,
+        clientSecret: payload?.clientSecret || "",
+        amount: payload?.amount || request.totalPrice || 0,
+        currency: payload?.currency || "ILS",
+      });
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, "فشل تهيئة الدفع"));
+    } finally {
+      setRowLoadingId(null);
+    }
+  };
+
+  if (!selectedStoreId) {
+    return (
+      <div dir="rtl" className="space-y-6 p-3 sm:p-6">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: "var(--gray-12)" }}>
+            الإعلانات
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--gray-11)" }}>
+            إدارة طلبات الإعلان المرتبطة بالمتجر النشط.
+          </p>
+        </div>
+        <EmptyState
+          title="لا يوجد متجر نشط"
+          description="اختر متجرًا من شريط صاحب المتجر أولًا حتى تتمكن من إنشاء وإدارة طلبات الإعلانات."
+        />
+      </div>
+    );
+  }
 
   return (
-    <div dir="rtl" className="p-4 sm:p-6 space-y-8">
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
-      {/* ── Section 1: Available Templates ── */}
-      <div>
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold" style={{ color: "var(--gray-12)" }}>القوالب الإعلانية المتاحة</h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--gray-10)" }}>اختر قالباً وأرسل طلب إعلان</p>
-        </div>
-
-        <div className="rounded-2xl overflow-hidden overflow-x-auto"
-          style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
-          {templatesLoading ? (
-            <div className="flex justify-center py-10"><Spinner size={24} /></div>
-          ) : templates.length === 0 ? (
-            <div className="text-center py-10 text-sm" style={{ color: "var(--gray-9)" }}>لا توجد قوالب متاحة حالياً</div>
-          ) : (
-            <table className="w-full text-sm" style={{ minWidth: 650 }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid var(--gray-a6)", background: "var(--gray-a2)" }}>
-                  {["اسم القالب", "الموقع", "نسبة الصورة", "السعر", "الفترة", ""].map(h => (
-                    <th key={h} className="px-4 py-3 text-right text-xs font-semibold" style={{ color: "var(--gray-10)" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {templates.map((t, i) => (
-                  <tr key={t.adTemplateId}
-                    style={{ borderBottom: i < templates.length - 1 ? "1px solid var(--gray-a4)" : "none" }}>
-                    <td className="px-4 py-3">
-                      <div className="font-semibold" style={{ color: "var(--gray-12)" }}>{t.name}</div>
-                      {t.description && <div className="text-xs mt-0.5" style={{ color: "var(--gray-10)" }}>{t.description}</div>}
-                    </td>
-                    <td className="px-4 py-3 text-xs font-medium" style={{ color: "var(--gray-11)" }}>{t.position}</td>
-                    <td className="px-4 py-3 text-xs" style={{ color: "var(--gray-11)" }}>{t.imageRatio}</td>
-                    <td className="px-4 py-3">
-                      <span className="font-bold" style={{ color: "var(--green-11)" }}>{t.pricePerHour} ₪</span>
-                    </td>
-                    <td className="px-4 py-3 text-xs" style={{ color: "var(--gray-11)" }}>
-                      {t.startDate} → {t.endDate}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleRequestNew(t)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition hover:opacity-80 whitespace-nowrap"
-                        style={{ background: "var(--blue-9)", color: "#fff" }}
-                      >
-                        <FiPlus size={12} /> طلب إعلان
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {/* ── Section 2: My Requests ── */}
-      <div>
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+    <>
+      <div dir="rtl" className="space-y-6 p-3 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-bold" style={{ color: "var(--gray-12)" }}>طلباتي</h2>
-            <p className="text-sm mt-0.5" style={{ color: "var(--gray-10)" }}>
-              {ads.length > 0 ? `${ads.length} طلب` : "لا توجد طلبات"}
+            <h1 className="text-2xl font-bold" style={{ color: "var(--gray-12)" }}>
+              الإعلانات
+            </h1>
+            <p className="mt-1 text-sm" style={{ color: "var(--gray-11)" }}>
+              إنشاء الطلبات الإعلانية، متابعة حالاتها، وإتمام الدفع للطلبات المقبولة.
             </p>
           </div>
-          {/* Status filter tabs */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {STATUS_FILTERS.map(f => (
-              <button key={f.value} onClick={() => setStatusFilter(f.value)}
-                className="px-3 py-1.5 rounded-full text-xs font-medium transition border"
-                style={{
-                  background: statusFilter === f.value ? "var(--blue-9)" : "transparent",
-                  color: statusFilter === f.value ? "#fff" : "var(--gray-11)",
-                  borderColor: statusFilter === f.value ? "var(--blue-9)" : "var(--gray-a6)",
-                }}>
-                {f.label}
-              </button>
-            ))}
+          <button
+            type="button"
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+          >
+            <FiPlus size={16} />
+            طلب إعلان جديد
+          </button>
+        </div>
+
+        {templatesError ? (
+          <InfoMessage color="var(--red-11)" background="var(--red-a2)" border="var(--red-a5)">
+            {templatesError}
+          </InfoMessage>
+        ) : templatesLoading ? (
+          <InfoMessage icon={FiLoader}>جاري تحميل النماذج الإعلانية...</InfoMessage>
+        ) : null}
+
+        <div className="rounded-2xl border p-4" style={cardStyle}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold" style={{ color: "var(--gray-12)" }}>
+                فلترة الطلبات
+              </div>
+              <div className="mt-1 text-xs" style={{ color: "var(--gray-10)" }}>
+                تصفية حسب حالة الطلب.
+              </div>
+            </div>
+            <div className="w-full max-w-xs">
+              <select
+                className={inputClass}
+                style={inputStyle}
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+              >
+                <option value="">كل الحالات</option>
+                {Object.entries(REQUEST_STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
-        {adsError && (
-          <div className="flex items-center justify-between gap-3 px-5 py-3 rounded-2xl mb-4"
-            style={{ background: "var(--red-2)", border: "1px solid var(--red-6)" }}>
-            <div className="flex items-center gap-2 text-sm" style={{ color: "var(--red-11)" }}>
-              <FiAlertCircle size={15} /><span>{adsError}</span>
-            </div>
-            <button onClick={fetchAds} className="text-xs font-semibold underline" style={{ color: "var(--red-11)" }}>
-              إعادة المحاولة
-            </button>
-          </div>
-        )}
+        {error ? (
+          <InfoMessage color="var(--red-11)" background="var(--red-a2)" border="var(--red-a5)">
+            {error}
+          </InfoMessage>
+        ) : null}
 
-        {adsLoading ? (
-          <div className="flex justify-center py-10"><Spinner size={24} /></div>
-        ) : ads.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-14 text-center rounded-2xl"
-            style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
-            <div className="text-4xl mb-3">📢</div>
-            <p className="font-semibold text-sm" style={{ color: "var(--gray-11)" }}>لا توجد طلبات</p>
-            <p className="text-xs mt-1" style={{ color: "var(--gray-9)" }}>اختر قالباً من الجدول أعلاه وأرسل طلبك</p>
-          </div>
-        ) : (
-          <div className="rounded-2xl overflow-hidden overflow-x-auto"
-            style={{ background: "var(--gray-1)", border: "1px solid var(--gray-a6)" }}>
-            <table className="w-full text-sm" style={{ minWidth: 700 }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid var(--gray-a6)", background: "var(--gray-a2)" }}>
-                  {["الإعلان", "القالب", "الحالة", "الدفع", ""].map(h => (
-                    <th key={h} className="px-4 py-3 text-right text-xs font-semibold" style={{ color: "var(--gray-10)" }}>{h}</th>
-                  ))}
+        <div className="overflow-hidden rounded-2xl border" style={cardStyle}>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[880px] text-sm">
+              <thead style={{ background: "var(--gray-a2)", color: "var(--gray-11)" }}>
+                <tr>
+                  <th className="px-4 py-3 text-right text-xs font-semibold">العنوان</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold">النموذج</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold">الفترة</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold">الحالة</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold">الدفع</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold">الإجمالي</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold">الإجراءات</th>
                 </tr>
               </thead>
               <tbody>
-                {ads.map((ad, i) => (
-                  <tr key={ad.adRequestId}
-                    style={{ borderBottom: i < ads.length - 1 ? "1px solid var(--gray-a4)" : "none" }}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-14 h-10 rounded-lg overflow-hidden shrink-0"
-                          style={{ background: "var(--gray-a3)" }}>
-                          {ad.imageUrl && (
-                            <img src={ad.imageUrl} alt="" className="w-full h-full object-cover"
-                              onError={e => e.currentTarget.style.display = "none"} />
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-medium" style={{ color: "var(--gray-12)" }}>{ad.title}</div>
-                          {ad.rejectionReason && (
-                            <div className="text-xs mt-0.5" style={{ color: "var(--red-10)" }}>
-                              سبب الرفض: {ad.rejectionReason}
-                            </div>
-                          )}
-                          {ad.isDisplayed && (
-                            <span className="inline-flex items-center gap-1 text-xs mt-0.5" style={{ color: "var(--purple-11)" }}>
-                              <FiEye size={10} /> يُعرض الآن
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs" style={{ color: "var(--gray-11)" }}>
-                      <div>{ad.template?.name}</div>
-                      <div style={{ color: "var(--gray-9)" }}>{ad.template?.position}</div>
-                    </td>
-                    <td className="px-4 py-3"><RequestStatusBadge status={ad.status} /></td>
-                    <td className="px-4 py-3"><PaymentBadge status={ad.paymentStatus} /></td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {ad.status === "PENDING" && (
-                          <button onClick={() => handleEdit(ad)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition hover:opacity-80"
-                            style={{ background: "var(--blue-a3)", color: "var(--blue-11)" }}>
-                            <FiEdit2 size={11} /> تعديل
-                          </button>
-                        )}
-                        {ad.status === "APPROVED" && ad.paymentStatus === "UNPAID" && (
-                          <button onClick={() => handlePay(ad)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition hover:opacity-80"
-                            style={{ background: "var(--green-9)", color: "#fff" }}>
-                            <FiCreditCard size={11} /> ادفع
-                          </button>
-                        )}
-                      </div>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10 text-center" style={{ color: "var(--gray-10)" }}>
+                      <span className="inline-flex items-center gap-2">
+                        <Spinner size={16} />
+                        جاري تحميل الطلبات...
+                      </span>
                     </td>
                   </tr>
-                ))}
+                ) : requests.length ? (
+                  requests.map((request) => (
+                    <tr key={request.adRequestId} style={{ borderTop: "1px solid var(--gray-a5)" }}>
+                      <td className="px-4 py-4">
+                        <div className="font-semibold" style={{ color: "var(--gray-12)" }}>
+                          {request.title}
+                        </div>
+                        <div className="mt-1 text-xs" style={{ color: "var(--gray-10)" }}>
+                          #{request.adRequestId}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div style={{ color: "var(--gray-12)" }}>{request.template?.name || `#${request.templateId}`}</div>
+                        <div className="mt-1 text-xs" style={{ color: "var(--gray-10)" }}>
+                          {getCampaignLabel(request.template?.position, CAMPAIGN_POSITION_LABELS)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2 text-xs" style={{ color: "var(--gray-11)" }}>
+                          <FiCalendar size={12} />
+                          {formatDateTime(request.startDate)}
+                        </div>
+                        <div className="mt-1 text-xs" style={{ color: "var(--gray-11)" }}>
+                          {formatDateTime(request.endDate)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <StatusBadge status={request.status} labels={REQUEST_STATUS_LABELS} />
+                        {request.rejectionReason ? (
+                          <div className="mt-2 text-xs" style={{ color: "var(--red-9)" }}>
+                            {request.rejectionReason}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-4">
+                        <StatusBadge status={request.paymentStatus} labels={REQUEST_PAYMENT_STATUS_LABELS} />
+                      </td>
+                      <td className="px-4 py-4" style={{ color: "var(--gray-12)" }}>
+                        {formatMoney(request.totalPrice, "ILS")}
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openDetails(request)}
+                            className="inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:opacity-85"
+                            style={{ borderColor: "var(--gray-a6)", color: "var(--gray-12)" }}
+                          >
+                            <FiEye size={13} />
+                            عرض
+                          </button>
+
+                          {request.status === "PENDING" ? (
+                            <button
+                              type="button"
+                              onClick={() => openEdit(request)}
+                              className="inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:opacity-85"
+                              style={{ borderColor: "var(--gray-a6)", color: "var(--gray-12)" }}
+                            >
+                              <FiEdit2 size={13} />
+                              تعديل
+                            </button>
+                          ) : null}
+
+                          {request.status === "PENDING" ? (
+                            <button
+                              type="button"
+                              onClick={() => handleCancel(request)}
+                              disabled={rowLoadingId === request.adRequestId}
+                              className="inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-xs font-semibold transition hover:opacity-85 disabled:opacity-60"
+                              style={{ borderColor: "var(--red-a6)", color: "var(--red-11)" }}
+                            >
+                              {rowLoadingId === request.adRequestId ? <Spinner size={12} /> : <FiTrash2 size={13} />}
+                              إلغاء
+                            </button>
+                          ) : null}
+
+                          {request.status === "APPROVED" && request.paymentStatus !== "PAID" ? (
+                            <button
+                              type="button"
+                              onClick={() => handlePay(request)}
+                              disabled={rowLoadingId === request.adRequestId}
+                              className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                            >
+                              {rowLoadingId === request.adRequestId ? <Spinner size={12} /> : <FiCreditCard size={13} />}
+                              دفع
+                            </button>
+                          ) : null}
+
+                          {request.paymentStatus === "PAID" ? (
+                            <span className="inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-semibold" style={{ background: "var(--green-a3)", color: "var(--green-11)" }}>
+                              <FiCheckCircle size={13} />
+                              مكتمل
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: "var(--gray-10)" }}>
+                      لا توجد طلبات إعلانية مطابقة.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Dialogs */}
       <AdRequestFormDialog
         open={formOpen}
         onOpenChange={setFormOpen}
-        template={formTemplate}
-        request={editRequest}
-        onSuccess={() => {
-          fetchAds();
-          showToast(editRequest ? "تم تعديل الطلب" : "تم إرسال الطلب بنجاح");
+        storeId={selectedStoreId}
+        templates={templates}
+        request={editingRequest}
+        onSaved={loadRequests}
+      />
+
+      <AdRequestDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        request={detailsRequest}
+      />
+
+      <CampaignPaymentDialog
+        open={!!paymentState}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPaymentState(null);
+          }
+        }}
+        title={paymentState ? `دفع طلب: ${paymentState.title}` : "الدفع"}
+        description="سيتم استخدام Stripe لمعالجة عملية الدفع الخاصة بطلب الإعلان."
+        clientSecret={paymentState?.clientSecret || ""}
+        amount={paymentState?.amount || 0}
+        currency={paymentState?.currency || "ILS"}
+        onPaid={async () => {
+          await loadRequests();
+          setPaymentState(null);
         }}
       />
-      <PayDialog
-        open={payOpen}
-        onOpenChange={setPayOpen}
-        request={payTarget}
-        onSuccess={() => { fetchAds(); showToast("تم تأكيد الدفع بنجاح"); }}
-      />
-    </div>
+    </>
   );
 }

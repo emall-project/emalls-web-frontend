@@ -23,7 +23,7 @@ export default function CatalogProductsPage() {
         if (cancelled) return;
         const list = unwrapAccountPayload(response) || [];
         setShops(Array.isArray(list) ? list : []);
-        setSelectedShopId((current) => current || (list?.[0]?.id ? String(list[0].id) : ""));
+        setSelectedShopId((current) => current || (list?.[0]?.shopId ? String(list[0].shopId) : list?.[0]?.id ? String(list[0].id) : ""));
       })
       .catch(() => {
         if (!cancelled) setShops([]);
@@ -38,7 +38,7 @@ export default function CatalogProductsPage() {
   }, []);
 
   const selectedShop = useMemo(
-    () => shops.find((shop) => String(shop.id) === String(selectedShopId)),
+    () => shops.find((shop) => String(shop.shopId || shop.id) === String(selectedShopId)),
     [selectedShopId, shops]
   );
 
@@ -75,8 +75,8 @@ export default function CatalogProductsPage() {
       >
         <option value="">اختر متجرًا</option>
         {shops.map((shop) => (
-          <option key={shop.id} value={shop.id}>
-            {shop.name || shop.shopName || `متجر #${shop.id}`}
+          <option key={shop.shopId || shop.id} value={shop.shopId || shop.id}>
+            {shop.name || shop.shopName || `متجر #${shop.shopId || shop.id}`}
           </option>
         ))}
       </select>

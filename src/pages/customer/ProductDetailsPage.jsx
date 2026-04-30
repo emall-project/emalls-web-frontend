@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { FiFlag, FiHeart, FiImage, FiLoader, FiMessageSquare, FiSend, FiStar, FiTrash2 } from "react-icons/fi";
+import { FiFlag, FiHeart, FiImage, FiLoader, FiMessageSquare, FiMinus, FiPlus, FiSend, FiShoppingCart, FiStar, FiTrash2 } from "react-icons/fi";
+import { useLocation } from "react-router-dom";
 import Header from "../../components/customer/HomePageComponents/Header";
 import Footer from "../../components/customer/HomePageComponents/Footer";
 import ProductsRow from "../../components/customer/HomePageComponents/ProductsRow";
 import { catalogApi, unwrapCatalogPayload } from "../../api/catalog";
 import { useAuth } from "../../auth/AuthContext";
+import { useCart } from "../../cart/CartContext";
 import { getDefaultVariant, getProductImage, getProductPrice, getProductOldPrice, toProductCard } from "../../utils/catalogProducts";
 import { getMediaPreviewUrl } from "../../api/mediaManager";
 
@@ -19,11 +21,14 @@ function formatPrice(value) {
 export default function ProductDetailsPage() {
   const { productId, slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isCustomer, isAuthenticated, session } = useAuth();
+  const { addItem } = useCart();
   const [product, setProduct] = useState(null);
   const [productInfo, setProductInfo] = useState(null);
   const [attributes, setAttributes] = useState([]);
   const [selectedVariantId, setSelectedVariantId] = useState("");
+  const [quantity, setQuantity] = useState(1);
   const [activeMediaUrl, setActiveMediaUrl] = useState("");
   const [similar, setSimilar] = useState([]);
   const [comments, setComments] = useState([]);
@@ -36,6 +41,7 @@ export default function ProductDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState("");
   const [error, setError] = useState("");
+  const mallId = Number(productInfo?.mallId ?? product?.mallId ?? 0) || null;
 
   const defaultVariant = useMemo(() => getDefaultVariant(product), [product]);
   const variants = product?.variants || [];
@@ -134,9 +140,13 @@ export default function ProductDetailsPage() {
     setActiveMediaUrl(getMediaPreviewUrl(selectedVariant?.media?.[0]?.mediumFile) || "");
   }, [selectedVariant?.id]);
 
+  useEffect(() => {
+    setQuantity(1);
+  }, [selectedVariant?.id, product?.id]);
+
   const requireCustomer = () => {
     if (!isAuthenticated || !isCustomer) {
-      navigate("/login");
+      navigate("/login", { state: { from: location } });
       return false;
     }
     return true;
@@ -244,6 +254,38 @@ export default function ProductDetailsPage() {
       await loadProduct();
     } catch (requestError) {
       setError(requestError.message || "فشل حذف التقييم");
+    } finally {
+      setSaving("");
+    }
+  };
+
+  const addCurrentVariantToCart = async () => {
+    if (!product?.id || !selectedVariant?.id) {
+      setError("اختر متغيرًا صالحًا قبل الإضافة إلى السلة");
+      return;
+    }
+
+    if (!mallId) {
+      setError("تعذر تحديد المول لهذا المنتج");
+      return;
+    }
+
+    if (!requireCustomer()) {
+      return;
+    }
+
+    setSaving("cart");
+    setError("");
+
+    try {
+      await addItem({
+        mallId,
+        productId: Number(product.id),
+        variantId: Number(selectedVariant.id),
+        quantity,
+      });
+    } catch (requestError) {
+      setError(requestError.message || "فشل إضافة المنتج إلى السلة");
     } finally {
       setSaving("");
     }
@@ -371,8 +413,35 @@ export default function ProductDetailsPage() {
               </div>
             ) : null}
 
-            <div className="flex gap-3 py-5">
-              <button className="flex-1 bg-black px-5 py-3 text-sm font-semibold text-white">
+            <div className="flex flex-col gap-3 py-5 sm:flex-row">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setQuantity((current) => Math.max(1, current - 1))}
+                  disabled={quantity <= 1 || saving === "cart"}
+                  className="inline-flex h-11 w-11 items-center justify-center border border-black/10 text-black disabled:opacity-35"
+                >
+                  <FiMinus />
+                </button>
+                <div className="inline-flex h-11 min-w-14 items-center justify-center border border-black/10 px-3 text-sm font-semibold text-black">
+                  {quantity}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setQuantity((current) => Math.min(99, current + 1))}
+                  disabled={saving === "cart"}
+                  className="inline-flex h-11 w-11 items-center justify-center border border-black/10 text-black disabled:opacity-35"
+                >
+                  <FiPlus />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={addCurrentVariantToCart}
+                disabled={saving === "cart" || !selectedVariant?.id || !mallId}
+                className="flex flex-1 items-center justify-center gap-2 bg-black px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {saving === "cart" ? <FiLoader className="animate-spin" /> : <FiShoppingCart />}
                 إضافة للسلة
               </button>
               <button
@@ -469,7 +538,7 @@ export default function ProductDetailsPage() {
         </section>
       </main>
 
-      <ProductsRow title="منتجات مشابهة" products={similar} onAddToCart={() => {}} />
+      <ProductsRow title="منتجات مشابهة" products={similar} />
       <Footer />
     </div>
   );

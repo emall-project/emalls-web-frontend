@@ -8,6 +8,36 @@ function firstImageUrl(files = []) {
   return (Array.isArray(files) ? files : []).map(getMediaPreviewUrl).find(Boolean) || "";
 }
 
+function splitParagraphs(value) {
+  return String(value || "")
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+export function mapMallService(service) {
+  return {
+    id: asStringId(service?.serviceId ?? service?.id),
+    serviceId: service?.serviceId ?? service?.id ?? null,
+    name: service?.name || "خدمة",
+    description: service?.description || "",
+    isActive: service?.isActive ?? true,
+  };
+}
+
+export function mapMallRestaurant(restaurant) {
+  return {
+    id: asStringId(restaurant?.restaurantId ?? restaurant?.id),
+    restaurantId: restaurant?.restaurantId ?? restaurant?.id ?? null,
+    name: restaurant?.name || "مطعم",
+    description: restaurant?.description || "",
+    cuisineType: restaurant?.cuisineType || "",
+    locationInMall: restaurant?.locationInMall || "",
+    logoUrl: getMediaPreviewUrl(restaurant?.logoImage),
+    isActive: restaurant?.isActive ?? true,
+  };
+}
+
 export function mapCatalogCategory(category) {
   return {
     id: asStringId(category?.id ?? category?.categoryId),
@@ -23,22 +53,28 @@ export function mapCatalogCategory(category) {
 
 export function mapAccountMall(mall) {
   const id = mall?.mallId ?? mall?.id;
+  const logoUrl = getMediaPreviewUrl(mall?.logoImage);
+  const images = (mall?.mallImages || [])
+    .map((image, index) => ({
+      id: image?.id || `${id || "mall"}-${index}`,
+      image: getMediaPreviewUrl(image),
+      alt: mall?.name || "Mall",
+    }))
+    .filter((image) => image.image);
+  const description = mall?.description || "";
+
   return {
     id: asStringId(id),
     mallId: id,
     name: mall?.name || "مول",
     location: mall?.location || mall?.city?.name || "",
     city: mall?.city?.name || "",
-    logoUrl: getMediaPreviewUrl(mall?.logoImage),
-    images: (mall?.mallImages || [])
-      .map((image, index) => ({
-        id: image?.id || `${id || "mall"}-${index}`,
-        image: getMediaPreviewUrl(image),
-        alt: mall?.name || "Mall",
-      }))
-      .filter((image) => image.image),
-    services: mall?.services || [],
-    description: mall?.description || "",
+    logoUrl,
+    images: images.length ? images : logoUrl ? [{ id: `${id || "mall"}-logo`, image: logoUrl, alt: mall?.name || "Mall" }] : [],
+    services: (Array.isArray(mall?.services) ? mall.services : []).map(mapMallService),
+    restaurants: (Array.isArray(mall?.restaurants) ? mall.restaurants : []).map(mapMallRestaurant),
+    description,
+    aboutSections: splitParagraphs(description),
     status: mall?.status || "",
   };
 }
@@ -46,15 +82,20 @@ export function mapAccountMall(mall) {
 export function mapAccountShop(shop) {
   const id = shop?.shopId ?? shop?.id;
   const mallId = shop?.mall?.mallId ?? shop?.mall?.id ?? shop?.mallId;
+  const category = shop?.category || shop?.specialist || "";
   return {
     id: asStringId(id),
     shopId: id,
     name: shop?.name || "متجر",
     mallId: asStringId(mallId),
+    mallName: shop?.mall?.name || "",
     logoUrl: getMediaPreviewUrl(shop?.logoImage),
-    floor: shop?.floor || "",
-    specialist: shop?.category || shop?.specialist || "",
-    image: firstImageUrl(shop?.shopPhotos),
+    floor: shop?.floor || shop?.location || "",
+    specialist: category,
+    category,
+    description: shop?.description || "",
+    location: shop?.location || "",
+    image: firstImageUrl(shop?.shopPhotos) || getMediaPreviewUrl(shop?.logoImage),
     status: shop?.status || "",
   };
 }
@@ -91,7 +132,7 @@ export function toShopSearchItem(shop, malls = []) {
     type: "store",
     id: shop.id,
     title: shop.name,
-    subtitle: mall?.name ? `في ${mall.name}` : shop.specialist || "",
+    subtitle: mall?.name ? `في ${mall.name}` : shop.mallName ? `في ${shop.mallName}` : shop.category || shop.specialist || "",
     imageUrl: shop.logoUrl || shop.image || "",
     href: `/stores/${shop.id}`,
   };

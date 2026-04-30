@@ -8,14 +8,11 @@ import {
   IoBusinessOutline,
 } from "react-icons/io5";
 
-import rawMalls from "../../assets/malls.json";
-import rawStores from "../../assets/stores.json";
-import rawProducts from "../../assets/products.json";
-
-import { buildSearchIndex, searchInIndex } from "../../utils/searchUtils";
+import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
 import { catalogApi, normalizeCatalogPage } from "../../api/catalog";
 import { toProductCard } from "../../utils/catalogProducts";
 import CatalogFilters, { buildCatalogFilterPayload, hasCatalogFilters } from "../../components/customer/CatalogFilters";
+import { mapAccountMall, mapAccountShop, toMallSearchItem, toShopSearchItem } from "../../utils/customerBackendMappers";
 
 function useQueryParam(name) {
   const { search } = useLocation();
@@ -28,7 +25,12 @@ export default function SearchPage() {
   const q = useQueryParam("q");
   const mallIdParam = useQueryParam("mallId"); // ✅ optional
   const [liveProducts, setLiveProducts] = useState([]);
+  const [liveMalls, setLiveMalls] = useState([]);
+  const [liveStores, setLiveStores] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [loadingDirectory, setLoadingDirectory] = useState(false);
+  const [productsError, setProductsError] = useState("");
+  const [directoryError, setDirectoryError] = useState("");
   const [filters, setFilters] = useState({
     categoryId: "",
     brandId: "",
@@ -39,29 +41,19 @@ export default function SearchPage() {
     selectedOptionsByAttribute: {},
   });
 
-  // ✅ filter raw data if mallId exists
-  const scoped = useMemo(() => {
-    if (!mallIdParam) {
-      return { malls: rawMalls, stores: rawStores, products: rawProducts };
-    }
-    return {
-      malls: rawMalls.filter((m) => String(m.id) === String(mallIdParam)),
-      stores: rawStores.filter((s) => String(s.mallId) === String(mallIdParam)),
-      products: rawProducts.filter((p) => String(p.mallId) === String(mallIdParam)),
-    };
-  }, [mallIdParam]);
-
   useEffect(() => {
     let cancelled = false;
     const hasFilters = hasCatalogFilters(filters);
     if (q.trim().length < 2 && !hasFilters && !mallIdParam) {
       setLiveProducts([]);
+      setProductsError("");
       return () => {
         cancelled = true;
       };
     }
 
     setLoadingProducts(true);
+    setProductsError("");
     catalogApi.products.publicPage(
       {
         ...(q.trim().length >= 2 ? { q: q.trim() } : {}),
@@ -74,8 +66,11 @@ export default function SearchPage() {
         if (cancelled) return;
         setLiveProducts(normalizeCatalogPage(response).content.map(toProductCard));
       })
-      .catch(() => {
-        if (!cancelled) setLiveProducts([]);
+      .catch((requestError) => {
+        if (!cancelled) {
+          setLiveProducts([]);
+          setProductsError(requestError.message || "تعذر تحميل المنتجات.");
+        }
       })
       .finally(() => {
         if (!cancelled) setLoadingProducts(false);
@@ -86,30 +81,86 @@ export default function SearchPage() {
     };
   }, [filters, mallIdParam, q]);
 
-  const searchIndex = useMemo(
-    () => buildSearchIndex({ rawMalls: scoped.malls, rawStores: scoped.stores, rawProducts: scoped.products }),
-    [scoped]
-  );
+  useEffect(() => {
+    let cancelled = false;
+    const searchTerm = q.trim();
+
+    if (searchTerm.length < 2 && !mallIdParam) {
+      setLiveMalls([]);
+      setLiveStores([]);
+      setDirectoryError("");
+      setLoadingDirectory(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setLoadingDirectory(true);
+    setDirectoryError("");
+
+    const mallRequest = mallIdParam
+      ? accountsApi.malls.byId(mallIdParam)
+      : accountsApi.malls.all({ name: searchTerm, status: "ACTIVE" });
+    const shopRequest = accountsApi.shops.all({
+      ...(searchTerm.length >= 2 ? { name: searchTerm } : {}),
+      ...(mallIdParam ? { mall_id: mallIdParam } : {}),
+      status: "ACTIVE",
+    });
+
+    Promise.allSettled([mallRequest, shopRequest])
+      .then(([mallsResult, shopsResult]) => {
+        if (cancelled) return;
+
+        const mappedMalls =
+          mallsResult.status === "fulfilled"
+            ? (Array.isArray(unwrapAccountPayload(mallsResult.value))
+                ? unwrapAccountPayload(mallsResult.value)
+                : unwrapAccountPayload(mallsResult.value)
+                ? [unwrapAccountPayload(mallsResult.value)]
+                : []
+              ).map(mapAccountMall)
+            : [];
+
+        const mappedStores =
+          shopsResult.status === "fulfilled"
+            ? (unwrapAccountPayload(shopsResult.value) || []).map(mapAccountShop)
+            : [];
+
+        setLiveMalls(mappedMalls);
+        setLiveStores(mappedStores);
+
+        if (mallsResult.status === "rejected" || shopsResult.status === "rejected") {
+          setDirectoryError("تعذر تحميل نتائج المولات والمتاجر.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDirectory(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mallIdParam, q]);
 
   const results = useMemo(() => {
-    const indexed = searchInIndex(q, searchIndex, { limit: 80 });
-    const hasLiveRequest = q.trim().length >= 2 || mallIdParam || hasCatalogFilters(filters);
-    const products = liveProducts.length || hasLiveRequest
-      ? liveProducts.map((product) => ({
-          type: "product",
-          id: product.id,
-          title: product.name,
-          subtitle: product.shortDescription || product.status || "",
-          imageUrl: product.imageUrl,
-          href: product.href,
-        }))
-      : indexed.products;
+    const malls = liveMalls.map(toMallSearchItem);
+    const stores = liveStores.map((store) => toShopSearchItem(store, liveMalls));
+    const products = liveProducts.map((product) => ({
+      type: "product",
+      id: product.id,
+      title: product.name,
+      subtitle: product.shortDescription || product.status || "",
+      imageUrl: product.imageUrl,
+      href: product.href,
+    }));
+
     return {
-      ...indexed,
+      malls,
+      stores,
       products,
-      all: [...indexed.malls, ...indexed.stores, ...products],
+      all: [...malls, ...stores, ...products],
     };
-  }, [filters, liveProducts, mallIdParam, q, searchIndex]);
+  }, [liveMalls, liveProducts, liveStores]);
   const hasActiveCatalogQuery = q.trim().length >= 2 || mallIdParam || hasCatalogFilters(filters);
 
   return (
@@ -161,8 +212,8 @@ export default function SearchPage() {
 
         {/* Count */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-10">
-          <CountCard label="المولات" count={results.malls.length} icon={<IoBusinessOutline className="text-2xl" />} />
-          <CountCard label="المتاجر" count={results.stores.length} icon={<IoStorefrontOutline className="text-2xl" />} />
+          <CountCard label="المولات" count={loadingDirectory ? "..." : results.malls.length} icon={<IoBusinessOutline className="text-2xl" />} />
+          <CountCard label="المتاجر" count={loadingDirectory ? "..." : results.stores.length} icon={<IoStorefrontOutline className="text-2xl" />} />
           <CountCard label="المنتجات" count={loadingProducts ? "..." : results.products.length} icon={<IoCartOutline className="text-2xl" />} />
         </div>
 
@@ -170,11 +221,17 @@ export default function SearchPage() {
           <CatalogFilters filters={filters} onChange={setFilters} />
         </div>
 
+        {directoryError || productsError ? (
+          <div className="mb-6 border border-black/10 bg-white px-4 py-3 text-sm font-light text-black/60">
+            {directoryError || productsError}
+          </div>
+        ) : null}
+
         {/* States */}
         {q.trim().length < 2 && !hasActiveCatalogQuery ? (
           <EmptyState title="ابدأ البحث" desc="اكتب حرفين على الأقل لعرض النتائج" icon={<IoSearchOutline className="text-4xl text-black/30" />} />
         ) : results.all.length === 0 ? (
-          <EmptyState title="لا توجد نتائج" desc={`لم نجد أي نتائج مطابقة لـ "${q}"`} sub="جرب كلمات بحث مختلفة أو تحقق من الإملاء" icon={<IoSearchOutline className="text-4xl text-black/30" />} />
+          <EmptyState title="لا توجد نتائج" desc={q ? `لم نجد أي نتائج مطابقة لـ "${q}"` : "لا توجد نتائج مطابقة للمرشحات الحالية"} sub="جرب كلمات بحث مختلفة أو تحقق من الإملاء" icon={<IoSearchOutline className="text-4xl text-black/30" />} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ResultsSection title="المولات" items={results.malls} onPick={(item) => navigate(item.href)} icon={<IoBusinessOutline className="text-lg" />} />

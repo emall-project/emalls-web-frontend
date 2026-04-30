@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { FiAlertCircle, FiLoader, FiLogOut, FiRefreshCw, FiSave } from "react-icons/fi";
+import { FiAlertCircle, FiLoader, FiLogOut, FiRefreshCw, FiRotateCcw, FiSave, FiShoppingBag, FiShoppingCart } from "react-icons/fi";
+import { Link } from "react-router-dom";
 import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
+import { orderHubApi, unwrapOrderHubPayload } from "../../api/orderHub";
 import { MediaUuidField } from "../../components/account/MediaUuidField";
 import { useAuth } from "../../auth/AuthContext";
 import { buildApiFormError } from "../../utils/apiErrors";
+import { formatOrderHubStatus } from "../../utils/orderHubUi";
 
 const inputClass = "w-full rounded-2xl border px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
 const inputStyle = { background: "var(--gray-a2)", borderColor: "var(--gray-a6)", color: "var(--gray-12)" };
@@ -39,6 +42,7 @@ const PASSWORD_FIELD_MAP = {
 export default function CustomerAccountPage() {
   const { session, logout } = useAuth();
   const [dashboard, setDashboard] = useState(null);
+  const [commerceDashboard, setCommerceDashboard] = useState(null);
   const [profileFile, setProfileFile] = useState(null);
   const [form, setForm] = useState({
     fullName: "",
@@ -73,12 +77,14 @@ export default function CustomerAccountPage() {
     setLoading(true);
     setMessage(null);
     try {
-      const [dashboardResponse, userResponse] = await Promise.all([
+      const [dashboardResponse, userResponse, commerceDashboardResponse] = await Promise.all([
         accountsApi.dashboard.customer(),
         accountsApi.users.byId(session.userId),
+        orderHubApi.dashboard.getCustomer().catch(() => null),
       ]);
       const user = unwrapAccountPayload(userResponse) || {};
       setDashboard(unwrapAccountPayload(dashboardResponse));
+      setCommerceDashboard(unwrapOrderHubPayload(commerceDashboardResponse));
       setForm({
         fullName: user.fullName || "",
         email: user.email || "",
@@ -185,10 +191,11 @@ export default function CustomerAccountPage() {
         ) : null}
 
         {dashboard ? (
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {[
               ["العمر", dashboard.age ?? "-"],
               ["الجنس", dashboard.gender || "-"],
+              ["اكتمال الملف", dashboard.profileCompletionPercent != null ? `${dashboard.profileCompletionPercent}%` : "-"],
               ["المفضلة", dashboard.favoriteCount ?? dashboard.favoritesCount ?? "-"],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl border p-4" style={{ background: "var(--gray-1)", borderColor: "var(--gray-a6)" }}>
@@ -196,6 +203,138 @@ export default function CustomerAccountPage() {
                 <div className="mt-1 text-xl font-bold" style={{ color: "var(--gray-12)" }}>{value}</div>
               </div>
             ))}
+          </div>
+        ) : null}
+
+        <div className="grid gap-3 md:grid-cols-3">
+          <Link
+            to="/cart"
+            className="rounded-3xl border p-5 text-right transition hover:opacity-90"
+            style={{ background: "var(--gray-1)", borderColor: "var(--gray-a6)", color: "var(--gray-12)" }}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <FiShoppingCart />
+              السلال النشطة
+            </div>
+            <div className="mt-2 text-sm" style={{ color: "var(--gray-10)" }}>
+              مراجعة السلال الحالية وإتمام الطلبات.
+            </div>
+          </Link>
+          <Link
+            to="/orders"
+            className="rounded-3xl border p-5 text-right transition hover:opacity-90"
+            style={{ background: "var(--gray-1)", borderColor: "var(--gray-a6)", color: "var(--gray-12)" }}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <FiShoppingBag />
+              طلباتي
+            </div>
+            <div className="mt-2 text-sm" style={{ color: "var(--gray-10)" }}>
+              متابعة حالة الطلبات وتفاصيلها.
+            </div>
+          </Link>
+          <Link
+            to="/returns"
+            className="rounded-3xl border p-5 text-right transition hover:opacity-90"
+            style={{ background: "var(--gray-1)", borderColor: "var(--gray-a6)", color: "var(--gray-12)" }}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <FiRotateCcw />
+              الإرجاعات
+            </div>
+            <div className="mt-2 text-sm" style={{ color: "var(--gray-10)" }}>
+              عرض طلبات الإرجاع وحالاتها.
+            </div>
+          </Link>
+        </div>
+
+        {commerceDashboard ? (
+          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="rounded-3xl border p-6" style={{ background: "var(--gray-1)", borderColor: "var(--gray-a6)" }}>
+              <h2 className="text-lg font-bold" style={{ color: "var(--gray-12)" }}>ملخص التجارة</h2>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border p-4" style={{ borderColor: "var(--gray-a6)", background: "var(--gray-a2)" }}>
+                  <div className="text-xs" style={{ color: "var(--gray-10)" }}>إجمالي الطلبات</div>
+                  <div className="mt-1 text-xl font-bold" style={{ color: "var(--gray-12)" }}>
+                    {commerceDashboard.orderKpis?.totalOrders ?? "-"}
+                  </div>
+                </div>
+                <div className="rounded-2xl border p-4" style={{ borderColor: "var(--gray-a6)", background: "var(--gray-a2)" }}>
+                  <div className="text-xs" style={{ color: "var(--gray-10)" }}>الطلبات النشطة</div>
+                  <div className="mt-1 text-xl font-bold" style={{ color: "var(--gray-12)" }}>
+                    {commerceDashboard.orderKpis?.activeOrders ?? "-"}
+                  </div>
+                </div>
+                <div className="rounded-2xl border p-4" style={{ borderColor: "var(--gray-a6)", background: "var(--gray-a2)" }}>
+                  <div className="text-xs" style={{ color: "var(--gray-10)" }}>تم تسليمها</div>
+                  <div className="mt-1 text-xl font-bold" style={{ color: "var(--gray-12)" }}>
+                    {commerceDashboard.orderKpis?.deliveredOrders ?? "-"}
+                  </div>
+                </div>
+                <div className="rounded-2xl border p-4" style={{ borderColor: "var(--gray-a6)", background: "var(--gray-a2)" }}>
+                  <div className="text-xs" style={{ color: "var(--gray-10)" }}>السلال النشطة</div>
+                  <div className="mt-1 text-xl font-bold" style={{ color: "var(--gray-12)" }}>
+                    {commerceDashboard.activeCarts?.carts?.length ?? "-"}
+                  </div>
+                </div>
+                <div className="rounded-2xl border p-4" style={{ borderColor: "var(--gray-a6)", background: "var(--gray-a2)" }}>
+                  <div className="text-xs" style={{ color: "var(--gray-10)" }}>الإرجاعات النشطة</div>
+                  <div className="mt-1 text-xl font-bold" style={{ color: "var(--gray-12)" }}>
+                    {commerceDashboard.activeReturns?.returns?.length ?? commerceDashboard.orderKpis?.returnedOrders ?? "-"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border p-6" style={{ background: "var(--gray-1)", borderColor: "var(--gray-a6)" }}>
+              <h2 className="text-lg font-bold" style={{ color: "var(--gray-12)" }}>أحدث النشاطات</h2>
+              <div className="mt-4 space-y-3">
+                {(commerceDashboard.recentOrders?.orders || []).slice(0, 3).map((order) => (
+                  <Link
+                    key={order.shopOrderId}
+                    to={`/orders/${order.shopOrderId}`}
+                    className="block rounded-2xl border px-4 py-3"
+                    style={{ borderColor: "var(--gray-a6)", background: "var(--gray-a2)" }}
+                  >
+                    <div className="text-sm font-semibold" style={{ color: "var(--gray-12)" }}>
+                      {order.shopInfo?.name || `طلب #${order.shopOrderId}`}
+                    </div>
+                    <div className="mt-1 text-xs" style={{ color: "var(--gray-10)" }}>
+                      {formatOrderHubStatus(order.status)}
+                    </div>
+                  </Link>
+                ))}
+                {!commerceDashboard.recentOrders?.orders?.length ? (
+                  <div className="rounded-2xl border px-4 py-3 text-sm" style={{ borderColor: "var(--gray-a6)", background: "var(--gray-a2)", color: "var(--gray-10)" }}>
+                    لا توجد طلبات حديثة بعد.
+                  </div>
+                ) : null}
+              </div>
+
+              <h3 className="mt-6 text-sm font-bold" style={{ color: "var(--gray-12)" }}>الإرجاعات النشطة</h3>
+              <div className="mt-3 space-y-3">
+                {(commerceDashboard.activeReturns?.returns || []).slice(0, 2).map((item) => (
+                  <Link
+                    key={item.returnRequestId}
+                    to={`/returns/${item.returnRequestId}`}
+                    className="block rounded-2xl border px-4 py-3"
+                    style={{ borderColor: "var(--gray-a6)", background: "var(--gray-a2)" }}
+                  >
+                    <div className="text-sm font-semibold" style={{ color: "var(--gray-12)" }}>
+                      {item.reason || `طلب #${item.returnRequestId}`}
+                    </div>
+                    <div className="mt-1 text-xs" style={{ color: "var(--gray-10)" }}>
+                      {formatOrderHubStatus(item.status)}
+                    </div>
+                  </Link>
+                ))}
+                {!commerceDashboard.activeReturns?.returns?.length ? (
+                  <div className="rounded-2xl border px-4 py-3 text-sm" style={{ borderColor: "var(--gray-a6)", background: "var(--gray-a2)", color: "var(--gray-10)" }}>
+                    لا توجد إرجاعات نشطة حاليًا.
+                  </div>
+                ) : null}
+              </div>
+            </div>
           </div>
         ) : null}
 

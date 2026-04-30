@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   IoStorefrontOutline,
   IoChevronBack,
@@ -7,10 +8,12 @@ import {
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 
 function FeaturedShops({ shops = [], mallName }) {
+  const navigate = useNavigate();
   const scrollRef = useRef(null);
 
-  const specialistShops = (shops || []).filter((shop) => shop.specialist === true);
-  if (specialistShops.length === 0) return null;
+  const featuredShops = (shops || []).filter((shop) => shop.logoUrl || shop.image).slice(0, 8);
+  const displayShops = featuredShops.length ? featuredShops : (shops || []).slice(0, 8);
+  if (displayShops.length === 0) return null;
 
   const scrollByAmount = (dir) => {
     const el = scrollRef.current;
@@ -24,7 +27,7 @@ function FeaturedShops({ shops = [], mallName }) {
     if (!el) return;
     // ابدأ من اليمين (RTL)
     el.scrollLeft = el.scrollWidth;
-  }, [specialistShops.length]);
+  }, [displayShops.length]);
 
   return (
     <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-8 md:py-12">
@@ -102,7 +105,7 @@ function FeaturedShops({ shops = [], mallName }) {
             "
             style={{ WebkitOverflowScrolling: "touch" }}
           >
-            {specialistShops.map((shop) => (
+            {displayShops.map((shop) => (
               <article
                 key={shop.id}
                 className="
@@ -157,6 +160,8 @@ function FeaturedShops({ shops = [], mallName }) {
 
                   {/* CTA Button */}
                   <button
+                    type="button"
+                    onClick={() => navigate(`/stores/${shop.id}`)}
                     className="
                       w-full
                       h-10 sm:h-11 md:h-12

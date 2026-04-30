@@ -63,6 +63,16 @@ const inputStyle = {
   color: "var(--gray-12)",
 };
 
+function useThemeContainer() {
+  const [container, setContainer] = useState(null);
+
+  useEffect(() => {
+    setContainer(document.querySelector(".radix-themes") || document.body);
+  }, []);
+
+  return container;
+}
+
 function slugify(value) {
   return String(value || "")
     .trim()
@@ -254,6 +264,7 @@ function CatalogFormDialog({
   const [formError, setFormError] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const isEdit = !!item;
+  const themeContainer = useThemeContainer();
 
   useEffect(() => {
     if (open) {
@@ -362,7 +373,7 @@ function CatalogFormDialog({
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
+      <Dialog.Portal container={themeContainer}>
         <Dialog.Overlay className= "fixed inset-0 z-[9990] bg-black/50" />
         <Dialog.Content
           dir="rtl"
