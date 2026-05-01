@@ -61,7 +61,7 @@ export default function ProductDetailsPage() {
     () => (selectedVariant?.media || []).map((medium) => medium.mediumFile).filter(Boolean),
     [selectedVariant]
   );
-  const imageUrl = activeMediaUrl || getMediaPreviewUrl(variantMedia[0]) || getProductImage(product);
+  const imageUrl = activeMediaUrl || getMediaPreviewUrl(variantMedia[0], "large") || getProductImage(product, "large");
   const displayPrice = Number(
     selectedVariant?.discountedPrice ??
     selectedInfoVariant?.basePrice ??
@@ -108,7 +108,7 @@ export default function ProductDetailsPage() {
           nextProduct.variants?.[0] ||
           null;
         setSelectedVariantId(initialVariant?.id ? String(initialVariant.id) : "");
-        setActiveMediaUrl(getMediaPreviewUrl(initialVariant?.media?.[0]?.mediumFile) || "");
+        setActiveMediaUrl(getMediaPreviewUrl(initialVariant?.media?.[0]?.mediumFile, "large") || "");
 
         if (isCustomer) {
           const [favoriteResponse, myCommentResponse, myReviewResponse] = await Promise.all([
@@ -137,7 +137,7 @@ export default function ProductDetailsPage() {
   }, [loadProduct]);
 
   useEffect(() => {
-    setActiveMediaUrl(getMediaPreviewUrl(selectedVariant?.media?.[0]?.mediumFile) || "");
+    setActiveMediaUrl(getMediaPreviewUrl(selectedVariant?.media?.[0]?.mediumFile, "large") || "");
   }, [selectedVariant?.id]);
 
   useEffect(() => {
@@ -340,13 +340,15 @@ export default function ProductDetailsPage() {
             {variantMedia.length > 1 ? (
               <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-6 md:grid-cols-8">
                 {variantMedia.map((file) => {
-                  const url = getMediaPreviewUrl(file);
+                  const thumbnailUrl = getMediaPreviewUrl(file, "small");
+                  const fullUrl = getMediaPreviewUrl(file, "large");
+                  const url = thumbnailUrl || fullUrl;
                   if (!url) return null;
                   return (
                     <button
                       type="button"
                       key={file.id || url}
-                      onClick={() => setActiveMediaUrl(url)}
+                      onClick={() => setActiveMediaUrl(fullUrl || url)}
                       className="border border-black/10 bg-white p-1"
                     >
                       <img src={url} alt={file.name || product.name} className="aspect-square w-full object-cover" />

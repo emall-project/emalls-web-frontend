@@ -4,8 +4,8 @@ function asStringId(value) {
   return value == null ? "" : String(value);
 }
 
-function firstImageUrl(files = []) {
-  return (Array.isArray(files) ? files : []).map(getMediaPreviewUrl).find(Boolean) || "";
+function firstImageUrl(files = [], size = "small") {
+  return (Array.isArray(files) ? files : []).map((file) => getMediaPreviewUrl(file, size)).find(Boolean) || "";
 }
 
 function splitParagraphs(value) {
@@ -57,7 +57,7 @@ export function mapAccountMall(mall) {
   const images = (mall?.mallImages || [])
     .map((image, index) => ({
       id: image?.id || `${id || "mall"}-${index}`,
-      image: getMediaPreviewUrl(image),
+      image: getMediaPreviewUrl(image, "original"),
       alt: mall?.name || "Mall",
     }))
     .filter((image) => image.image);
@@ -70,7 +70,7 @@ export function mapAccountMall(mall) {
     location: mall?.location || mall?.city?.name || "",
     city: mall?.city?.name || "",
     logoUrl,
-    images: images.length ? images : logoUrl ? [{ id: `${id || "mall"}-logo`, image: logoUrl, alt: mall?.name || "Mall" }] : [],
+    images: images.length ? images : logoUrl ? [{ id: `${id || "mall"}-logo`, image: getMediaPreviewUrl(mall?.logoImage, "original") || logoUrl, alt: mall?.name || "Mall" }] : [],
     services: (Array.isArray(mall?.services) ? mall.services : []).map(mapMallService),
     restaurants: (Array.isArray(mall?.restaurants) ? mall.restaurants : []).map(mapMallRestaurant),
     description,
@@ -101,7 +101,7 @@ export function mapAccountShop(shop) {
 }
 
 export function mapDisplayedAd(ad) {
-  const image = getMediaPreviewUrl(ad?.adRequestImage);
+  const image = getMediaPreviewUrl(ad?.adRequestImage, "original");
   if (!image) return null;
 
   const shopId = ad?.shopId ?? ad?.shop?.shopId ?? ad?.shop?.id;

@@ -64,14 +64,25 @@ async function uploadToPresignedUrl(uploadUrl, file) {
   }
 }
 
-export function getMediaPreviewUrl(file) {
-  return (
-    file?.localPreviewUrl ||
-    file?.smallFileUrl ||
-    file?.mediumFileUrl ||
-    file?.originalFileUrl ||
-    ""
-  );
+const MEDIA_PREVIEW_ORDERS = {
+  thumbnail: ["smallFileUrl", "mediumFileUrl", "largeFileUrl", "originalFileUrl"],
+  small: ["smallFileUrl", "mediumFileUrl", "largeFileUrl", "originalFileUrl"],
+  medium: ["mediumFileUrl", "largeFileUrl", "originalFileUrl", "smallFileUrl"],
+  large: ["largeFileUrl", "originalFileUrl", "mediumFileUrl", "smallFileUrl"],
+  original: ["originalFileUrl", "largeFileUrl", "mediumFileUrl", "smallFileUrl"],
+};
+
+export function getMediaPreviewUrl(file, size = "small") {
+  if (!file) {
+    return "";
+  }
+
+  if (file.localPreviewUrl) {
+    return file.localPreviewUrl;
+  }
+
+  const keys = MEDIA_PREVIEW_ORDERS[size] || MEDIA_PREVIEW_ORDERS.small;
+  return keys.map((key) => file?.[key]).find(Boolean) || "";
 }
 
 export function isImageFile(file) {

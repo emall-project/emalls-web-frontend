@@ -1,6 +1,6 @@
 import { getMediaPreviewUrl } from "../api/mediaManager";
 
-export function getProductImage(product) {
+export function getProductImage(product, size = "small") {
   const file =
     product?.medium ||
     product?.mediumFile ||
@@ -8,9 +8,12 @@ export function getProductImage(product) {
     product?.variants?.[0]?.media?.[0]?.mediumFile ||
     null;
 
+  const fileUrl = getMediaPreviewUrl(file, size);
+
   return (
+    (size === "small" || size === "thumbnail" ? product?.imageUrl : fileUrl) ||
+    fileUrl ||
     product?.imageUrl ||
-    getMediaPreviewUrl(file) ||
     file?.smallFileUrl ||
     "/vite.svg"
   );

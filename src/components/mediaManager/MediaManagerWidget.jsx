@@ -128,7 +128,7 @@ function getUploadPhaseLabel(uploadPhase) {
 }
 
 function FilePreview({ file }) {
-  const previewUrl = getMediaPreviewUrl(file);
+  const previewUrl = getMediaPreviewUrl(file, "small");
   const Icon = getFileIcon(file);
 
   if (previewUrl && isImageFile(file)) {
@@ -175,7 +175,7 @@ function FilePreview({ file }) {
 }
 
 function PreviewDialog({ file, onClose, onOpen }) {
-  const previewUrl = getMediaPreviewUrl(file);
+  const previewUrl = getMediaPreviewUrl(file, "large");
 
   useEffect(() => {
     if (!file) {
@@ -726,7 +726,7 @@ export function MediaManagerWidget({
   };
 
   const openFile = useCallback((file) => {
-    const url = getMediaPreviewUrl(file);
+    const url = getMediaPreviewUrl(file, "large");
 
     if (!url) {
       setError("لا يوجد رابط متاح لهذا الملف");

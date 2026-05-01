@@ -727,8 +727,8 @@ function RequestDetailsDialog({ open, onOpenChange, request }) {
               ) : null}
             </div>
             <div className="rounded-2xl border p-4" style={cardStyle}>
-              {getMediaPreviewUrl(request.adRequestImage) ? (
-                <img src={getMediaPreviewUrl(request.adRequestImage)} alt={request.title} className="h-56 w-full rounded-xl object-cover" />
+              {getMediaPreviewUrl(request.adRequestImage, "original") ? (
+                <img src={getMediaPreviewUrl(request.adRequestImage, "original")} alt={request.title} className="h-56 w-full rounded-xl object-cover" />
               ) : (
                 <div className="flex h-56 items-center justify-center rounded-xl border" style={{ borderColor: "var(--gray-a6)", color: "var(--gray-10)" }}>
                   لا توجد معاينة

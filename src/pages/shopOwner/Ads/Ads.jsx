@@ -492,9 +492,9 @@ function AdRequestDetailsDialog({ open, onOpenChange, request }) {
             </div>
 
             <div className="rounded-2xl border p-4" style={cardStyle}>
-              {getMediaPreviewUrl(request.adRequestImage) ? (
+              {getMediaPreviewUrl(request.adRequestImage, "original") ? (
                 <img
-                  src={getMediaPreviewUrl(request.adRequestImage)}
+                  src={getMediaPreviewUrl(request.adRequestImage, "original")}
                   alt={request.title}
                   className="h-56 w-full rounded-xl object-cover"
                 />

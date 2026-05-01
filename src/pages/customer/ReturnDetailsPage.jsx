@@ -145,9 +145,9 @@ export default function ReturnDetailsPage() {
                   </div>
                 </div>
 
-                {getMediaPreviewUrl(item.image) ? (
+                {getMediaPreviewUrl(item.image, "medium") ? (
                   <img
-                    src={getMediaPreviewUrl(item.image)}
+                    src={getMediaPreviewUrl(item.image, "medium")}
                     alt="صورة الإرجاع"
                     className="w-full rounded-[32px] border border-black/10 object-cover"
                   />
