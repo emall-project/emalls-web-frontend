@@ -1,6 +1,10 @@
 import { requestJson } from "../utils/http";
 
 const MEDIA_BASE = "/media-manager";
+const APPROVED_STATUS = "APPROVED";
+const TERMINAL_UPLOAD_FAILURE_STATUSES = new Set(["REJECTED", "FAILED", "ERROR"]);
+const DEFAULT_UPLOAD_POLL_INTERVAL_MS = 1500;
+const DEFAULT_UPLOAD_WAIT_TIMEOUT_MS = 90000;
 
 function unwrap(payload) {
   return payload?.data ?? payload ?? null;
@@ -20,10 +24,6 @@ function getFolderBase(mode, storeId) {
   }
 
   return `${MEDIA_BASE}/admin/folders`;
-}
-
-function getInternalFileBase() {
-  return `${MEDIA_BASE}/internal/files`;
 }
 
 function getTempFileBase() {
@@ -62,32 +62,6 @@ async function uploadToPresignedUrl(uploadUrl, file) {
   if (!response.ok) {
     throw new Error("فشل رفع الملف إلى التخزين");
   }
-}
-
-async function tryCompleteUpload(fileId, file) {
-  const payload = {
-    id: fileId,
-    status: "APPROVED",
-    errorMessage: null,
-    size: file.size,
-    mimeType: file.type || null,
-    extension: getExtensionFromName(file.name) || null,
-  };
-
-  try {
-    await requestJson(`${getInternalFileBase()}/complete-upload`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-  } catch (error) {
-    if (error?.status === 401 || error?.status === 403) {
-      return false;
-    }
-
-    throw error;
-  }
-
-  return true;
 }
 
 export function getMediaPreviewUrl(file) {
@@ -164,6 +138,48 @@ export function formatFileSize(size) {
   return `${(value / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
+function delay(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+async function fetchFileById({ mode, storeId, fileId }) {
+  const payload = await requestJson(`${getFileBase(mode, storeId)}/${fileId}`);
+  return unwrap(payload);
+}
+
+async function waitForApprovedFile({
+  mode,
+  storeId,
+  fileId,
+  intervalMs = DEFAULT_UPLOAD_POLL_INTERVAL_MS,
+  timeoutMs = DEFAULT_UPLOAD_WAIT_TIMEOUT_MS,
+}) {
+  const startedAt = Date.now();
+  let lastFile = null;
+
+  while (Date.now() - startedAt < timeoutMs) {
+    lastFile = await fetchFileById({ mode, storeId, fileId });
+    const status = String(lastFile?.status || "").toUpperCase();
+
+    if (status === APPROVED_STATUS) {
+      return lastFile;
+    }
+
+    if (TERMINAL_UPLOAD_FAILURE_STATUSES.has(status)) {
+      throw new Error(lastFile?.errorMessage || "فشلت معالجة الملف من الخادم");
+    }
+
+    await delay(intervalMs);
+  }
+
+  const error = new Error("تم رفع الملف لكن لم تكتمل معالجته بعد. حدّث القائمة بعد قليل.");
+  error.code = "MEDIA_UPLOAD_PENDING_TIMEOUT";
+  error.file = lastFile;
+  throw error;
+}
+
 export const mediaManagerApi = {
   async listFolders({ mode, storeId, parentId = null }) {
     const query = new URLSearchParams();
@@ -211,11 +227,7 @@ export const mediaManagerApi = {
   },
 
   async getFileById({ mode, storeId, fileId }) {
-    const payload = await requestJson(
-      `${getFileBase(mode, storeId)}/${fileId}`
-    );
-
-    return unwrap(payload);
+    return fetchFileById({ mode, storeId, fileId });
   },
 
   async renameFile({ mode, storeId, fileId, newName }) {
@@ -248,7 +260,7 @@ export const mediaManagerApi = {
     });
   },
 
-  async uploadFile({ mode, storeId, folderId, file }) {
+  async uploadFile({ mode, storeId, folderId, file, onUploadStateChange }) {
     const payload = await requestJson(
       `${getFileBase(mode, storeId)}/upload-url`,
       {
@@ -268,10 +280,11 @@ export const mediaManagerApi = {
       throw new Error("فشل تجهيز رفع الملف");
     }
 
+    onUploadStateChange?.("uploading");
     await uploadToPresignedUrl(uploadUrl, file);
-    await tryCompleteUpload(fileId, file);
+    onUploadStateChange?.("processing");
 
-    const savedFile = await this.getFileById({
+    const savedFile = await waitForApprovedFile({
       mode,
       storeId,
       fileId,
@@ -283,7 +296,7 @@ export const mediaManagerApi = {
       extension:
         savedFile?.extension || getExtensionFromName(file.name) || null,
       size: savedFile?.size ?? file.size,
-      status: savedFile?.status || "PENDING",
+      status: savedFile?.status || APPROVED_STATUS,
       originalFileUrl: savedFile?.originalFileUrl || "",
       mediumFileUrl: savedFile?.mediumFileUrl || "",
       smallFileUrl: savedFile?.smallFileUrl || "",
@@ -307,7 +320,6 @@ export const mediaManagerApi = {
     }
 
     await uploadToPresignedUrl(uploadUrl, file);
-    const completed = await tryCompleteUpload(fileId, file).catch(() => false);
 
     return {
       id: fileId,
@@ -316,7 +328,7 @@ export const mediaManagerApi = {
       mimeType: file.type || null,
       extension: getExtensionFromName(file.name) || null,
       size: file.size,
-      status: completed ? "APPROVED" : "PENDING",
+      status: "PENDING",
       originalFileUrl: "",
       mediumFileUrl: "",
       smallFileUrl: "",

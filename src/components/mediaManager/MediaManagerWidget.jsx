@@ -89,6 +89,44 @@ function getPreviewLabel(file) {
   return extension ? extension.toUpperCase() : "ملف";
 }
 
+function getFileStatus(file) {
+  return String(file?.status || "").toUpperCase();
+}
+
+function isApprovedFile(file) {
+  return getFileStatus(file) === "APPROVED";
+}
+
+function getStatusLabel(file) {
+  const status = getFileStatus(file);
+
+  if (status === "APPROVED") {
+    return "جاهز";
+  }
+
+  if (status === "PENDING") {
+    return "بانتظار المعالجة";
+  }
+
+  if (status === "REJECTED" || status === "FAILED" || status === "ERROR") {
+    return "فشل المعالجة";
+  }
+
+  return status || "بانتظار المعالجة";
+}
+
+function getUploadPhaseLabel(uploadPhase) {
+  if (uploadPhase === "uploading") {
+    return "جاري رفع الملف...";
+  }
+
+  if (uploadPhase === "processing") {
+    return "بانتظار معالجة الملف من الخادم...";
+  }
+
+  return "";
+}
+
 function FilePreview({ file }) {
   const previewUrl = getMediaPreviewUrl(file);
   const Icon = getFileIcon(file);
@@ -284,6 +322,7 @@ export function MediaManagerWidget({
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadPhase, setUploadPhase] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [draggingFileId, setDraggingFileId] = useState(null);
@@ -452,6 +491,11 @@ export function MediaManagerWidget({
       return;
     }
 
+    if (!isApprovedFile(file)) {
+      setError("لا يمكن اختيار هذا الملف قبل اكتمال معالجته من الخادم");
+      return;
+    }
+
     const fileId = String(file.id);
     syncSelectedFile(file);
 
@@ -551,6 +595,7 @@ export function MediaManagerWidget({
     }
 
     setUploading(true);
+    setUploadPhase("uploading");
     setError("");
 
     try {
@@ -562,6 +607,7 @@ export function MediaManagerWidget({
           storeId,
           folderId: currentFolderId,
           file,
+          onUploadStateChange: setUploadPhase,
         });
 
         uploadedFiles.push(savedFile);
@@ -601,13 +647,17 @@ export function MediaManagerWidget({
 
       setNotice(
         uploadedFiles.length === 1
-          ? "تم رفع الملف"
-          : `تم رفع ${uploadedFiles.length} ملفات`
+          ? "تم رفع الملف ومعالجته"
+          : `تم رفع ومعالجة ${uploadedFiles.length} ملفات`
       );
     } catch (requestError) {
+      if (requestError?.code === "MEDIA_UPLOAD_PENDING_TIMEOUT") {
+        await loadItems();
+      }
       setError(requestError.message || "فشل رفع الملفات");
     } finally {
       setUploading(false);
+      setUploadPhase("");
     }
   };
 
@@ -777,6 +827,7 @@ export function MediaManagerWidget({
   };
 
   const isSelected = (fileId) => selectedOrder.includes(String(fileId));
+  const uploadPhaseLabel = getUploadPhaseLabel(uploadPhase);
 
   const emptyStateMessage = missingStoreScope
     ? "لا يوجد متجر نشط لهذا الحساب"
@@ -936,6 +987,20 @@ export function MediaManagerWidget({
         >
           <FiCheck size={15} />
           <span>{notice}</span>
+        </div>
+      ) : null}
+
+      {uploadPhaseLabel ? (
+        <div
+          className="mx-4 mt-4 flex items-center gap-2 rounded-xl px-4 py-3 text-sm"
+          style={{
+            background: "var(--blue-a3)",
+            border: "1px solid var(--blue-a6)",
+            color: "var(--blue-11)",
+          }}
+        >
+          <Spinner size={15} />
+          <span>{uploadPhaseLabel}</span>
         </div>
       ) : null}
 
@@ -1108,6 +1173,8 @@ export function MediaManagerWidget({
             {files.map((file) => {
               const selected = isSelected(file.id);
               const isRenaming = renamingFileId === String(file.id);
+              const canSelectFile = !selectable || isApprovedFile(file);
+              const statusLabel = getStatusLabel(file);
 
               return (
                 <div
@@ -1128,10 +1195,43 @@ export function MediaManagerWidget({
                   className="rounded-xl border p-3 text-right transition focus:outline-none focus:ring-2"
                   style={{
                     background: selected ? "var(--blue-a3)" : "var(--gray-a2)",
-                    borderColor: selected ? "var(--blue-8)" : "var(--gray-a5)",
-                    cursor: selectable ? "pointer" : "default",
+                    borderColor: selected ? "var(--blue-9)" : canSelectFile ? "var(--gray-a5)" : "var(--amber-a6)",
+                    boxShadow: selected ? "0 0 0 2px var(--blue-a6)" : "none",
+                    cursor: selectable && canSelectFile ? "pointer" : "default",
+                    opacity: canSelectFile ? 1 : 0.78,
                   }}
                 >
+                  {selectable ? (
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+                        style={{
+                          background: canSelectFile ? "var(--green-a3)" : "var(--amber-a3)",
+                          color: canSelectFile ? "var(--green-11)" : "var(--amber-11)",
+                        }}
+                      >
+                        {canSelectFile ? "جاهز للاختيار" : statusLabel}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={!canSelectFile}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          toggleSelection(file);
+                        }}
+                        className="inline-flex h-8 items-center gap-1 rounded-full px-3 text-xs font-bold transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                        style={{
+                          background: selected ? "var(--blue-9)" : "var(--gray-1)",
+                          border: selected ? "1px solid var(--blue-9)" : "1px solid var(--gray-a7)",
+                          color: selected ? "#fff" : "var(--gray-12)",
+                        }}
+                      >
+                        {selected ? <FiCheck size={13} /> : null}
+                        {selected ? "محدد" : "اختيار"}
+                      </button>
+                    </div>
+                  ) : null}
+
                   <div
                     className="overflow-hidden rounded-xl"
                     style={{
@@ -1187,7 +1287,7 @@ export function MediaManagerWidget({
                       <div className="mt-1 text-xs" style={{ color: "var(--gray-10)" }}>
                         {formatFileSize(file.size)}
                         {file.extension ? ` • ${file.extension.toUpperCase()}` : ""}
-                        {file.status ? ` • ${file.status}` : ""}
+                        {file.status ? ` • ${statusLabel}` : ""}
                       </div>
                     </div>
 
@@ -1246,11 +1346,36 @@ export function MediaManagerWidget({
 
       {selectable ? (
         <div
-          className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-4"
-          style={{ borderColor: "var(--gray-a6)" }}
+          className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t px-4 py-4 shadow-[0_-8px_24px_rgba(15,23,42,0.08)]"
+          style={{ borderColor: "var(--gray-a6)", background: "var(--gray-1)" }}
         >
-          <div className="text-sm" style={{ color: "var(--gray-11)" }}>
-            تم اختيار {selectedFiles.length} ملف
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="text-sm font-semibold" style={{ color: "var(--gray-12)" }}>
+              تم اختيار {selectedFiles.length} ملف
+            </div>
+            {selectedFiles.length ? (
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                {selectedFiles.slice(0, 3).map((file) => (
+                  <span
+                    key={file.id}
+                    className="max-w-[180px] truncate rounded-full px-3 py-1 text-xs font-medium"
+                    style={{ background: "var(--blue-a3)", color: "var(--blue-11)" }}
+                    title={file.name}
+                  >
+                    {file.name}
+                  </span>
+                ))}
+                {selectedFiles.length > 3 ? (
+                  <span className="text-xs" style={{ color: "var(--gray-10)" }}>
+                    +{selectedFiles.length - 3}
+                  </span>
+                ) : null}
+              </div>
+            ) : (
+              <div className="text-xs" style={{ color: "var(--gray-10)" }}>
+                اختر ملفًا جاهزًا من القائمة ثم أكد الاختيار.
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

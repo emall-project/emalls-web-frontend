@@ -206,6 +206,117 @@ function buildPayload(type, form) {
   };
 }
 
+function normalizeCategoryOption(category, parentId = null) {
+  if (!category?.id) {
+    return null;
+  }
+
+  return {
+    ...category,
+    id: category.id,
+    name: category.name || `#${category.id}`,
+    parentId: category.parentId ?? parentId ?? null,
+  };
+}
+
+function normalizeCategoryOptions(items) {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  const seen = new Set();
+  return items
+    .map((category) => normalizeCategoryOption(category))
+    .filter(Boolean)
+    .filter((category) => {
+      const id = String(category.id);
+      if (seen.has(id)) {
+        return false;
+      }
+      seen.add(id);
+      return true;
+    });
+}
+
+function flattenCategoryTree(nodes, parentId = null) {
+  if (!Array.isArray(nodes)) {
+    return [];
+  }
+
+  return nodes.flatMap((node) => {
+    const normalized = normalizeCategoryOption(node, parentId);
+    const children = flattenCategoryTree(node?.children || [], node?.id ?? parentId);
+    return normalized ? [normalized, ...children] : children;
+  });
+}
+
+function collectDescendantIds(categories, categoryId) {
+  const rootId = categoryId != null ? String(categoryId) : "";
+  const descendantIds = new Set();
+
+  if (!rootId) {
+    return descendantIds;
+  }
+
+  const childrenByParent = new Map();
+  categories.forEach((category) => {
+    if (category?.parentId == null) {
+      return;
+    }
+
+    const parentId = String(category.parentId);
+    const children = childrenByParent.get(parentId) || [];
+    children.push(String(category.id));
+    childrenByParent.set(parentId, children);
+  });
+
+  const stack = [...(childrenByParent.get(rootId) || [])];
+  while (stack.length) {
+    const id = stack.pop();
+    if (!id || descendantIds.has(id)) {
+      continue;
+    }
+
+    descendantIds.add(id);
+    stack.push(...(childrenByParent.get(id) || []));
+  }
+
+  return descendantIds;
+}
+
+async function loadCategoryParentOptions() {
+  let lastError = null;
+
+  try {
+    const response = await catalogApi.categories.all();
+    const categories = normalizeCategoryOptions(unwrapCatalogPayload(response));
+    if (categories.length) {
+      return categories;
+    }
+  } catch (error) {
+    lastError = error;
+  }
+
+  try {
+    const response = await catalogApi.categories.page({ page: 0, size: 500 });
+    const categories = normalizeCategoryOptions(normalizeCatalogPage(response).content);
+    if (categories.length) {
+      return categories;
+    }
+  } catch (error) {
+    lastError = error;
+  }
+
+  try {
+    const response = await catalogApi.categories.tree();
+    return normalizeCategoryOptions(flattenCategoryTree(unwrapCatalogPayload(response)));
+  } catch (error) {
+    lastError = error;
+  }
+
+  throw lastError || new Error("فشل تحميل الفئات");
+}
+
 function normalizeConfig(config) {
   return {
     targetedAudience: config?.targetedAudience || "ALL",
@@ -257,6 +368,8 @@ function CatalogFormDialog({
   onOpenChange,
   item,
   parentOptions,
+  parentLoading = false,
+  parentError = "",
   onSaved,
 }) {
   const [form, setForm] = useState(() => itemToForm(type, item));
@@ -265,6 +378,13 @@ function CatalogFormDialog({
   const [fieldErrors, setFieldErrors] = useState({});
   const isEdit = !!item;
   const themeContainer = useThemeContainer();
+  const availableParentOptions = useMemo(() => {
+    const descendantIds = collectDescendantIds(parentOptions, form.id);
+    return parentOptions.filter((category) => {
+      const categoryId = String(category.id);
+      return categoryId !== String(form.id) && !descendantIds.has(categoryId);
+    });
+  }, [form.id, parentOptions]);
 
   useEffect(() => {
     if (open) {
@@ -477,16 +597,23 @@ function CatalogFormDialog({
                     style={inputStyle}
                     value={form.parentId}
                     onChange={(event) => set("parentId", event.target.value)}
+                    disabled={parentLoading}
                   >
-                    <option value="">بدون فئة أب</option>
-                    {parentOptions
-                      .filter((category) => String(category.id) !== String(form.id))
-                      .map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
+                    <option value="">
+                      {parentLoading ? "جاري تحميل الفئات..." : "بدون فئة أب"}
+                    </option>
+                    {availableParentOptions.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
                   </select>
+                  {parentError ? <FieldError text={parentError} /> : null}
+                  {!parentLoading && !parentError && availableParentOptions.length === 0 ? (
+                    <p className="mt-1 text-xs" style={{ color: "var(--gray-10)" }}>
+                      لا توجد فئات متاحة.
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -720,6 +847,8 @@ export default function CatalogMetadataPage({ type }) {
   const [isActive, setIsActive] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [parentLoading, setParentLoading] = useState(false);
+  const [parentError, setParentError] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -755,12 +884,30 @@ export default function CatalogMetadataPage({ type }) {
     fetchItems();
   }, [fetchItems]);
 
+  const fetchParentCategories = useCallback(async () => {
+    if (type !== "categories") {
+      setAllCategories([]);
+      setParentError("");
+      return;
+    }
+
+    setParentLoading(true);
+    setParentError("");
+
+    try {
+      const categories = await loadCategoryParentOptions();
+      setAllCategories(categories);
+    } catch (requestError) {
+      setAllCategories([]);
+      setParentError(requestError?.message || "فشل تحميل الفئات");
+    } finally {
+      setParentLoading(false);
+    }
+  }, [type]);
+
   useEffect(() => {
-    if (type !== "categories") return;
-    catalogApi.categories.all()
-      .then((response) => setAllCategories(unwrapCatalogPayload(response) || []))
-      .catch(() => setAllCategories([]));
-  }, [type, dialogOpen]);
+    fetchParentCategories();
+  }, [fetchParentCategories, dialogOpen]);
 
   const openCreate = () => {
     setSelectedItem(null);
@@ -939,7 +1086,12 @@ export default function CatalogMetadataPage({ type }) {
         onOpenChange={setDialogOpen}
         item={selectedItem}
         parentOptions={allCategories}
-        onSaved={fetchItems}
+        parentLoading={parentLoading}
+        parentError={parentError}
+        onSaved={() => {
+          fetchItems();
+          fetchParentCategories();
+        }}
       />
     </div>
   );
