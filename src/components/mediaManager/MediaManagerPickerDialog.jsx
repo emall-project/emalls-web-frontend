@@ -34,11 +34,11 @@ export function MediaManagerPickerDialog({
 
         <Dialog.Content
           dir="rtl"
-          className="fixed inset-0 z-[20041] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[20041] flex items-stretch justify-center overflow-hidden p-4"
           aria-describedby={undefined}
         >
           <div
-            className="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl shadow-2xl"
+            className="flex h-full max-h-[calc(100dvh-2rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl shadow-2xl"
             style={{
               background: "var(--gray-1)",
               border: "1px solid var(--gray-a6)",
@@ -66,7 +66,7 @@ export function MediaManagerPickerDialog({
               </Dialog.Close>
             </div>
 
-            <div className="flex-1 overflow-hidden p-6">
+            <div className="min-h-0 flex-1 overflow-hidden p-6">
               <MediaManagerWidget
                 mode={mode}
                 storeId={storeId}
@@ -80,6 +80,7 @@ export function MediaManagerPickerDialog({
                   onOpenChange(false);
                 }}
                 minHeight={420}
+                maxHeight="100%"
               />
             </div>
           </div>

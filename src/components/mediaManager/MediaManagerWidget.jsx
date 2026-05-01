@@ -315,6 +315,7 @@ export function MediaManagerWidget({
   onConfirmSelection,
   onCancelSelection,
   minHeight = 520,
+  maxHeight,
 }) {
   const fileInputRef = useRef(null);
   const [path, setPath] = useState([]);
@@ -837,13 +838,14 @@ export function MediaManagerWidget({
 
   return (
     <>
-    <div
-      className="overflow-hidden rounded-2xl border"
-      style={{
-        background: "var(--gray-1)",
-        borderColor: "var(--gray-a7)",
-      }}
-    >
+	    <div
+	      className="flex flex-col overflow-hidden rounded-2xl border"
+	      style={{
+	        background: "var(--gray-1)",
+	        borderColor: "var(--gray-a7)",
+	        maxHeight,
+	      }}
+	    >
       <div
         className="border-b px-4 py-4"
         style={{ borderColor: "var(--gray-a6)" }}
@@ -1064,7 +1066,10 @@ export function MediaManagerWidget({
         </div>
       ) : null}
 
-      <div className="p-4" style={{ minHeight }}>
+	      <div
+	        className={`min-h-0 p-4 ${maxHeight ? "flex-1 overflow-y-auto" : ""}`}
+	        style={{ minHeight }}
+	      >
         {loading ? (
           <div
             className="flex h-full min-h-[280px] items-center justify-center gap-2 text-sm"
