@@ -41,7 +41,7 @@ export async function requestJson(url, options = {}) {
     ...rawHeaders,
   });
 
-  console.log("sending request with option ", options)
+  console.log("sending request with url :", url, options)
 
   const response = await fetch(url, {
     credentials: "include",
