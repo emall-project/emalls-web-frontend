@@ -16,9 +16,10 @@ import MallSearch from "../../components/customer/MallPageComponents/MallSearch"
 
 import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
 import { catalogApi, normalizeCatalogPage, unwrapCatalogPayload } from "../../api/catalog";
+import { campaignsApi, unwrapCampaignPayload } from "../../api/campaigns";
 import { hasProductDiscount, toProductCard } from "../../utils/catalogProducts";
 import CatalogFilters, { buildCatalogFilterPayload } from "../../components/customer/CatalogFilters";
-import { mapAccountMall, mapAccountShop, mapCatalogCategory } from "../../utils/customerBackendMappers";
+import { mapAccountMall, mapAccountShop, mapCatalogCategory, mapDisplayedAd } from "../../utils/customerBackendMappers";
 
 function mapMallService(service) {
   return {
@@ -60,6 +61,8 @@ function MallPage() {
   const [liveProducts, setLiveProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState("");
+  const [mallAdSlides, setMallAdSlides] = useState([]);
+  const [mallAdsError, setMallAdsError] = useState("");
   const mallAllProducts = liveProducts;
 
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
@@ -77,6 +80,17 @@ function MallPage() {
   const filteredMallProducts = useMemo(() => {
     return mallAllProducts;
   }, [mallAllProducts]);
+
+  const mallShopIdKey = useMemo(
+    () =>
+      storesOfThisMall
+        .map((shop) => shop.shopId ?? shop.id)
+        .filter((shopId) => shopId != null && shopId !== "")
+        .map(String)
+        .sort()
+        .join(","),
+    [storesOfThisMall]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -171,6 +185,43 @@ function MallPage() {
     };
   }, [filters, mallId, selectedCategoryId, selectedStoreId]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!mallShopIdKey) {
+      setMallAdSlides([]);
+      setMallAdsError("");
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setMallAdsError("");
+
+    campaignsApi.ads.displayed()
+      .then((response) => {
+        if (cancelled) return;
+
+        const mallShopIds = new Set(mallShopIdKey.split(",").filter(Boolean));
+        const slides = (unwrapCampaignPayload(response) || [])
+          .filter((ad) => mallShopIds.has(String(ad?.shopId ?? ad?.shop?.shopId ?? ad?.shop?.id ?? "")))
+          .map(mapDisplayedAd)
+          .filter(Boolean);
+
+        setMallAdSlides(slides);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMallAdSlides([]);
+          setMallAdsError("تعذر تحميل إعلانات المول.");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mallShopIdKey]);
+
   const mallFeaturedProducts = useMemo(() => filteredMallProducts.slice(0, 2), [filteredMallProducts]);
 
   const deals = useMemo(() => {
@@ -224,7 +275,13 @@ function MallPage() {
         onSelectStore={setSelectedStoreId}
       />
 
-      <AdvSection imgsUrl={mallData.images} intervalMs={4000} page="mall" />
+      {mallAdsError && !mallAdSlides.length ? (
+        <div className="border-b border-black/5 bg-white px-6 py-3 text-center text-sm font-light text-black/50">
+          {mallAdsError}
+        </div>
+      ) : null}
+
+      <AdvSection imgsUrl={mallAdSlides.length ? mallAdSlides : mallData.images} intervalMs={4000} page="mall" />
 
       <MallInfoDialog mall={mallData} stores={storesOfThisMall} />
 
