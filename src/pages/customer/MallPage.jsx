@@ -18,7 +18,34 @@ import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
 import { catalogApi, normalizeCatalogPage, unwrapCatalogPayload } from "../../api/catalog";
 import { hasProductDiscount, toProductCard } from "../../utils/catalogProducts";
 import CatalogFilters, { buildCatalogFilterPayload } from "../../components/customer/CatalogFilters";
-import { mapAccountMall, mapAccountShop, mapCatalogCategory, mapMallRestaurant, mapMallService } from "../../utils/customerBackendMappers";
+import { mapAccountMall, mapAccountShop, mapCatalogCategory } from "../../utils/customerBackendMappers";
+
+function mapMallService(service) {
+  return {
+    id: String(service?.serviceId ?? service?.id ?? ""),
+    serviceId: service?.serviceId ?? service?.id ?? null,
+    name: service?.name || "خدمة",
+    description: service?.description || "",
+    isActive: service?.isActive ?? true,
+  };
+}
+
+function mapMallRestaurant(restaurant) {
+  return {
+    id: String(restaurant?.restaurantId ?? restaurant?.id ?? ""),
+    restaurantId: restaurant?.restaurantId ?? restaurant?.id ?? null,
+    name: restaurant?.name || "مطعم",
+    description: restaurant?.description || "",
+    cuisineType: restaurant?.cuisineType || "",
+    locationInMall: restaurant?.locationInMall || "",
+    logoUrl:
+      restaurant?.logoImage?.smallFileUrl ||
+      restaurant?.logoImage?.mediumFileUrl ||
+      restaurant?.logoImage?.originalFileUrl ||
+      "",
+    isActive: restaurant?.isActive ?? true,
+  };
+}
 
 function MallPage() {
   const { mallId } = useParams();
