@@ -37,17 +37,18 @@ function CategoryBar({
     <section
       ref={barRef}
       className="
-        sticky top-[73px] z-40
+        sticky z-40
         bg-white
         border-b border-black/10
         supports-[backdrop-filter]:bg-white/95
         supports-[backdrop-filter]:backdrop-blur-md
       "
+      style={{ top: "var(--app-header-h, 72px)" }}
     >
       {/* Top thin accent line - matching header */}
       <div className="h-px bg-gradient-to-r from-transparent via-black/5 to-transparent"></div>
 
-      <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-6 md:px-12 py-3 md:py-4 flex items-center gap-4 md:gap-8">
+      <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 py-2.5 md:py-4 flex items-center gap-3 md:gap-8">
         {/* left: all categories */}
         <div className="shrink-0">
           <AllCategoriesMenu
@@ -64,7 +65,7 @@ function CategoryBar({
             className="
               no-scrollbar
               flex items-center
-              gap-4 md:gap-8
+              gap-3 sm:gap-5 md:gap-8
               overflow-x-auto
               whitespace-nowrap
               scroll-smooth
@@ -83,7 +84,7 @@ function CategoryBar({
                   onClick={() => onSelectCategory?.(cate.id)}
                   className={[
                     "relative shrink-0 snap-start",
-                    "px-1 py-2 text-[11px] tracking-widest uppercase transition-all duration-300 md:text-[15px]",
+                    "px-1 py-2 text-[11px] uppercase transition-all duration-300 md:text-[15px]",
                     "whitespace-nowrap font-bold",
                     "after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1px] after:transition-all after:duration-300",
                     active

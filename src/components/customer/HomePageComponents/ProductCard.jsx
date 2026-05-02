@@ -85,6 +85,7 @@ export default function ProductCard({ p, onAddToCart }) {
     null;
   const mallId = Number(productInfo?.mallId ?? product.mallId ?? p?.mallId ?? p?.productInfo?.mallId ?? 0) || null;
   const canOpenAddDialog = ready && !out && !!product.id;
+  const hasProductImage = Boolean(product.imageUrl && product.imageUrl !== "/vite.svg");
 
   const existingCartItem = useMemo(() => {
     if (!mallId || !selectedVariant?.id) return null;
@@ -332,12 +333,18 @@ export default function ProductCard({ p, onAddToCart }) {
           </div>
         )}
 
-        <img
-          src={product.imageUrl}
-          alt={product.name}
-          className="w-full aspect-square object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-          loading="lazy"
-        />
+        {hasProductImage ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="w-full aspect-square object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+            loading="lazy"
+          />
+        ) : (
+          <div className="grid aspect-square w-full place-items-center bg-neutral-100 text-4xl font-light text-black/20">
+            {product.name?.[0] || "س"}
+          </div>
+        )}
 
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all duration-500" />
       </button>
@@ -462,11 +469,17 @@ export default function ProductCard({ p, onAddToCart }) {
 
                 {/* Product info */}
                 <div className="mt-5 flex items-center gap-4">
-                  <img
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="w-[72px] h-[72px] sm:w-20 sm:h-20 object-cover border border-black/10"
-                  />
+                  {hasProductImage ? (
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="w-[72px] h-[72px] sm:w-20 sm:h-20 object-cover border border-black/10"
+                    />
+                  ) : (
+                    <div className="grid w-[72px] h-[72px] sm:w-20 sm:h-20 shrink-0 place-items-center border border-black/10 bg-neutral-100 text-2xl font-light text-black/20">
+                      {product.name?.[0] || "س"}
+                    </div>
+                  )}
                   <div className="min-w-0 text-right flex-1">
                     <p className="font-semibold text-black line-clamp-2 text-sm sm:text-base">
                       {product.name}

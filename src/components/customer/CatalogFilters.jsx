@@ -42,10 +42,11 @@ export function buildCatalogFilterPayload(filters = {}) {
   };
 }
 
-export default function CatalogFilters({ filters, onChange, compact = false }) {
+export default function CatalogFilters({ filters, onChange, compact = false, hiddenFields = [] }) {
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
   const [attributes, setAttributes] = useState([]);
+  const hidden = new Set(hiddenFields);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,15 +94,19 @@ export default function CatalogFilters({ filters, onChange, compact = false }) {
       </div>
 
       <div className={compact ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-4" : "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"}>
-        <select className={inputClass} value={filters.categoryId || ""} onChange={(event) => setFilterValue(filters, onChange, "categoryId", event.target.value)}>
-          <option value="">كل الفئات</option>
-          {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-        </select>
+        {!hidden.has("categoryId") ? (
+          <select className={inputClass} value={filters.categoryId || ""} onChange={(event) => setFilterValue(filters, onChange, "categoryId", event.target.value)}>
+            <option value="">كل الفئات</option>
+            {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+          </select>
+        ) : null}
 
-        <select className={inputClass} value={filters.brandId || ""} onChange={(event) => setFilterValue(filters, onChange, "brandId", event.target.value)}>
-          <option value="">كل البراندات</option>
-          {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
-        </select>
+        {!hidden.has("brandId") ? (
+          <select className={inputClass} value={filters.brandId || ""} onChange={(event) => setFilterValue(filters, onChange, "brandId", event.target.value)}>
+            <option value="">كل البراندات</option>
+            {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+          </select>
+        ) : null}
 
         <select className={inputClass} value={filters.targetedAudience || ""} onChange={(event) => setFilterValue(filters, onChange, "targetedAudience", event.target.value)}>
           <option value="">كل الجمهور</option>

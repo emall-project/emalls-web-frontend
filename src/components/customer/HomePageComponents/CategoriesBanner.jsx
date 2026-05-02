@@ -4,7 +4,7 @@ import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 function CategoriesBanner({ categories = [], onSelectCategory }) {
   const scrollerRef = useRef(null);
 
-  const items = useMemo(() => categories.filter((c) => c.imageUrl), [categories]);
+  const items = useMemo(() => categories.filter((c) => c?.id), [categories]);
 
   // RTL: start from the right
   useEffect(() => {
@@ -83,21 +83,25 @@ function CategoriesBanner({ categories = [], onSelectCategory }) {
                 snap-x snap-mandatory
                 pb-2
                 [-ms-overflow-style:none] [scrollbar-width:none]
+                [&::-webkit-scrollbar]:hidden
               "
               style={{ WebkitOverflowScrolling: "touch" }}
             >
-              <style>{`
-                .no-scrollbar::-webkit-scrollbar { display: none; }
-              `}</style>
-
               {items.map((c) => (
-                <button
+                <article
                   key={c.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => onSelectCategory?.(c.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      onSelectCategory?.(c.id);
+                    }
+                  }}
                   className="
                     group relative shrink-0 snap-center
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30
+                    cursor-pointer
                     overflow-hidden
                     transition
                     hover:shadow-2xl
@@ -108,18 +112,29 @@ function CategoriesBanner({ categories = [], onSelectCategory }) {
                     aspectRatio: "3 / 4",
                   }}
                 >
-                  {/* image */}
-                  <img
-                    src={c.imageUrl}
-                    alt={c.name}
-                    loading="lazy"
-                    className="
-                      w-full h-full object-cover
-                      transition-transform duration-700
-                      group-hover:scale-[1.04]
-                    "
-                    onError={(e) => (e.currentTarget.style.display = "none")}
-                  />
+                  <button
+                    type="button"
+                    onClick={() => onSelectCategory?.(c.id)}
+                    className="block h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
+                  >
+                    {c.imageUrl ? (
+                      <img
+                        src={c.imageUrl}
+                        alt={c.name}
+                        loading="lazy"
+                        className="
+                          w-full h-full object-cover
+                          transition-transform duration-700
+                          group-hover:scale-[1.04]
+                        "
+                        onError={(e) => (e.currentTarget.style.display = "none")}
+                      />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center bg-neutral-200 text-5xl font-light text-black/25">
+                        {c.name?.[0] || "ف"}
+                      </div>
+                    )}
+                  </button>
 
                   {/* overlay */}
                   <div className="absolute inset-0 bg-linear-to-t from-black/65 via-black/20 to-transparent transition group-hover:from-black/70" />
@@ -140,11 +155,29 @@ function CategoriesBanner({ categories = [], onSelectCategory }) {
 
                     <div className="mx-auto mt-2 sm:mt-3 h-px w-0 bg-white/90 transition-all duration-500 group-hover:w-10 sm:group-hover:w-14 md:group-hover:w-20" />
 
-                    <span className="mt-3 sm:mt-4 block text-[9px] sm:text-[10px] text-white/80 tracking-[0.25em] uppercase opacity-0 transition duration-500 group-hover:opacity-100">
-                      تسوق الآن
-                    </span>
+                    {c.children?.length ? (
+                      <div className="mt-3 flex flex-wrap justify-center gap-1.5 opacity-0 transition duration-500 group-hover:opacity-100">
+                        {c.children.slice(0, 3).map((child) => (
+                          <button
+                            key={child.id}
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onSelectCategory?.(child.id);
+                            }}
+                            className="border border-white/25 bg-white/10 px-2 py-1 text-[9px] font-semibold text-white/85 backdrop-blur-sm transition hover:bg-white hover:text-black"
+                          >
+                            {child.name}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="mt-3 sm:mt-4 block text-[9px] sm:text-[10px] text-white/80 tracking-[0.25em] uppercase opacity-0 transition duration-500 group-hover:opacity-100">
+                        تسوق الآن
+                      </span>
+                    )}
                   </div>
-                </button>
+                </article>
               ))}
             </div>
 

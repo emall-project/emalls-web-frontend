@@ -23,13 +23,13 @@ export default function ProductsRow({ title, products = [], onViewAll, onAddToCa
   if (!products.length) return null;
 
   return (
-    <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-6 md:px-12 py-3 md:py-3">
+    <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 py-8 md:py-10">
       {/* Top accent line */}
       
       <div className="bg-white">
         <SectionHeader title={title} onViewAll={onViewAll} />
 
-        <div className="relative mt-8 md:mt-10">
+        <div className="relative mt-6 md:mt-8">
           {/* arrows - luxury square style */}
           <button
             type="button"
@@ -37,7 +37,7 @@ export default function ProductsRow({ title, products = [], onViewAll, onAddToCa
             onClick={() => scrollByAmount(-1)}
             className="
               hidden md:flex
-              absolute left-0 md:-left-14 top-1/2 -translate-y-1/2 z-10
+              absolute left-0 md:-left-6 xl:-left-10 top-1/2 -translate-y-1/2 z-10
               h-12 w-12 bg-white border border-black/10
               items-center justify-center 
               transition-all duration-300
@@ -54,7 +54,7 @@ export default function ProductsRow({ title, products = [], onViewAll, onAddToCa
             onClick={() => scrollByAmount(1)}
             className="
               hidden md:flex
-              absolute right-0 md:-right-14 top-1/2 -translate-y-1/2 z-10
+              absolute right-0 md:-right-6 xl:-right-10 top-1/2 -translate-y-1/2 z-10
               h-12 w-12 bg-white border border-black/10
               items-center justify-center 
               transition-all duration-300

@@ -69,6 +69,7 @@ export const accountsApi = {
     activate: (id) => accountFetch(`/api/users/activate/${id}`, { method: "PUT" }),
     deactivate: (id) => accountFetch(`/api/users/deactivate/${id}`, { method: "PUT" }),
     profile: {
+      getInfo: (userId) => accountFetch(`/api/users/${userId}/profile/info`),
       updateInfo: (userId, body) =>
         accountFetch(`/api/users/${userId}/profile/info`, bodyRequest("PUT", body)),
       changePassword: (userId, body) =>

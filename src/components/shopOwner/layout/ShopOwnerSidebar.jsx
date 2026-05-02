@@ -23,7 +23,7 @@ function OwnerLink({ to, icon, label, end }) {
 
 export function ShopOwnerSidebar({ open, onClose }) {
   const sidebarClass = open ? "translate-x-0" : "translate-x-full lg:translate-x-0";
-  const { fullName, selectedStoreId } = useAuth();
+  const { fullName, profilePictureUrl, selectedStoreId } = useAuth();
 
   return (
     <>
@@ -69,10 +69,14 @@ export function ShopOwnerSidebar({ open, onClose }) {
         {/* User card */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t" style={{ background: "var(--gray-1)", borderColor: "var(--gray-a6)" }}>
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold"
-              style={{ background: "var(--blue-9)", color: "#fff" }}>
-              SO
-            </div>
+            {profilePictureUrl ? (
+              <img src={profilePictureUrl} alt={fullName || "صاحب المتجر"} className="h-10 w-10 rounded-full object-cover ring-1 ring-black/10" />
+            ) : (
+              <div className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-semibold"
+                style={{ background: "var(--blue-9)", color: "#fff" }}>
+                SO
+              </div>
+            )}
             <div>
               <div className="text-sm font-semibold" style={{ color: "var(--gray-12)" }}>
                 {fullName || "صاحب المتجر"}

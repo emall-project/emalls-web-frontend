@@ -11,6 +11,8 @@ import MallPage from "./pages/customer/MallPage.jsx";
 import SearchPage from "./pages/customer/SearchPage.jsx";
 import StorePage from "./pages/customer/StorePage.jsx";
 import ProductDetailsPage from "./pages/customer/ProductDetailsPage.jsx";
+import CategoryPage from "./pages/customer/CategoryPage.jsx";
+import BrandPage from "./pages/customer/BrandPage.jsx";
 import FavoritesPage from "./pages/customer/FavoritesPage.jsx";
 import LoginPage from "./pages/auth/LoginPage.jsx";
 import SignupPage from "./pages/customer/SignupPage.jsx";
@@ -77,6 +79,10 @@ export default function App() {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/malls/:mallId" element={<MallPage />} />
             <Route path="/stores/:storeId" element={<StorePage />} />
+            <Route path="/categories/slug/:slug" element={<CategoryPage />} />
+            <Route path="/categories/:categoryId" element={<CategoryPage />} />
+            <Route path="/brands/slug/:slug" element={<BrandPage />} />
+            <Route path="/brands/:brandId" element={<BrandPage />} />
             <Route path="/products/slug/:slug" element={<ProductDetailsPage />} />
             <Route path="/products/:productId" element={<ProductDetailsPage />} />
             <Route

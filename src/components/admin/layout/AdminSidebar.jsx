@@ -21,7 +21,7 @@ export function AdminSidebar({ open, onClose }) {
   const sidebarClass = open
     ? "translate-x-0"
     : "translate-x-full lg:translate-x-0";
-  const { fullName } = useAuth();
+  const { fullName, profilePictureUrl } = useAuth();
 
   return (
     <aside
@@ -81,9 +81,13 @@ export function AdminSidebar({ open, onClose }) {
         style={{ borderColor: "var(--gray-a6)" }}
       >
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">
-            AD
-          </div>
+          {profilePictureUrl ? (
+            <img src={profilePictureUrl} alt={fullName || "مستخدم إدمن"} className="h-10 w-10 rounded-full object-cover ring-1 ring-black/10" />
+          ) : (
+            <div className="h-10 w-10 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-semibold">
+              AD
+            </div>
+          )}
           <div>
             <div className="text-sm font-semibold">{fullName || "مستخدم إدمن"}</div>
             <div className="text-xs" style={{ color: "var(--gray-11)" }}>

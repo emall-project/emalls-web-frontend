@@ -454,7 +454,11 @@ export function MediaManagerWidget({
         }),
       ]);
 
-      setFolders(folderItems);
+      setFolders(
+        currentFolderId == null
+          ? folderItems.filter((folder) => folder?.parentId == null)
+          : folderItems
+      );
       setFiles(fileItems);
     } catch (requestError) {
       setError(requestError.message || "فشل جلب الملفات");

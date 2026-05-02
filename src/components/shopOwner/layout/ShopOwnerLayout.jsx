@@ -10,6 +10,7 @@ function ShopOwnerTopbar({
   onToggleTheme,
   onMenuOpen,
   fullName,
+  profilePictureUrl,
   stores,
   selectedStoreId,
   onSelectStore,
@@ -30,6 +31,10 @@ function ShopOwnerTopbar({
         </button>
 
         <div className="mr-auto flex items-center gap-3">
+          {profilePictureUrl ? (
+            <img src={profilePictureUrl} alt={fullName || "صاحب المتجر"} className="hidden h-9 w-9 rounded-full object-cover ring-1 ring-black/10 sm:block" />
+          ) : null}
+
           <div className="hidden sm:block text-right">
             <div className="text-sm font-semibold" style={{ color: "var(--gray-12)" }}>
               {fullName || "صاحب المتجر"}
@@ -81,7 +86,7 @@ function ShopOwnerTopbar({
 export function ShopOwnerLayout({ appearance, onToggleTheme }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
-  const { fullName, stores, selectedStoreId, selectStore, logout } = useAuth();
+  const { fullName, profilePictureUrl, stores, selectedStoreId, selectStore, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -108,6 +113,7 @@ export function ShopOwnerLayout({ appearance, onToggleTheme }) {
           onToggleTheme={onToggleTheme}
           onMenuOpen={() => setSidebarOpen(true)}
           fullName={fullName}
+          profilePictureUrl={profilePictureUrl}
           stores={stores}
           selectedStoreId={selectedStoreId}
           onSelectStore={selectStore}

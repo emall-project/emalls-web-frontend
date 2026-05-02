@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { FiShoppingCart } from "react-icons/fi";
 import { GrFavorite } from "react-icons/gr";
 import { VscAccount } from "react-icons/vsc";
@@ -14,11 +14,23 @@ import HeaderSearch from "./HeaderSearch";
 function Header() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { ready, isAuthenticated, role, isCustomer, fullName } = useAuth();
+  const headerRef = useRef(null);
+  const { ready, isAuthenticated, role, isCustomer, fullName, profilePictureUrl } = useAuth();
   const { totalCartQuantity } = useCart();
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [favoritesVersion, setFavoritesVersion] = useState(0);
   const [cartOpen, setCartOpen] = useState(false);
+
+  useLayoutEffect(() => {
+    const setHeaderHeight = () => {
+      const height = headerRef.current?.offsetHeight || 72;
+      document.documentElement.style.setProperty("--app-header-h", `${height}px`);
+    };
+
+    setHeaderHeight();
+    window.addEventListener("resize", setHeaderHeight);
+    return () => window.removeEventListener("resize", setHeaderHeight);
+  }, []);
 
   const handleAccountClick = () => {
     if (!ready) {
@@ -79,12 +91,12 @@ function Header() {
   }, [favoritesVersion, isAuthenticated, isCustomer, ready]);
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-black/10">
+    <header ref={headerRef} className="sticky top-0 z-50 bg-white border-b border-black/10">
       {/* Top thin line - luxury accent */}
       <div className="h-px bg-black"></div>
       
-      <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-6 md:px-12 py-4 md:py-5">
-        <div className="flex items-center justify-between gap-6">
+      <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 py-3 md:py-5">
+        <div className="flex items-center justify-between gap-3 sm:gap-5 md:gap-6">
           
           {/* Logo */}
           <button
@@ -92,18 +104,18 @@ function Header() {
             onClick={() => navigate("/")}
           >
             <div className="flex flex-col items-end leading-none gap-0.5">
-              <span className="text-2xl md:text-3xl font-black tracking-tight text-black">سوقنا</span>
+              <span className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-black">سوقنا</span>
               <span className="text-[9px] md:text-[10px] tracking-[0.35em] text-black/40 uppercase font-light self-stretch text-right">e-mall</span>
             </div>
           </button>
 
           {/* Search - Centered & Clean */}
-          <div className="flex-1 max-w-2xl">
+          <div className="min-w-0 flex-1 max-w-2xl">
             <HeaderSearch />
           </div>
 
           {/* Actions - Minimalist Icons */}
-          <div className="flex items-center gap-6 md:gap-8">
+          <div className="flex shrink-0 items-center gap-3 sm:gap-5 md:gap-8">
             
             {/* Favorites */}
             <button
@@ -161,7 +173,15 @@ function Header() {
               className="group flex flex-col items-center gap-1 transition-all duration-300"
               title={isAuthenticated ? fullName || "الحساب" : "تسجيل الدخول"}
             >
-              <VscAccount className="text-black text-xl md:text-2xl transition-all duration-300 group-hover:scale-110" />
+              {profilePictureUrl ? (
+                <img
+                  src={profilePictureUrl}
+                  alt={fullName || "الحساب"}
+                  className="h-7 w-7 rounded-full object-cover ring-1 ring-black/10 transition-all duration-300 group-hover:scale-110 md:h-8 md:w-8"
+                />
+              ) : (
+                <VscAccount className="text-black text-xl md:text-2xl transition-all duration-300 group-hover:scale-110" />
+              )}
               <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-medium group-hover:text-black transition-colors">
                 الحساب
               </span>

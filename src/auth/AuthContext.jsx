@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { loginWithPassword, refreshAccessToken } from "./api";
+import { accountsApi, unwrapAccountPayload } from "../api/accounts";
+import { getMediaPreviewUrl } from "../api/mediaManager";
 import {
   AUTH_CHANGE_EVENT,
   clearAuthState,
@@ -16,6 +18,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [authState, setAuthState] = useState(() => readAuthState());
+  const [profile, setProfile] = useState(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -116,6 +119,46 @@ export function AuthProvider({ children }) {
   const session = authState?.session || null;
   const isAuthenticated = !!session && !isSessionExpired(session);
 
+  const refreshProfile = useCallback(async () => {
+    if (!session?.userId || !isAuthenticated) {
+      setProfile(null);
+      return null;
+    }
+
+    const response = await accountsApi.users.profile.getInfo(session.userId);
+    const nextProfile = unwrapAccountPayload(response);
+    setProfile(nextProfile || null);
+    return nextProfile || null;
+  }, [isAuthenticated, session?.userId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!session?.userId || !isAuthenticated) {
+      setProfile(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    accountsApi.users.profile.getInfo(session.userId)
+      .then((response) => {
+        if (!cancelled) setProfile(unwrapAccountPayload(response) || null);
+      })
+      .catch(() => {
+        if (!cancelled) setProfile(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, session?.userId]);
+
+  const profilePictureUrl = getMediaPreviewUrl(
+    profile?.profilePictureImage || profile?.profilePicture,
+    "small"
+  );
+
   const value = useMemo(
     () => ({
       ready,
@@ -123,8 +166,10 @@ export function AuthProvider({ children }) {
       session,
       isAuthenticated,
       role: isAuthenticated ? session?.role || "" : "",
-      fullName: session?.fullName || "",
+      fullName: profile?.fullName || session?.fullName || "",
       username: session?.username || "",
+      profile,
+      profilePictureUrl,
       stores: session?.shopIds || [],
       selectedStoreId: session?.selectedStoreId ?? null,
       selectedMallId: session?.selectedMallId ?? null,
@@ -134,9 +179,10 @@ export function AuthProvider({ children }) {
       login,
       logout,
       selectStore,
+      refreshProfile,
       getDefaultHome: () => getHomePathForRole(isAuthenticated ? session?.role || "" : ""),
     }),
-    [authState, isAuthenticated, login, logout, ready, selectStore, session]
+    [authState, isAuthenticated, login, logout, profile, profilePictureUrl, ready, refreshProfile, selectStore, session]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

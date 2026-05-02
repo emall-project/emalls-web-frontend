@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { FiGrid, FiMapPin, FiRefreshCw, FiShoppingBag, FiTag, FiX } from "react-icons/fi";
+import { Link, useNavigate } from "react-router-dom";
 import Header from "../../components/customer/HomePageComponents/Header";
 import CategoryBar from "../../components/customer/HomePageComponents/CategoryBar";
 import AdvSection from "../../components/customer/HomePageComponents/AdvSection";
@@ -14,6 +15,7 @@ import { hasProductDiscount, toProductCard } from "../../utils/catalogProducts";
 import {
   mapAccountMall,
   mapAccountShop,
+  mapCatalogBrand,
   mapCatalogCategory,
   mapDisplayedAd,
 } from "../../utils/customerBackendMappers";
@@ -38,7 +40,7 @@ function HomeNotice({ children, tone = "muted" }) {
 function HomeStatsStrip({ productsCount, categoriesCount, mallsCount, storesCount }) {
   const items = [
     { icon: FiGrid, label: "تصنيفات", value: categoriesCount },
-    { icon: FiShoppingBag, label: "منتجات", value: productsCount },
+    { icon: FiShoppingBag, label: "منتجات معروضة", value: productsCount },
     { icon: FiMapPin, label: "مولات", value: mallsCount },
     { icon: FiTag, label: "متاجر", value: storesCount },
   ];
@@ -119,7 +121,9 @@ function HeroFallback({ loading, error }) {
       className="relative grid w-full place-items-center bg-neutral-50 text-center"
       style={{
         height:
-          "calc(100svh - var(--app-header-h, 72px) - var(--app-catbar-h, 56px))",
+          "calc(100svh - var(--app-header-h, 72px) - var(--app-catbar-h, 56px) - 52px)",
+        minHeight: "430px",
+        maxHeight: "760px",
       }}
     >
       <div className="px-6">
@@ -139,14 +143,209 @@ function HeroFallback({ loading, error }) {
   );
 }
 
+function imageFromMall(mall) {
+  return mall?.images?.[0]?.image || mall?.logoUrl || "";
+}
+
+function DiscoveryCard({ item, type, onFilter }) {
+  const image = type === "mall" ? imageFromMall(item) : item?.image || item?.logoUrl;
+  const href = type === "mall" ? `/malls/${item.id}` : `/stores/${item.id}`;
+  const meta =
+    type === "mall"
+      ? item.location || item.city || "مول نشط"
+      : item.mallName || item.category || "متجر نشط";
+
+  return (
+    <div className="group relative overflow-hidden border border-black/10 bg-white">
+      <Link to={href} className="block">
+        <div className="aspect-[4/3] overflow-hidden bg-neutral-100">
+          {image ? (
+            <img
+              src={image}
+              alt={item.name}
+              loading="lazy"
+              className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
+            />
+          ) : (
+            <div className="grid h-full place-items-center text-4xl font-light text-black/20">
+              {item.name?.[0] || "س"}
+            </div>
+          )}
+        </div>
+      </Link>
+      <div className="p-4 text-right">
+        <Link to={href} className="block text-base font-semibold text-black hover:underline">
+          {item.name}
+        </Link>
+        <p className="mt-1 truncate text-xs text-black/45">{meta}</p>
+        <button
+          type="button"
+          onClick={() => onFilter?.(item.id)}
+          className="mt-4 w-full border border-black/10 px-4 py-2 text-xs font-semibold text-black transition hover:border-black hover:bg-black hover:text-white"
+        >
+          عرض المنتجات
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LiveDiscoverySection({
+  malls,
+  stores,
+  loading,
+  error,
+  onSelectMall,
+  onSelectStore,
+}) {
+  const featuredMalls = malls.slice(0, 3);
+  const featuredStores = stores.slice(0, 4);
+
+  if (!featuredMalls.length && !featuredStores.length && !loading && !error) {
+    return null;
+  }
+
+  return (
+    <section className="border-b border-black/5 bg-neutral-50 py-10 md:py-14">
+      <div className="mx-auto max-w-400 px-4 sm:px-6 md:px-12 2xl:max-w-[1920px]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="text-right">
+            <p className="text-[10px] font-semibold text-black/35">من حسابات ومولات مباشرة</p>
+            <h2 className="mt-2 text-2xl font-light text-black">تسوق حسب المول أو المتجر</h2>
+          </div>
+          <Link
+            to="/search"
+            className="w-fit border border-black/10 px-5 py-2 text-xs font-semibold text-black transition hover:border-black hover:bg-black hover:text-white"
+          >
+            بحث شامل
+          </Link>
+        </div>
+
+        {error ? (
+          <div className="mt-5 border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+
+        {loading && !featuredMalls.length && !featuredStores.length ? (
+          <div className="mt-6 flex min-h-28 items-center justify-center border border-dashed border-black/10 bg-white px-6 text-sm text-black/50">
+            <FiRefreshCw className="ml-2 animate-spin" size={14} />
+            جاري تحميل المولات والمتاجر...
+          </div>
+        ) : null}
+
+        {featuredMalls.length ? (
+          <div className="mt-7 grid gap-4 md:grid-cols-3">
+            {featuredMalls.map((mall) => (
+              <DiscoveryCard
+                key={mall.id}
+                item={mall}
+                type="mall"
+                onFilter={(id) => {
+                  onSelectStore(null);
+                  onSelectMall(id);
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
+
+        {featuredStores.length ? (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {featuredStores.map((store) => (
+              <DiscoveryCard
+                key={store.id}
+                item={store}
+                type="store"
+                onFilter={(id) => {
+                  onSelectMall(null);
+                  onSelectStore(id);
+                }}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function BrandsHomeSection({ brands = [], loading, error }) {
+  const featuredBrands = brands.slice(0, 10);
+
+  if (!featuredBrands.length && !loading && !error) {
+    return null;
+  }
+
+  return (
+    <section className="border-b border-black/5 bg-white py-10 md:py-14">
+      <div className="mx-auto max-w-400 px-4 sm:px-6 md:px-12 2xl:max-w-[1920px]">
+        <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="text-right">
+            <p className="text-[10px] font-semibold text-black/35">براندات مباشرة</p>
+            <h2 className="mt-2 text-2xl font-light text-black">تسوق حسب البراند</h2>
+          </div>
+          <Link
+            to="/search"
+            className="w-fit border border-black/10 px-5 py-2 text-xs font-semibold text-black transition hover:border-black hover:bg-black hover:text-white"
+          >
+            عرض كل المنتجات
+          </Link>
+        </div>
+
+        {error ? (
+          <div className="mb-5 border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        ) : null}
+
+        {loading && !featuredBrands.length ? (
+          <div className="flex min-h-24 items-center justify-center border border-dashed border-black/10 bg-neutral-50 text-sm text-black/50">
+            <FiRefreshCw className="ml-2 animate-spin" size={14} />
+            جاري تحميل البراندات...
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+          {featuredBrands.map((brand) => (
+            <Link
+              key={brand.id}
+              to={`/brands/${brand.id}`}
+              className="group flex min-h-36 flex-col items-center justify-center border border-black/10 bg-neutral-50 p-4 text-center transition hover:border-black hover:bg-white"
+            >
+              <div className="grid h-16 w-16 place-items-center overflow-hidden bg-white">
+                {brand.imageUrl ? (
+                  <img src={brand.imageUrl} alt={brand.name} className="max-h-full max-w-full object-contain" loading="lazy" />
+                ) : (
+                  <span className="text-2xl font-light text-black/25">{brand.name?.[0] || "ب"}</span>
+                )}
+              </div>
+              <div className="mt-4 line-clamp-2 text-sm font-semibold text-black group-hover:underline">
+                {brand.name}
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function HomePage() {
+  const navigate = useNavigate();
+  const productsAnchorRef = useRef(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedMallId, setSelectedMallId] = useState(null);
   const [selectedStoreId, setSelectedStoreId] = useState(null);
 
   const [categories, setCategories] = useState([]);
+  const [categoryTree, setCategoryTree] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [categoriesError, setCategoriesError] = useState("");
+
+  const [brands, setBrands] = useState([]);
+  const [brandsLoading, setBrandsLoading] = useState(false);
+  const [brandsError, setBrandsError] = useState("");
 
   const [malls, setMalls] = useState([]);
   const [stores, setStores] = useState([]);
@@ -166,19 +365,48 @@ function HomePage() {
     setCategoriesLoading(true);
     setCategoriesError("");
 
-    catalogApi.categories.all({ isActive: true })
-      .then((response) => {
+    Promise.all([
+      catalogApi.categories.all({ isActive: true }),
+      catalogApi.categories.tree().catch(() => null),
+    ])
+      .then(([flatResponse, treeResponse]) => {
         if (cancelled) return;
-        setCategories((unwrapCatalogPayload(response) || []).map(mapCatalogCategory));
+        setCategories((unwrapCatalogPayload(flatResponse) || []).map(mapCatalogCategory));
+        setCategoryTree((unwrapCatalogPayload(treeResponse) || []).map(mapCatalogCategory));
       })
       .catch(() => {
         if (!cancelled) {
           setCategories([]);
+          setCategoryTree([]);
           setCategoriesError("تعذر تحميل التصنيفات.");
         }
       })
       .finally(() => {
         if (!cancelled) setCategoriesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setBrandsLoading(true);
+    setBrandsError("");
+
+    catalogApi.brands.all({ isActive: true })
+      .then((response) => {
+        if (!cancelled) setBrands((unwrapCatalogPayload(response) || []).map(mapCatalogBrand));
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBrands([]);
+          setBrandsError("تعذر تحميل البراندات.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setBrandsLoading(false);
       });
 
     return () => {
@@ -309,6 +537,11 @@ function HomePage() {
     () => stores.find((store) => String(store.id) === String(selectedStoreId)),
     [stores, selectedStoreId]
   );
+  const scrollToProducts = () => {
+    window.requestAnimationFrame(() => {
+      productsAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -326,11 +559,7 @@ function HomePage() {
         onSelectStore={setSelectedStoreId}
       />
 
-      {categoriesError || mallStoreError ? (
-        <HomeNotice tone="error">{categoriesError || mallStoreError}</HomeNotice>
-      ) : mallStoreLoading && !malls.length && !stores.length ? (
-        <HomeNotice>جاري تحميل المولات والمتاجر...</HomeNotice>
-      ) : null}
+      {categoriesError ? <HomeNotice tone="error">{categoriesError}</HomeNotice> : null}
 
       <ActiveFiltersBar
         selectedCategory={selectedCategory}
@@ -355,15 +584,36 @@ function HomePage() {
         storesCount={stores.length}
       />
 
+      <LiveDiscoverySection
+        malls={malls}
+        stores={stores}
+        loading={mallStoreLoading}
+        error={mallStoreError}
+        onSelectMall={(id) => {
+          setSelectedMallId(id);
+          scrollToProducts();
+        }}
+        onSelectStore={(id) => {
+          setSelectedStoreId(id);
+          scrollToProducts();
+        }}
+      />
+
       {/* Categories Banner */}
-      <CategoriesBanner categories={categories} onSelectCategory={setSelectedCategoryId} />
+      <CategoriesBanner
+        categories={categoryTree.length ? categoryTree : categories}
+        onSelectCategory={(categoryId) => navigate(`/categories/${categoryId}`)}
+      />
       {!categories.length && categoriesLoading ? (
         <div className="px-6 py-8 text-center text-sm font-light text-black/50">
           جاري تحميل التصنيفات...
         </div>
       ) : null}
 
+      <BrandsHomeSection brands={brands} loading={brandsLoading} error={brandsError} />
+
       {/* Featured */}
+      <div ref={productsAnchorRef} className="scroll-mt-32" />
       <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 py-8 sm:py-10 md:py-14">
         <div className="flex flex-col gap-3 border-b border-black/10 pb-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -416,6 +666,8 @@ function HomePage() {
               </div>
 
               <button
+                type="button"
+                onClick={() => navigate("/search")}
                 className="shrink-0 text-[10px] sm:text-xs tracking-[0.25em] uppercase font-light px-5 sm:px-6 py-2.5 sm:py-3 border transition-all duration-300"
                 style={{ color: "#d4af37", borderColor: "rgba(212,175,55,0.5)" }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = "#d4af37"; e.currentTarget.style.color = "#0a0a0a"; }}
@@ -446,14 +698,14 @@ function HomePage() {
       <ProductsRow
         title="الأكثر ملائمة لك"
         products={forYou}
-        onViewAll={() => {}}
+        onViewAll={() => navigate("/search")}
         onAddToCart={() => {}}
       />
 
       <ProductsRow
         title="الأكثر مبيعًا"
         products={bestSellers}
-        onViewAll={() => {}}
+        onViewAll={() => navigate("/search")}
         onAddToCart={() => {}}
       />
 

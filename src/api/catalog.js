@@ -148,6 +148,13 @@ export const catalogApi = {
       catalogFetch(`/stores/${storeId}/products/dashboard/summary`),
   },
 
+  storeEngagement: {
+    reviewSummary: (storeId) =>
+      catalogFetch(`/stores/${storeId}/engagement/reviews/summary`),
+    commentSummary: (storeId) =>
+      catalogFetch(`/stores/${storeId}/engagement/comments/summary`),
+  },
+
   favorites: {
     page: (params = {}) => catalogFetch(pagedPath("/favorites", params)),
     all: () => catalogFetch("/favorites/all"),

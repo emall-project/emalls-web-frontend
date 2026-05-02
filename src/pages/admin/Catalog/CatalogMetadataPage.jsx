@@ -378,6 +378,7 @@ function CatalogFormDialog({
   const [fieldErrors, setFieldErrors] = useState({});
   const isEdit = !!item;
   const themeContainer = useThemeContainer();
+  const currentImagePreview = getMediaPreviewUrl(form.image, "medium");
   const availableParentOptions = useMemo(() => {
     const descendantIds = collectDescendantIds(parentOptions, form.id);
     return parentOptions.filter((category) => {
@@ -567,16 +568,30 @@ function CatalogFormDialog({
               </div>
 
               {config.imageField ? (
-                <MediaUuidField
-                  label="الصورة"
-                  value={form.imageId}
-                  file={form.image}
-                  onChange={(value) => set("imageId", value)}
-                  onFileChange={(file) => set("image", file)}
-                  mode="admin"
-                  required
-                  error={fieldErrors.imageId}
-                />
+                <div className="space-y-3">
+                  {currentImagePreview ? (
+                    <div
+                      className="overflow-hidden rounded-2xl border"
+                      style={{ background: "var(--gray-a2)", borderColor: "var(--gray-a6)" }}
+                    >
+                      <img
+                        src={currentImagePreview}
+                        alt={form.name || "الصورة الحالية"}
+                        className="h-44 w-full object-cover"
+                      />
+                    </div>
+                  ) : null}
+                  <MediaUuidField
+                    label="الصورة"
+                    value={form.imageId}
+                    file={form.image}
+                    onChange={(value) => set("imageId", value)}
+                    onFileChange={(file) => set("image", file)}
+                    mode="admin"
+                    required
+                    error={fieldErrors.imageId}
+                  />
+                </div>
               ) : null}
 
               {config.audienceFields ? (

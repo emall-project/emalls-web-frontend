@@ -53,8 +53,34 @@ function splitPhoneNumber(value = "") {
   return { prefix: "+970", number: normalized.replace(/^\+970[-\s]?/, "") };
 }
 
+function profilePhone(profile, dashboard) {
+  if (profile?.phone) {
+    return {
+      prefix: profile.phone.prefix || "+970",
+      number: profile.phone.number || "",
+    };
+  }
+
+  return splitPhoneNumber(profile?.phoneNumber || dashboard?.phoneNumber);
+}
+
+function buildProfileForm({ profile = {}, dashboard = {}, session = {} }) {
+  const phone = profilePhone(profile, dashboard);
+
+  return {
+    fullName: profile.fullName || dashboard.fullName || session.fullName || "",
+    email: profile.email || dashboard.email || "",
+    prefix: phone.prefix,
+    number: phone.number,
+    gender: profile.gender || dashboard.gender || "NOT_SPECIFIED",
+    age: profile.age ?? dashboard.age ?? "",
+    nationalIdNumber: profile.nationalIdNumber || "",
+    profilePictureUuid: profile.profilePictureUuid || "",
+  };
+}
+
 export default function CustomerAccountPage() {
-  const { session, logout } = useAuth();
+  const { session, logout, refreshProfile } = useAuth();
   const [dashboard, setDashboard] = useState(null);
   const [commerceDashboard, setCommerceDashboard] = useState(null);
   const [profileFile, setProfileFile] = useState(null);
@@ -91,31 +117,23 @@ export default function CustomerAccountPage() {
     setLoading(true);
     setMessage(null);
     try {
-      const [dashboardResponse, commerceDashboardResponse] = await Promise.all([
+      const [dashboardResponse, commerceDashboardResponse, profileResponse] = await Promise.all([
         accountsApi.dashboard.customer(),
         orderHubApi.dashboard.getCustomer().catch(() => null),
+        accountsApi.users.profile.getInfo(session.userId).catch(() => null),
       ]);
       const customerDashboard = unwrapAccountPayload(dashboardResponse) || {};
-      const phone = splitPhoneNumber(customerDashboard.phoneNumber);
+      const customerProfile = unwrapAccountPayload(profileResponse) || {};
       setDashboard(customerDashboard);
       setCommerceDashboard(unwrapOrderHubPayload(commerceDashboardResponse));
-      setForm({
-        fullName: customerDashboard.fullName || session.fullName || "",
-        email: customerDashboard.email || "",
-        prefix: phone.prefix,
-        number: phone.number,
-        gender: customerDashboard.gender || "NOT_SPECIFIED",
-        age: customerDashboard.age ?? "",
-        nationalIdNumber: "",
-        profilePictureUuid: "",
-      });
-      setProfileFile(null);
+      setForm(buildProfileForm({ profile: customerProfile, dashboard: customerDashboard, session }));
+      setProfileFile(customerProfile.profilePictureImage || customerProfile.profilePicture || null);
     } catch (error) {
       setMessage({ type: "error", text: error.message || "فشل تحميل الحساب" });
     } finally {
       setLoading(false);
     }
-  }, [session?.userId]);
+  }, [session, session?.userId]);
 
   useEffect(() => {
     load();
@@ -134,7 +152,7 @@ export default function CustomerAccountPage() {
     }
 
     try {
-      await accountsApi.users.profile.updateInfo(session.userId, {
+      const response = await accountsApi.users.profile.updateInfo(session.userId, {
         fullName: form.fullName.trim() || null,
         email: form.email.trim() || null,
         phone: form.number.trim() ? { prefix: form.prefix, number: form.number.trim() } : null,
@@ -143,8 +161,11 @@ export default function CustomerAccountPage() {
         nationalIdNumber: form.nationalIdNumber.trim() || null,
         profilePictureUuid: form.profilePictureUuid.trim() || null,
       });
+      const savedProfile = unwrapAccountPayload(response) || {};
+      setForm(buildProfileForm({ profile: savedProfile, dashboard, session }));
+      setProfileFile(savedProfile.profilePictureImage || savedProfile.profilePicture || profileFile);
+      await refreshProfile().catch(() => null);
       setMessage({ type: "success", text: "تم حفظ الملف الشخصي" });
-      load();
     } catch (error) {
       const formError = buildApiFormError(error, PROFILE_FIELD_MAP, "فشل حفظ الملف الشخصي");
       setProfileFieldErrors(formError.fieldErrors);

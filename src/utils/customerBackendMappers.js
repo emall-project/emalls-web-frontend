@@ -41,13 +41,28 @@ export function mapMallRestaurant(restaurant) {
 export function mapCatalogCategory(category) {
   return {
     id: asStringId(category?.id ?? category?.categoryId),
+    categoryId: category?.id ?? category?.categoryId ?? null,
     name: category?.name || "تصنيف",
+    slug: category?.slug || "",
     description: category?.description || "",
     parentId:
       category?.parentId == null && category?.parent?.id == null
         ? null
         : asStringId(category?.parentId ?? category?.parent?.id),
-    imageUrl: getMediaPreviewUrl(category?.image),
+    imageUrl: getMediaPreviewUrl(category?.image, "medium"),
+    children: (category?.children || []).map(mapCatalogCategory),
+  };
+}
+
+export function mapCatalogBrand(brand) {
+  return {
+    id: asStringId(brand?.id ?? brand?.brandId),
+    brandId: brand?.id ?? brand?.brandId ?? null,
+    name: brand?.name || "براند",
+    slug: brand?.slug || "",
+    description: brand?.description || "",
+    imageUrl: getMediaPreviewUrl(brand?.image, "medium"),
+    isActive: brand?.isActive ?? true,
   };
 }
 
@@ -95,7 +110,7 @@ export function mapAccountShop(shop) {
     category,
     description: shop?.description || "",
     location: shop?.location || "",
-    image: firstImageUrl(shop?.shopPhotos) || getMediaPreviewUrl(shop?.logoImage),
+    image: firstImageUrl(shop?.shopPhotos, "medium") || getMediaPreviewUrl(shop?.logoImage, "medium"),
     status: shop?.status || "",
   };
 }
@@ -108,6 +123,8 @@ export function mapDisplayedAd(ad) {
 
   return {
     id: ad?.adRequestId ?? ad?.id ?? image,
+    title: ad?.title || ad?.template?.name || "عرض مميز",
+    subtitle: ad?.description || ad?.template?.description || "",
     image,
     alt: ad?.title || ad?.template?.name || "Ad",
     href: shopId ? `/stores/${shopId}` : "#",

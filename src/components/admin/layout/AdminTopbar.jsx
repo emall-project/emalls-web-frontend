@@ -5,7 +5,7 @@ import { useAuth } from "../../../auth/AuthContext";
 export function AdminTopbar({ appearance, onToggleTheme }) {
   const isDark = appearance === "dark";
   const navigate = useNavigate();
-  const { fullName, logout } = useAuth();
+  const { fullName, profilePictureUrl, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -26,6 +26,10 @@ export function AdminTopbar({ appearance, onToggleTheme }) {
             إدارة النظام
           </div>
         </div>
+
+        {profilePictureUrl ? (
+          <img src={profilePictureUrl} alt={fullName || "مستخدم إداري"} className="h-9 w-9 rounded-full object-cover ring-1 ring-black/10" />
+        ) : null}
 
         <button
           onClick={onToggleTheme}
