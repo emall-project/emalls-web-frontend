@@ -12,7 +12,7 @@ import { catalogApi } from "../../../api/catalog";
 export default function ProductCard({ p, onAddToCart }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isAuthenticated, isCustomer } = useAuth();
+  const { ready, isAuthenticated, isCustomer } = useAuth();
   const { addItem } = useCart();
   const product = toProductCard(p);
   const discount = hasProductDiscount(p) || isTmpDiscount(p);
@@ -36,8 +36,14 @@ export default function ProductCard({ p, onAddToCart }) {
 
   useEffect(() => {
     let cancelled = false;
-    if (!isCustomer || !product.id) {
-      setFavorite(false);
+    if (!ready) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (!isAuthenticated || !isCustomer || !product.id) {
+      setFavorite(Boolean(p?.favorite));
       return () => {
         cancelled = true;
       };
@@ -54,7 +60,7 @@ export default function ProductCard({ p, onAddToCart }) {
     return () => {
       cancelled = true;
     };
-  }, [isCustomer, product.id]);
+  }, [isAuthenticated, isCustomer, p?.favorite, product.id, ready]);
 
   useEffect(() => {
     setSelectedVariantId(defaultVariant?.id ? String(defaultVariant.id) : "");
@@ -63,6 +69,10 @@ export default function ProductCard({ p, onAddToCart }) {
   }, [defaultVariant?.id, product.id]);
 
   const handleAdd = async () => {
+    if (!ready) {
+      return;
+    }
+
     if (!isAuthenticated || !isCustomer) {
       navigate("/login", { state: { from: location } });
       return;
@@ -106,8 +116,12 @@ export default function ProductCard({ p, onAddToCart }) {
   const toggleFavorite = async (event) => {
     event.stopPropagation();
 
+    if (!ready || favoriteLoading) {
+      return;
+    }
+
     if (!isAuthenticated || !isCustomer) {
-      navigate("/login");
+      navigate("/login", { state: { from: location } });
       return;
     }
 
@@ -132,7 +146,8 @@ export default function ProductCard({ p, onAddToCart }) {
       <button
         type="button"
         onClick={toggleFavorite}
-        className="absolute left-2 top-2 z-20 flex h-8 w-8 items-center justify-center border border-black/10 bg-white/90 text-black transition hover:bg-black hover:text-white"
+        disabled={!ready || favoriteLoading}
+        className="absolute left-2 top-2 z-20 flex h-8 w-8 items-center justify-center border border-black/10 bg-white/90 text-black transition hover:bg-black hover:text-white disabled:cursor-wait disabled:opacity-70"
         title="المفضلة"
       >
         {favoriteLoading ? <FiLoader className="animate-spin" size={14} /> : <FiHeart size={15} fill={favorite ? "currentColor" : "none"} />}
@@ -208,10 +223,10 @@ export default function ProductCard({ p, onAddToCart }) {
                   <Dialog.Trigger asChild>
                     <button
                       type="button"
-                      disabled={!canOpenAddDialog}
+                      disabled={!ready || !canOpenAddDialog}
                       className={[
                         "h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 border border-black/10 flex items-center justify-center transition-all duration-300",
-                        canOpenAddDialog
+                        ready && canOpenAddDialog
                           ? "hover:bg-black hover:border-black group/btn active:scale-95"
                           : "opacity-30 cursor-not-allowed",
                       ].join(" ")}

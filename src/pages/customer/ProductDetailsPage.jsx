@@ -22,7 +22,7 @@ export default function ProductDetailsPage() {
   const { productId, slug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isCustomer, isAuthenticated, session } = useAuth();
+  const { ready, isCustomer, isAuthenticated, session } = useAuth();
   const { addItem } = useCart();
   const [product, setProduct] = useState(null);
   const [productInfo, setProductInfo] = useState(null);
@@ -145,6 +145,10 @@ export default function ProductDetailsPage() {
   }, [selectedVariant?.id, product?.id]);
 
   const requireCustomer = () => {
+    if (!ready) {
+      return false;
+    }
+
     if (!isAuthenticated || !isCustomer) {
       navigate("/login", { state: { from: location } });
       return false;
@@ -440,7 +444,7 @@ export default function ProductDetailsPage() {
               <button
                 type="button"
                 onClick={addCurrentVariantToCart}
-                disabled={saving === "cart" || !selectedVariant?.id || !mallId}
+                disabled={!ready || saving === "cart" || !selectedVariant?.id || !mallId}
                 className="flex flex-1 items-center justify-center gap-2 bg-black px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {saving === "cart" ? <FiLoader className="animate-spin" /> : <FiShoppingCart />}
@@ -449,7 +453,7 @@ export default function ProductDetailsPage() {
               <button
                 type="button"
                 onClick={toggleFavorite}
-                disabled={saving === "favorite"}
+                disabled={!ready || saving === "favorite"}
                 className="inline-flex w-14 items-center justify-center border border-black/10 text-black"
                 title="المفضلة"
               >

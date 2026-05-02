@@ -21,19 +21,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let cancelled = false;
 
-    const syncFromStorage = () => {
-      if (!cancelled) {
-        setAuthState(readAuthState());
-      }
-    };
-
-    const bootstrap = async () => {
+    const hydrateAuthState = async ({ markReady = false } = {}) => {
       const current = readAuthState();
 
       if (current?.session && !isSessionExpired(current.session)) {
         if (!cancelled) {
           setAuthState(current);
-          setReady(true);
+          if (markReady) setReady(true);
         }
         return;
       }
@@ -45,6 +39,7 @@ export function AuthProvider({ children }) {
             setAuthState(refreshed);
           }
         } catch {
+          clearAuthState();
           if (!cancelled) {
             setAuthState(null);
           }
@@ -58,17 +53,33 @@ export function AuthProvider({ children }) {
         setAuthState(current);
       }
 
-      if (!cancelled) {
+      if (markReady && !cancelled) {
         setReady(true);
       }
     };
 
+    const syncFromStorage = () => {
+      hydrateAuthState().catch(() => {});
+    };
+
+    const syncWhenVisible = () => {
+      if (document.visibilityState !== "hidden") {
+        syncFromStorage();
+      }
+    };
+
     window.addEventListener(AUTH_CHANGE_EVENT, syncFromStorage);
-    bootstrap();
+    window.addEventListener("storage", syncFromStorage);
+    window.addEventListener("focus", syncFromStorage);
+    document.addEventListener("visibilitychange", syncWhenVisible);
+    hydrateAuthState({ markReady: true });
 
     return () => {
       cancelled = true;
       window.removeEventListener(AUTH_CHANGE_EVENT, syncFromStorage);
+      window.removeEventListener("storage", syncFromStorage);
+      window.removeEventListener("focus", syncFromStorage);
+      document.removeEventListener("visibilitychange", syncWhenVisible);
     };
   }, []);
 
@@ -103,28 +114,29 @@ export function AuthProvider({ children }) {
   }, []);
 
   const session = authState?.session || null;
+  const isAuthenticated = !!session && !isSessionExpired(session);
 
   const value = useMemo(
     () => ({
       ready,
       authState,
       session,
-      isAuthenticated: !!session && !isSessionExpired(session),
-      role: session?.role || "",
+      isAuthenticated,
+      role: isAuthenticated ? session?.role || "" : "",
       fullName: session?.fullName || "",
       username: session?.username || "",
       stores: session?.shopIds || [],
       selectedStoreId: session?.selectedStoreId ?? null,
       selectedMallId: session?.selectedMallId ?? null,
-      isAdmin: session?.role === ROLE_ADMIN,
-      isShopOwner: session?.role === ROLE_SHOP_OWNER,
-      isCustomer: session?.role === ROLE_CUSTOMER,
+      isAdmin: isAuthenticated && session?.role === ROLE_ADMIN,
+      isShopOwner: isAuthenticated && session?.role === ROLE_SHOP_OWNER,
+      isCustomer: isAuthenticated && session?.role === ROLE_CUSTOMER,
       login,
       logout,
       selectStore,
-      getDefaultHome: () => getHomePathForRole(session?.role || ""),
+      getDefaultHome: () => getHomePathForRole(isAuthenticated ? session?.role || "" : ""),
     }),
-    [authState, login, logout, ready, selectStore, session]
+    [authState, isAuthenticated, login, logout, ready, selectStore, session]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

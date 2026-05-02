@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { FiGrid, FiMapPin, FiRefreshCw, FiShoppingBag, FiTag, FiX } from "react-icons/fi";
 import Header from "../../components/customer/HomePageComponents/Header";
 import CategoryBar from "../../components/customer/HomePageComponents/CategoryBar";
 import AdvSection from "../../components/customer/HomePageComponents/AdvSection";
 import CategoriesBanner from "../../components/customer/HomePageComponents/CategoriesBanner";
 import ProductCard from "../../components/customer/HomePageComponents/ProductCard";
-import SectionHeader from "../../components/customer/HomePageComponents/SectionHeader";
 import ProductsRow from "../../components/customer/HomePageComponents/ProductsRow";
 import Footer from "../../components/customer/HomePageComponents/Footer";
 import { catalogApi, normalizeCatalogPage, unwrapCatalogPayload } from "../../api/catalog";
@@ -20,6 +20,97 @@ import {
 
 function asBackendId(value) {
   return value == null || value === "" ? null : Number(value);
+}
+
+function HomeNotice({ children, tone = "muted" }) {
+  const toneClass =
+    tone === "error"
+      ? "border-red-100 bg-red-50 text-red-700"
+      : "border-black/5 bg-neutral-50 text-black/55";
+
+  return (
+    <div className={`border-b px-6 py-3 text-center text-sm font-light ${toneClass}`}>
+      {children}
+    </div>
+  );
+}
+
+function HomeStatsStrip({ productsCount, categoriesCount, mallsCount, storesCount }) {
+  const items = [
+    { icon: FiGrid, label: "تصنيفات", value: categoriesCount },
+    { icon: FiShoppingBag, label: "منتجات", value: productsCount },
+    { icon: FiMapPin, label: "مولات", value: mallsCount },
+    { icon: FiTag, label: "متاجر", value: storesCount },
+  ];
+
+  return (
+    <section className="border-y border-black/5 bg-white">
+      <div className="mx-auto grid max-w-400 grid-cols-2 gap-px px-4 sm:grid-cols-4 md:px-12 2xl:max-w-[1920px]">
+        {items.map(({ icon: Icon, label, value }) => (
+          <div key={label} className="flex items-center justify-center gap-3 py-4 text-center">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-100 text-black">
+              <Icon size={15} />
+            </span>
+            <div className="text-right">
+              <div className="text-base font-semibold text-black">{value || 0}</div>
+              <div className="text-[10px] font-semibold tracking-[0.2em] text-black/45">{label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ActiveFiltersBar({
+  selectedCategory,
+  selectedMall,
+  selectedStore,
+  onClearCategory,
+  onClearMall,
+  onClearStore,
+}) {
+  const chips = [
+    selectedCategory ? { label: selectedCategory.name, onClear: onClearCategory } : null,
+    selectedMall ? { label: selectedMall.name, onClear: onClearMall } : null,
+    selectedStore ? { label: selectedStore.name, onClear: onClearStore } : null,
+  ].filter(Boolean);
+
+  if (!chips.length) return null;
+
+  return (
+    <div className="border-b border-black/5 bg-neutral-50/80 px-4 py-3">
+      <div className="mx-auto flex max-w-400 flex-wrap items-center justify-center gap-2 text-xs 2xl:max-w-[1920px]">
+        <span className="font-semibold text-black/45">النتائج الحالية حسب</span>
+        {chips.map((chip) => (
+          <button
+            key={chip.label}
+            type="button"
+            onClick={chip.onClear}
+            className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1.5 font-semibold text-black transition hover:border-black/25"
+          >
+            {chip.label}
+            <FiX size={12} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProductsEmptyState({ loading, error, emptyText }) {
+  return (
+    <div className="mt-6 flex min-h-28 items-center justify-center border border-dashed border-black/10 bg-neutral-50 px-6 text-center text-sm font-light text-black/50">
+      {loading ? (
+        <span className="inline-flex items-center gap-2">
+          <FiRefreshCw className="animate-spin" size={14} />
+          جاري تحميل المنتجات...
+        </span>
+      ) : (
+        error || emptyText
+      )}
+    </div>
+  );
 }
 
 function HeroFallback({ loading, error }) {
@@ -206,6 +297,18 @@ function HomePage() {
 
   const bestSellers = useMemo(() => products.slice(0, 10), [products]);
   const forYou = useMemo(() => products.slice(5, 15), [products]);
+  const selectedCategory = useMemo(
+    () => categories.find((category) => String(category.id) === String(selectedCategoryId)),
+    [categories, selectedCategoryId]
+  );
+  const selectedMall = useMemo(
+    () => malls.find((mall) => String(mall.id) === String(selectedMallId)),
+    [malls, selectedMallId]
+  );
+  const selectedStore = useMemo(
+    () => stores.find((store) => String(store.id) === String(selectedStoreId)),
+    [stores, selectedStoreId]
+  );
 
   return (
     <div className="min-h-screen bg-white">
@@ -224,14 +327,19 @@ function HomePage() {
       />
 
       {categoriesError || mallStoreError ? (
-        <div className="border-b border-black/5 bg-white px-6 py-3 text-center text-sm font-light text-black/50">
-          {categoriesError || mallStoreError}
-        </div>
+        <HomeNotice tone="error">{categoriesError || mallStoreError}</HomeNotice>
       ) : mallStoreLoading && !malls.length && !stores.length ? (
-        <div className="border-b border-black/5 bg-white px-6 py-3 text-center text-sm font-light text-black/40">
-          جاري تحميل المولات والمتاجر...
-        </div>
+        <HomeNotice>جاري تحميل المولات والمتاجر...</HomeNotice>
       ) : null}
+
+      <ActiveFiltersBar
+        selectedCategory={selectedCategory}
+        selectedMall={selectedMall}
+        selectedStore={selectedStore}
+        onClearCategory={() => setSelectedCategoryId(null)}
+        onClearMall={() => setSelectedMallId(null)}
+        onClearStore={() => setSelectedStoreId(null)}
+      />
 
       {/* Hero Section */}
       {heroSlides.length ? (
@@ -239,6 +347,13 @@ function HomePage() {
       ) : (
         <HeroFallback loading={adsLoading} error={adsError} />
       )}
+
+      <HomeStatsStrip
+        productsCount={products.length}
+        categoriesCount={categories.length}
+        mallsCount={malls.length}
+        storesCount={stores.length}
+      />
 
       {/* Categories Banner */}
       <CategoriesBanner categories={categories} onSelectCategory={setSelectedCategoryId} />
@@ -250,19 +365,22 @@ function HomePage() {
 
       {/* Featured */}
       <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 py-8 sm:py-10 md:py-14">
-        <SectionHeader title="أبرز المنتجات" onViewAll={() => {}} />
+        <div className="flex flex-col gap-3 border-b border-black/10 pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[10px] font-semibold tracking-[0.28em] text-black/35">كتالوج مباشر</p>
+            <h2 className="mt-2 text-2xl font-light tracking-wide text-black">أبرز المنتجات</h2>
+          </div>
+          <div className="text-xs font-light text-black/45">
+            {productsLoading ? "يتم تحديث المنتجات..." : `${featured.length} من ${products.length} منتج`}
+          </div>
+        </div>
         <div className="mt-5 sm:mt-6 md:mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
           {featured.map((p) => (
             <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
           ))}
         </div>
-        {!featured.length && productsLoading ? (
-          <div className="mt-6 text-sm text-black/50">جاري تحميل المنتجات...</div>
-        ) : null}
-        {!featured.length && !productsLoading ? (
-          <div className="mt-6 text-sm text-black/50">
-            {productsError || "لا توجد منتجات متاحة حالياً."}
-          </div>
+        {!featured.length ? (
+          <ProductsEmptyState loading={productsLoading} error={productsError} emptyText="لا توجد منتجات متاحة حالياً." />
         ) : null}
       </section>
 
@@ -286,11 +404,8 @@ function HomePage() {
           <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 relative z-10">
             <div className="flex items-center justify-between">
               <div>
-                <span
-                  className="inline-block text-[9px] sm:text-[10px] font-semibold tracking-[0.3em] uppercase px-3 py-1 mb-3 border"
-                  style={{ color: "#d4af37", borderColor: "rgba(212,175,55,0.5)" }}
-                >
-                  EXCLUSIVE SALE
+                <span className="mb-3 inline-block border border-white/20 px-3 py-1 text-[9px] font-semibold tracking-[0.28em] text-white/60 sm:text-[10px]">
+                  عروض مباشرة
                 </span>
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-white tracking-[0.12em]">
                   عروض رائعة
@@ -320,15 +435,8 @@ function HomePage() {
                 <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
               ))}
             </div>
-            {!deals.length && productsLoading ? (
-              <div className="py-8 text-center text-sm font-light text-black/50">
-                جاري تحميل العروض...
-              </div>
-            ) : null}
-            {!deals.length && !productsLoading ? (
-              <div className="py-8 text-center text-sm font-light text-black/50">
-                لا توجد عروض متاحة حالياً.
-              </div>
+            {!deals.length ? (
+              <ProductsEmptyState loading={productsLoading} error="" emptyText="لا توجد عروض متاحة حالياً." />
             ) : null}
           </div>
         </div>
