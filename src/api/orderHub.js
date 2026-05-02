@@ -58,6 +58,8 @@ export function normalizeOrderHubPage(payload) {
 
 export const orderHubApi = {
   dashboard: {
+    getAdmin: () => orderHubFetch("/dashboard/admin"),
+    getShop: (shopId) => orderHubFetch(`/dashboard/shop/${shopId}`),
     getCustomer: () => orderHubFetch("/dashboard/customer"),
   },
 
@@ -79,11 +81,29 @@ export const orderHubApi = {
       orderHubFetch(`/carts/me/mall/${mallId}/cancel`, { method: "PATCH" }),
     checkout: (mallId, body) =>
       orderHubFetch(`/carts/me/mall/${mallId}/checkout`, bodyRequest("POST", body)),
+    adminPage: (params = {}) => orderHubFetch(pagedPath("/carts/admin", params)),
   },
 
   orders: {
     pageMine: (params = {}) => orderHubFetch(pagedPath("/orders/me", params)),
     byIdMine: (shopOrderId) => orderHubFetch(`/orders/me/${shopOrderId}`),
+    shopPage: (shopId, params = {}) =>
+      orderHubFetch(pagedPath(`/orders/shop/${shopId}`, params)),
+    shopByStatus: (shopId, status, params = {}) =>
+      orderHubFetch(pagedPath(`/orders/shop/${shopId}/status/${status}`, params)),
+    shopById: (shopId, shopOrderId) =>
+      orderHubFetch(`/orders/shop/${shopId}/${shopOrderId}`),
+    advanceShopStatus: (shopId, shopOrderId) =>
+      orderHubFetch(`/orders/shop/${shopId}/${shopOrderId}/advance`, { method: "PATCH" }),
+    shopStats: (shopId) => orderHubFetch(`/orders/shop/${shopId}/stats`),
+    adminPage: (params = {}) => orderHubFetch(pagedPath("/orders/admin", params)),
+    adminById: (shopOrderId) => orderHubFetch(`/orders/admin/${shopOrderId}`),
+    adminOverride: (shopOrderId, targetStatus, reason) =>
+      orderHubFetch(
+        `/orders/admin/${shopOrderId}/override?${queryString({ targetStatus, reason })}`,
+        { method: "PATCH" }
+      ),
+    adminStats: () => orderHubFetch("/orders/admin/stats"),
   },
 
   returns: {
@@ -91,5 +111,49 @@ export const orderHubApi = {
     pageMine: (params = {}) => orderHubFetch(pagedPath("/returns/me", params)),
     byIdMine: (returnRequestId) => orderHubFetch(`/returns/me/${returnRequestId}`),
     byOrderItem: (orderItemId) => orderHubFetch(`/returns/me/order-item/${orderItemId}`),
+    shopPage: (shopId, params = {}) =>
+      orderHubFetch(pagedPath(`/returns/shop/${shopId}`, params)),
+    shopByStatus: (shopId, status, params = {}) =>
+      orderHubFetch(pagedPath(`/returns/shop/${shopId}/status/${status}`, params)),
+    shopById: (shopId, returnRequestId) =>
+      orderHubFetch(`/returns/shop/${shopId}/${returnRequestId}`),
+    approveShop: (shopId, returnRequestId) =>
+      orderHubFetch(`/returns/shop/${shopId}/${returnRequestId}/approve`, { method: "PATCH" }),
+    rejectShop: (shopId, returnRequestId, rejectionReason) =>
+      orderHubFetch(
+        `/returns/shop/${shopId}/${returnRequestId}/reject`,
+        bodyRequest("PATCH", { rejectionReason })
+      ),
+    shopStats: (shopId) => orderHubFetch(`/returns/shop/${shopId}/stats`),
+    adminPage: (params = {}) => orderHubFetch(pagedPath("/returns/admin", params)),
+    adminByStatus: (status, params = {}) =>
+      orderHubFetch(pagedPath(`/returns/admin/status/${status}`, params)),
+    adminById: (returnRequestId) => orderHubFetch(`/returns/admin/${returnRequestId}`),
+    adminStats: () => orderHubFetch("/returns/admin/stats"),
+  },
+
+  deliveries: {
+    page: (params = {}) => orderHubFetch(pagedPath("/deliveries", params)),
+    byStatus: (status, params = {}) =>
+      orderHubFetch(pagedPath(`/deliveries/status/${status}`, params)),
+    byId: (deliveryId) => orderHubFetch(`/deliveries/${deliveryId}`),
+    byCartId: (cartId) => orderHubFetch(`/deliveries/cart/${cartId}`),
+    mine: () => orderHubFetch("/deliveries/me"),
+    mineByCartId: (cartId) => orderHubFetch(`/deliveries/me/cart/${cartId}`),
+    markSent: (deliveryId) => orderHubFetch(`/deliveries/${deliveryId}/sent`, { method: "PATCH" }),
+    markOnTheWay: (deliveryId) =>
+      orderHubFetch(`/deliveries/${deliveryId}/on-the-way`, { method: "PATCH" }),
+    markDelivered: (deliveryId) =>
+      orderHubFetch(`/deliveries/${deliveryId}/delivered`, { method: "PATCH" }),
+    markFailed: (deliveryId, body) =>
+      orderHubFetch(`/deliveries/${deliveryId}/failed`, bodyRequest("PATCH", body)),
+    stats: () => orderHubFetch("/deliveries/stats"),
+  },
+
+  finance: {
+    overview: () => orderHubFetch("/finance/overview"),
+    shopPayout: (shopId) => orderHubFetch(`/finance/shops/${shopId}/payout`),
+    itemDistribution: () => orderHubFetch("/finance/items/distribution"),
+    shopReturnStats: (shopId) => orderHubFetch(`/finance/shops/${shopId}/return-stats`),
   },
 };

@@ -37,17 +37,20 @@ import CatalogOverview from "./pages/admin/Catalog/CatalogOverview.jsx";
 import CatalogMetadataPage from "./pages/admin/Catalog/CatalogMetadataPage.jsx";
 import CatalogProductsPage from "./pages/admin/Catalog/CatalogProductsPage.jsx";
 import CatalogCommentsPage from "./pages/admin/Catalog/CatalogCommentsPage.jsx";
+import OrderHubManagement from "./pages/admin/OrderHub/OrderHubManagement.jsx";
 
 import { ShopOwnerLayout } from "./components/shopOwner/layout/ShopOwnerLayout";
 import ShopOwnerDashboard from "./pages/shopOwner/ShopOwnerDashboard";
 import ShopProfile from "./pages/shopOwner/ShopProfile/ShopProfile";
 import Products from "./pages/shopOwner/Products/Products";
-import ComingSoon from "./pages/shopOwner/ComingSoon";
 import Ads from "./pages/shopOwner/Ads/Ads";
 import Offers from "./pages/shopOwner/Offers/Offers.jsx";
 import Subscription from "./pages/shopOwner/Subscription/Subscription.jsx";
 import ShopOwnerFileManager from "./pages/shopOwner/FileManager/FileManager.jsx";
 import ShopRequests from "./pages/shopOwner/ShopRequests/ShopRequests.jsx";
+import ShopOwnerOrders from "./pages/shopOwner/Orders/Orders.jsx";
+import ShopOwnerReturns from "./pages/shopOwner/Returns/Returns.jsx";
+import ShopOwnerFinance from "./pages/shopOwner/Finance/Finance.jsx";
 
 export default function App() {
   const [appearance, setAppearance] = useState("light"); // "light" | "dark"
@@ -174,7 +177,8 @@ export default function App() {
               <Route path="catalog/tags" element={<CatalogMetadataPage type="tags" />} />
               <Route path="catalog/products" element={<CatalogProductsPage />} />
               <Route path="catalog/comments" element={<CatalogCommentsPage />} />
-              <Route path="orders" element={<ShopManagement />} />
+              <Route path="orders" element={<OrderHubManagement />} />
+              <Route path="finance" element={<OrderHubManagement initialTab="finance" />} />
               <Route path="ads" element={<AdsManagement />} />
               <Route path="files" element={<AdminFileManager />} />
             </Route>
@@ -193,10 +197,10 @@ export default function App() {
               <Route path="products" element={<Products />} />
               <Route path="shop-requests" element={<ShopRequests />} />
               <Route path="files" element={<ShopOwnerFileManager />} />
-              <Route path="orders" element={<ComingSoon title="إدارة الطلبات" />} />
-              <Route path="returns" element={<ComingSoon title="إدارة الإرجاعات" />} />
+              <Route path="orders" element={<ShopOwnerOrders />} />
+              <Route path="returns" element={<ShopOwnerReturns />} />
               <Route path="ads" element={<Ads />} />
-              <Route path="finance" element={<ComingSoon title="المستحقات المالية" />} />
+              <Route path="finance" element={<ShopOwnerFinance />} />
               <Route path="offers" element={<Offers />} />
               <Route path="subscription" element={<Subscription />} />
             </Route>
