@@ -39,6 +39,20 @@ const PASSWORD_FIELD_MAP = {
   confirmNewPassword: "confirmNewPassword",
 };
 
+function splitPhoneNumber(value = "") {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return { prefix: "+970", number: "" };
+  }
+
+  const [prefix, ...rest] = normalized.split(/[-\s]+/).filter(Boolean);
+  if (prefix?.startsWith("+") && rest.length) {
+    return { prefix, number: rest.join("") };
+  }
+
+  return { prefix: "+970", number: normalized.replace(/^\+970[-\s]?/, "") };
+}
+
 export default function CustomerAccountPage() {
   const { session, logout } = useAuth();
   const [dashboard, setDashboard] = useState(null);
@@ -77,25 +91,25 @@ export default function CustomerAccountPage() {
     setLoading(true);
     setMessage(null);
     try {
-      const [dashboardResponse, userResponse, commerceDashboardResponse] = await Promise.all([
+      const [dashboardResponse, commerceDashboardResponse] = await Promise.all([
         accountsApi.dashboard.customer(),
-        accountsApi.users.byId(session.userId),
         orderHubApi.dashboard.getCustomer().catch(() => null),
       ]);
-      const user = unwrapAccountPayload(userResponse) || {};
-      setDashboard(unwrapAccountPayload(dashboardResponse));
+      const customerDashboard = unwrapAccountPayload(dashboardResponse) || {};
+      const phone = splitPhoneNumber(customerDashboard.phoneNumber);
+      setDashboard(customerDashboard);
       setCommerceDashboard(unwrapOrderHubPayload(commerceDashboardResponse));
       setForm({
-        fullName: user.fullName || "",
-        email: user.email || "",
-        prefix: user.phone?.prefix || "+970",
-        number: user.phone?.number || "",
-        gender: user.gender || "NOT_SPECIFIED",
-        age: user.age ?? "",
-        nationalIdNumber: user.nationalIdNumber || "",
-        profilePictureUuid: user.profilePictureUuid || "",
+        fullName: customerDashboard.fullName || session.fullName || "",
+        email: customerDashboard.email || "",
+        prefix: phone.prefix,
+        number: phone.number,
+        gender: customerDashboard.gender || "NOT_SPECIFIED",
+        age: customerDashboard.age ?? "",
+        nationalIdNumber: "",
+        profilePictureUuid: "",
       });
-      setProfileFile(user.profilePictureImage || user.profilePicture || null);
+      setProfileFile(null);
     } catch (error) {
       setMessage({ type: "error", text: error.message || "فشل تحميل الحساب" });
     } finally {
