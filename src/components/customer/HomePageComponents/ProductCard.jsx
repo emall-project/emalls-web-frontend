@@ -7,32 +7,89 @@ import { isDiscount as isTmpDiscount, discountAmount, isOutOfStock } from "../..
 import { getDefaultVariant, hasProductDiscount, toProductCard } from "../../../utils/catalogProducts";
 import { useAuth } from "../../../auth/AuthContext";
 import { useCart } from "../../../cart/CartContext";
-import { catalogApi } from "../../../api/catalog";
+import { catalogApi, unwrapCatalogPayload } from "../../../api/catalog";
+import { getApiErrorMessage } from "../../../utils/apiErrors";
+
+function normalizeInfoVariant(variant) {
+  const id = variant?.id ?? variant?.variantId;
+  if (id == null) return null;
+
+  return {
+    ...variant,
+    id,
+    name: variant?.name || variant?.variantName || "الخيار الأساسي",
+    basePrice: variant?.basePrice,
+    discountedPrice: variant?.discountedPrice,
+    isDefault: variant?.isDefault,
+  };
+}
+
+function findCartItemByVariant(carts, mallId, variantId) {
+  const cart = (carts || []).find((item) => String(item?.mallId) === String(mallId));
+  return (cart?.items || []).find((item) => String(item?.variantId) === String(variantId)) || null;
+}
+
+function notifyFavoritesChanged() {
+  window.dispatchEvent(new CustomEvent("emall-favorites-changed"));
+}
 
 export default function ProductCard({ p, onAddToCart }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { ready, isAuthenticated, isCustomer } = useAuth();
-  const { addItem } = useCart();
+  const { activeCarts, addItem, updateQuantity, refreshActiveCarts } = useCart();
   const product = toProductCard(p);
   const discount = hasProductDiscount(p) || isTmpDiscount(p);
   const save = product.oldPrice ? Math.max(0, product.oldPrice - product.price).toFixed(2) : discountAmount(p);
   const out = product.outOfStock || isOutOfStock(p);
-  const variants = p?.variants || [];
+  const initialVariants = useMemo(() => p?.variants || [], [p?.variants]);
   const defaultVariant = useMemo(() => getDefaultVariant(p), [p]);
   const [selectedVariantId, setSelectedVariantId] = useState(defaultVariant?.id ? String(defaultVariant.id) : "");
 
   const [open, setOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [favorite, setFavorite] = useState(Boolean(p?.favorite));
+  const [favoriteError, setFavoriteError] = useState("");
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [adding, setAdding] = useState(false);
   const [cartError, setCartError] = useState("");
+  const [productInfo, setProductInfo] = useState(p?.productInfo || null);
+  const [loadingProductInfo, setLoadingProductInfo] = useState(false);
+
+  const variants = useMemo(() => {
+    const infoVariants = (productInfo?.variants || []).map(normalizeInfoVariant).filter(Boolean);
+    const normalizedInitialVariants = initialVariants.map(normalizeInfoVariant).filter(Boolean);
+
+    if (infoVariants.length) return infoVariants;
+    if (normalizedInitialVariants.length) return normalizedInitialVariants;
+
+    const defaultVariantId = product.defaultVariantId ?? p?.defaultVariantId;
+    if (!defaultVariantId) return [];
+
+    return [
+      {
+        id: defaultVariantId,
+        name: "الخيار الأساسي",
+        basePrice: product.basePrice ?? product.price,
+        discountedPrice: product.discountedPrice,
+        isDefault: true,
+      },
+    ];
+  }, [initialVariants, p?.defaultVariantId, product.basePrice, product.defaultVariantId, product.discountedPrice, product.price, productInfo?.variants]);
 
   const selectedVariant =
-    variants.find((variant) => String(variant.id) === String(selectedVariantId)) || defaultVariant || null;
-  const mallId = Number(product.mallId ?? p?.mallId ?? p?.productInfo?.mallId ?? 0) || null;
-  const canOpenAddDialog = !out && !!mallId && !!selectedVariant?.id;
+    variants.find((variant) => String(variant.id) === String(selectedVariantId)) ||
+    variants.find((variant) => variant.isDefault) ||
+    variants[0] ||
+    defaultVariant ||
+    null;
+  const mallId = Number(productInfo?.mallId ?? product.mallId ?? p?.mallId ?? p?.productInfo?.mallId ?? 0) || null;
+  const canOpenAddDialog = ready && !out && !!product.id;
+
+  const existingCartItem = useMemo(() => {
+    if (!mallId || !selectedVariant?.id) return null;
+    return findCartItemByVariant(activeCarts, mallId, selectedVariant.id);
+  }, [activeCarts, mallId, selectedVariant?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,10 +120,68 @@ export default function ProductCard({ p, onAddToCart }) {
   }, [isAuthenticated, isCustomer, p?.favorite, product.id, ready]);
 
   useEffect(() => {
-    setSelectedVariantId(defaultVariant?.id ? String(defaultVariant.id) : "");
+    const nextDefault =
+      variants.find((variant) => variant.isDefault) ||
+      variants.find((variant) => String(variant.id) === String(product.defaultVariantId ?? p?.defaultVariantId)) ||
+      variants[0] ||
+      defaultVariant;
+
+    setSelectedVariantId(nextDefault?.id ? String(nextDefault.id) : "");
     setQuantity(1);
     setCartError("");
-  }, [defaultVariant?.id, product.id]);
+  }, [defaultVariant, p?.defaultVariantId, product.defaultVariantId, product.id, variants]);
+
+  const loadProductInfo = async () => {
+    if (!product.id) return null;
+    if (productInfo?.mallId && productInfo?.variants?.length) return productInfo;
+
+    setLoadingProductInfo(true);
+    setCartError("");
+
+    try {
+      const response = await catalogApi.products.info(product.id);
+      const info = unwrapCatalogPayload(response);
+      setProductInfo(info || null);
+
+      const defaultInfoVariant =
+        info?.variants?.find((variant) => variant.isDefault) ||
+        info?.variants?.[0] ||
+        null;
+      if (defaultInfoVariant?.variantId || defaultInfoVariant?.id) {
+        setSelectedVariantId(String(defaultInfoVariant.variantId ?? defaultInfoVariant.id));
+      }
+
+      return info;
+    } catch (error) {
+      setCartError(getApiErrorMessage(error, "تعذر تحميل خيارات المنتج"));
+      return null;
+    } finally {
+      setLoadingProductInfo(false);
+    }
+  };
+
+  const handleOpenChange = async (nextOpen) => {
+    if (!nextOpen) {
+      setOpen(false);
+      return;
+    }
+
+    if (!ready) {
+      return;
+    }
+
+    if (!isAuthenticated || !isCustomer) {
+      navigate("/login", { state: { from: location } });
+      return;
+    }
+
+    if (!product.id || out) {
+      return;
+    }
+
+    setOpen(true);
+    await loadProductInfo();
+  };
 
   const handleAdd = async () => {
     if (!ready) {
@@ -78,7 +193,15 @@ export default function ProductCard({ p, onAddToCart }) {
       return;
     }
 
-    if (!mallId || !selectedVariant?.id) {
+    const info = !mallId || !selectedVariant?.id ? await loadProductInfo() : productInfo;
+    const resolvedMallId = Number(info?.mallId ?? mallId ?? 0) || null;
+    const resolvedVariant =
+      selectedVariant ||
+      (info?.variants || []).map(normalizeInfoVariant).filter(Boolean).find((variant) => variant.isDefault) ||
+      (info?.variants || []).map(normalizeInfoVariant).filter(Boolean)[0] ||
+      null;
+
+    if (!resolvedMallId || !resolvedVariant?.id) {
       setCartError("لا يمكن إضافة هذا المنتج الآن لأن بيانات المول أو المتغير غير مكتملة.");
       return;
     }
@@ -87,24 +210,46 @@ export default function ProductCard({ p, onAddToCart }) {
     setCartError("");
 
     const payload = {
-      mallId,
+      mallId: resolvedMallId,
       productId: Number(product.id),
-      variantId: Number(selectedVariant.id),
+      variantId: Number(resolvedVariant.id),
       quantity,
     };
 
     try {
-      const nextCart = await addItem(payload);
+      const activeCartItem =
+        findCartItemByVariant(activeCarts, resolvedMallId, resolvedVariant.id) || existingCartItem;
+
+      const nextCart = activeCartItem?.cartItemId
+        ? await updateQuantity(activeCartItem.cartItemId, {
+            quantity: Number(activeCartItem.quantity || 0) + quantity,
+          })
+        : await addItem(payload);
       await onAddToCart?.({
         ...product,
-        mallId,
+        mallId: resolvedMallId,
         quantity,
-        variantId: Number(selectedVariant.id),
+        variantId: Number(resolvedVariant.id),
       }, nextCart);
       setOpen(false);
       setQuantity(1);
     } catch (error) {
-      setCartError(error.message || "فشلت إضافة المنتج إلى السلة");
+      const message = getApiErrorMessage(error, "فشلت إضافة المنتج إلى السلة");
+      if (message.includes("موجود")) {
+        const refreshedCarts = await refreshActiveCarts().catch(() => []);
+        const refreshedItem = findCartItemByVariant(refreshedCarts, resolvedMallId, resolvedVariant.id);
+
+        if (refreshedItem?.cartItemId) {
+          await updateQuantity(refreshedItem.cartItemId, {
+            quantity: Number(refreshedItem.quantity || 0) + quantity,
+          });
+          setOpen(false);
+          setQuantity(1);
+          return;
+        }
+      }
+
+      setCartError(message);
     } finally {
       setAdding(false);
     }
@@ -128,13 +273,27 @@ export default function ProductCard({ p, onAddToCart }) {
     if (!product.id) return;
 
     setFavoriteLoading(true);
+    setFavoriteError("");
     try {
       if (favorite) {
         await catalogApi.favorites.deleteProduct(product.id);
         setFavorite(false);
+        notifyFavoritesChanged();
       } else {
         await catalogApi.favorites.create(product.id);
         setFavorite(true);
+        notifyFavoritesChanged();
+      }
+    } catch (error) {
+      const message = getApiErrorMessage(error, "فشل تحديث المفضلة");
+      if (message.includes("موجود")) {
+        setFavorite(true);
+        notifyFavoritesChanged();
+      } else if (message.includes("غير موجود")) {
+        setFavorite(false);
+        notifyFavoritesChanged();
+      } else {
+        setFavoriteError(message);
       }
     } finally {
       setFavoriteLoading(false);
@@ -216,7 +375,7 @@ export default function ProductCard({ p, onAddToCart }) {
           </div>
 
           {/* Add to cart button - smaller */}
-          <Dialog.Root open={open} onOpenChange={setOpen}>
+          <Dialog.Root open={open} onOpenChange={handleOpenChange}>
             <Tooltip.Provider delayDuration={200}>
               <Tooltip.Root>
                 <Tooltip.Trigger asChild>
@@ -234,10 +393,6 @@ export default function ProductCard({ p, onAddToCart }) {
                       title={
                         out
                           ? "المنتج غير متاح"
-                          : !mallId
-                          ? "لا يمكن تحديد المول لهذا المنتج"
-                          : !selectedVariant?.id
-                          ? "لا يوجد متغير صالح للإضافة"
                           : "إضافة إلى السلة"
                       }
                     >
@@ -254,10 +409,6 @@ export default function ProductCard({ p, onAddToCart }) {
                   >
                     {out
                       ? "نفذت الكمية"
-                      : !mallId
-                      ? "بيانات المول غير متاحة"
-                      : !selectedVariant?.id
-                      ? "اختر متغيرًا صالحًا"
                       : "إضافة للسلة"}
                     <Tooltip.Arrow className="fill-black" />
                   </Tooltip.Content>
@@ -303,6 +454,12 @@ export default function ProductCard({ p, onAddToCart }) {
                   </div>
                 ) : null}
 
+                {favoriteError ? (
+                  <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {favoriteError}
+                  </div>
+                ) : null}
+
                 {/* Product info */}
                 <div className="mt-5 flex items-center gap-4">
                   <img
@@ -317,7 +474,12 @@ export default function ProductCard({ p, onAddToCart }) {
                     <p className="text-base sm:text-lg text-black font-semibold mt-1">
                       ₪{selectedVariant?.discountedPrice ?? selectedVariant?.basePrice ?? product.price}
                     </p>
-                    {mallId ? (
+                    {loadingProductInfo ? (
+                      <p className="mt-1 flex items-center gap-1 text-xs text-black/45">
+                        <FiLoader className="animate-spin" size={11} />
+                        جاري تحميل خيارات المنتج...
+                      </p>
+                    ) : mallId ? (
                       <p className="mt-1 text-xs text-black/45">مول رقم #{mallId}</p>
                     ) : null}
                   </div>
@@ -352,6 +514,12 @@ export default function ProductCard({ p, onAddToCart }) {
                         );
                       })}
                     </div>
+                  </div>
+                ) : null}
+
+                {!loadingProductInfo && !variants.length ? (
+                  <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    لا توجد خيارات متاحة لهذا المنتج حالياً.
                   </div>
                 ) : null}
 
@@ -408,7 +576,7 @@ export default function ProductCard({ p, onAddToCart }) {
                   <button
                     type="button"
                     onClick={handleAdd}
-                    disabled={adding}
+                    disabled={adding || loadingProductInfo || !mallId || !selectedVariant?.id}
                     className="flex-1 h-11 sm:h-12 bg-black text-white text-xs sm:text-sm tracking-widest uppercase font-semibold hover:bg-black/90 transition-all duration-300 disabled:opacity-60"
                   >
                     {adding ? "جارٍ الإضافة..." : "إضافة"}

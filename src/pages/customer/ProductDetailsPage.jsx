@@ -10,6 +10,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { useCart } from "../../cart/CartContext";
 import { getDefaultVariant, getProductImage, getProductPrice, getProductOldPrice, toProductCard } from "../../utils/catalogProducts";
 import { getMediaPreviewUrl } from "../../api/mediaManager";
+import { getApiErrorMessage } from "../../utils/apiErrors";
 
 function formatPrice(value) {
   return Number(value || 0).toLocaleString("ar", {
@@ -18,12 +19,16 @@ function formatPrice(value) {
   });
 }
 
+function notifyFavoritesChanged() {
+  window.dispatchEvent(new CustomEvent("emall-favorites-changed"));
+}
+
 export default function ProductDetailsPage() {
   const { productId, slug } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const { ready, isCustomer, isAuthenticated, session } = useAuth();
-  const { addItem } = useCart();
+  const { activeCarts, addItem, updateQuantity, refreshActiveCarts } = useCart();
   const [product, setProduct] = useState(null);
   const [productInfo, setProductInfo] = useState(null);
   const [attributes, setAttributes] = useState([]);
@@ -163,12 +168,23 @@ export default function ProductDetailsPage() {
       if (favorite) {
         await catalogApi.favorites.deleteProduct(product.id);
         setFavorite(false);
+        notifyFavoritesChanged();
       } else {
         await catalogApi.favorites.create(product.id);
         setFavorite(true);
+        notifyFavoritesChanged();
       }
     } catch (requestError) {
-      setError(requestError.message || "فشل تحديث المفضلة");
+      const message = getApiErrorMessage(requestError, "فشل تحديث المفضلة");
+      if (message.includes("موجود")) {
+        setFavorite(true);
+        notifyFavoritesChanged();
+      } else if (message.includes("غير موجود")) {
+        setFavorite(false);
+        notifyFavoritesChanged();
+      } else {
+        setError(message);
+      }
     } finally {
       setSaving("");
     }
@@ -282,14 +298,41 @@ export default function ProductDetailsPage() {
     setError("");
 
     try {
-      await addItem({
-        mallId,
-        productId: Number(product.id),
-        variantId: Number(selectedVariant.id),
-        quantity,
-      });
+      const existingCart = activeCarts.find((cart) => String(cart?.mallId) === String(mallId));
+      const existingItem = (existingCart?.items || []).find(
+        (item) => String(item?.variantId) === String(selectedVariant.id)
+      );
+
+      if (existingItem?.cartItemId) {
+        await updateQuantity(existingItem.cartItemId, {
+          quantity: Number(existingItem.quantity || 0) + quantity,
+        });
+      } else {
+        await addItem({
+          mallId,
+          productId: Number(product.id),
+          variantId: Number(selectedVariant.id),
+          quantity,
+        });
+      }
     } catch (requestError) {
-      setError(requestError.message || "فشل إضافة المنتج إلى السلة");
+      const message = getApiErrorMessage(requestError, "فشل إضافة المنتج إلى السلة");
+      if (message.includes("موجود")) {
+        const refreshedCarts = await refreshActiveCarts().catch(() => []);
+        const refreshedCart = refreshedCarts.find((cart) => String(cart?.mallId) === String(mallId));
+        const refreshedItem = (refreshedCart?.items || []).find(
+          (item) => String(item?.variantId) === String(selectedVariant.id)
+        );
+
+        if (refreshedItem?.cartItemId) {
+          await updateQuantity(refreshedItem.cartItemId, {
+            quantity: Number(refreshedItem.quantity || 0) + quantity,
+          });
+          return;
+        }
+      }
+
+      setError(message);
     } finally {
       setSaving("");
     }

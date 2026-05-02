@@ -17,6 +17,7 @@ function Header() {
   const { ready, isAuthenticated, role, isCustomer, fullName } = useAuth();
   const { totalCartQuantity } = useCart();
   const [favoritesCount, setFavoritesCount] = useState(0);
+  const [favoritesVersion, setFavoritesVersion] = useState(0);
   const [cartOpen, setCartOpen] = useState(false);
 
   const handleAccountClick = () => {
@@ -48,6 +49,12 @@ function Header() {
   };
 
   useEffect(() => {
+    const handleFavoritesChanged = () => setFavoritesVersion((current) => current + 1);
+    window.addEventListener("emall-favorites-changed", handleFavoritesChanged);
+    return () => window.removeEventListener("emall-favorites-changed", handleFavoritesChanged);
+  }, []);
+
+  useEffect(() => {
     if (!ready) {
       return;
     }
@@ -69,7 +76,7 @@ function Header() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, isCustomer, ready]);
+  }, [favoritesVersion, isAuthenticated, isCustomer, ready]);
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-black/10">
