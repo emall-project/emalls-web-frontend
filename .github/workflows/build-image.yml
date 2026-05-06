@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE_NAME: catalog
+  IMAGE_NAME: frontend
   DOCKERHUB_NAMESPACE: ${{ secrets.DOCKERHUB_USERNAME }}
 
 jobs:
