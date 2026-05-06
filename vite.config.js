@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     host: true,
-    allowedHosts: ['e-mall.store'],
+    allowedHosts: ['e-mall.store', 'e-mall.site'],
     proxy: {
       '/accounts': {
         target: 'https://api.e-mall.store',

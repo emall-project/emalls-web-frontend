@@ -1,0 +1,12 @@
+services:
+  emalls-web-frontend:
+    build:
+      context: .
+      args:
+        VITE_STRIPE_PUBLISHABLE: ${VITE_STRIPE_PUBLISHABLE_KEY:-}
+    image: emalls-web-frontend:local
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    environment:
+      API_UPSTREAM: ${API_UPSTREAM:-https://api.e-mall.store}
+    restart: unless-stopped

@@ -2041,7 +2041,7 @@ export default function Products({
           <table className="w-full text-sm" style={{ minWidth: 700 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--gray-a6)", background: "var(--gray-a2)", color: "var(--gray-11)" }}>
-                {["المنتج", "الفئة", "المتغيرات", "الحالة", "الإجراءات"].map((h) => (
+                {["المنتج", "الفئة", "البراند", "المتغيرات", "الحالة", "الإجراءات"].map((h) => (
                   <th key={h} className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -2092,12 +2092,27 @@ export default function Products({
 
                       {/* Category */}
                       <td className="px-5 py-4">
-                        {product.categoryId != null ? (
+                        {product.categoryName != null ? (
                           <span
                             className="px-2.5 py-1 rounded-full text-xs font-medium"
                             style={{ background: "var(--blue-a3)", color: "var(--blue-11)" }}
                           >
-                            {product.categoryId}
+                            {product.categoryName}
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--gray-9)" }}>—</span>
+                        )}
+                      </td>
+
+
+                      {/* Brand */}
+                      <td className="px-5 py-4">
+                        {product.brandName != null ? (
+                          <span
+                            className="px-2.5 py-1 rounded-full text-xs font-medium"
+                            style={{ background: "var(--blue-a3)", color: "var(--blue-11)" }}
+                          >
+                            {product.brandName}
                           </span>
                         ) : (
                           <span style={{ color: "var(--gray-9)" }}>—</span>
