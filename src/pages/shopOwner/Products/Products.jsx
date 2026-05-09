@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import * as DDMenu from "@radix-ui/react-dropdown-menu";
 import * as Dialog from "@radix-ui/react-dialog";
-import { FiPlus, FiMoreVertical, FiEdit2, FiTrash2, FiPower, FiSearch, FiX, FiLoader, FiAlertCircle, FiChevronLeft, FiChevronRight, FiImage } from "react-icons/fi";
+import { FiPlus, FiMoreVertical, FiEdit2, FiTrash2, FiPower, FiSearch, FiX, FiLoader, FiAlertCircle, FiChevronDown, FiChevronLeft, FiChevronRight, FiChevronUp, FiImage } from "react-icons/fi";
 import { useAuth } from "../../../auth/AuthContext";
 import { productsApi } from "./api";
 import { AUDIENCE_OPTIONS, AGE_GROUP_OPTIONS, STATUS_COLORS } from "./constants";
@@ -89,8 +89,7 @@ function StyleInjector() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function useThemeContainer() {
-  const [c, setC] = useState(null);
-  useEffect(() => { setC(document.querySelector(".radix-themes") || document.body); }, []);
+  const [c] = useState(() => document.querySelector(".radix-themes") || document.body);
   return c;
 }
 
@@ -104,6 +103,18 @@ function normalizeVariantMedia(media = []) {
 
 function unwrapData(response) {
   return response?.data ?? response ?? null;
+}
+
+function nextSortState(current, field) {
+  if (current.field !== field) {
+    return { field, direction: "asc" };
+  }
+
+  if (current.direction === "asc") {
+    return { field, direction: "desc" };
+  }
+
+  return { field: "", direction: "" };
 }
 
 function buildProductBasePayload(form) {
@@ -1722,6 +1733,25 @@ function DeleteDialog({ open, onOpenChange, product, onConfirm, loading }) {
   );
 }
 
+function ProductSortableTh({ field, sort, onSort, children }) {
+  const active = sort.field === field;
+  const Icon = sort.direction === "asc" ? FiChevronUp : FiChevronDown;
+
+  return (
+    <th className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">
+      <button
+        type="button"
+        onClick={() => onSort(field)}
+        className="inline-flex items-center gap-1 font-semibold"
+        style={{ color: active ? "var(--blue-11)" : "inherit" }}
+      >
+        <span>{children}</span>
+        {active ? <Icon size={13} /> : null}
+      </button>
+    </th>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function Products({
   storeIdOverride = null,
@@ -1745,8 +1775,11 @@ export default function Products({
   const [filterCategoryId, setFilterCategoryId] = useState("");
   const [filterBrandId, setFilterBrandId] = useState("");
   const [filterIsActive, setFilterIsActive] = useState("");
+  const [filterTargetedAudience, setFilterTargetedAudience] = useState("");
+  const [filterAgeGroup, setFilterAgeGroup] = useState("");
   const [filterCategories, setFilterCategories] = useState([]);
   const [filterBrands, setFilterBrands] = useState([]);
+  const [sort, setSort] = useState({ field: "", direction: "" });
   const debounceRef = useRef(null);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -1784,6 +1817,9 @@ export default function Products({
         categoryId: filterCategoryId,
         brandId: filterBrandId,
         isActive: filterIsActive,
+        targetedAudience: filterTargetedAudience,
+        ageGroup: filterAgeGroup,
+        sort: sort.field ? `${sort.field},${sort.direction}` : "",
       });
       const data = res?.data || res?.content || res || {};
       const list = Array.isArray(data) ? data : (data?.content || []);
@@ -1796,7 +1832,18 @@ export default function Products({
     } finally {
       setFetchLoading(false);
     }
-  }, [filterBrandId, filterCategoryId, filterIsActive, page, search, selectedStoreId]);
+  }, [
+    filterAgeGroup,
+    filterBrandId,
+    filterCategoryId,
+    filterIsActive,
+    filterTargetedAudience,
+    page,
+    search,
+    selectedStoreId,
+    sort.direction,
+    sort.field,
+  ]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
@@ -1808,6 +1855,11 @@ export default function Products({
       setSearch(val);
       setPage(0);
     }, 400);
+  };
+
+  const handleSort = (field) => {
+    setSort((current) => nextSortState(current, field));
+    setPage(0);
   };
 
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
@@ -1999,13 +2051,43 @@ export default function Products({
               <span className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none text-xs" style={{ color: "var(--gray-9)" }}>▾</span>
             </div>
 
+            {/* Audience filter */}
+            <div className="relative min-w-[150px]">
+              <select
+                className="prod-select"
+                value={filterTargetedAudience}
+                onChange={e => { setFilterTargetedAudience(e.target.value); setPage(0); }}
+                style={{ paddingLeft: "28px" }}
+              >
+                <option value="">كل الجمهور</option>
+                {AUDIENCE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none text-xs" style={{ color: "var(--gray-9)" }}>▾</span>
+            </div>
+
+            {/* Age group filter */}
+            <div className="relative min-w-[160px]">
+              <select
+                className="prod-select"
+                value={filterAgeGroup}
+                onChange={e => { setFilterAgeGroup(e.target.value); setPage(0); }}
+                style={{ paddingLeft: "28px" }}
+              >
+                <option value="">كل الأعمار</option>
+                {AGE_GROUP_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none text-xs" style={{ color: "var(--gray-9)" }}>▾</span>
+            </div>
+
             {/* Clear all */}
-            {(searchInput || filterCategoryId || filterBrandId || filterIsActive) && (
+            {(searchInput || filterCategoryId || filterBrandId || filterIsActive || filterTargetedAudience || filterAgeGroup || sort.field) && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchInput(""); setSearch("");
                   setFilterCategoryId(""); setFilterBrandId(""); setFilterIsActive("");
+                  setFilterTargetedAudience(""); setFilterAgeGroup("");
+                  setSort({ field: "", direction: "" });
                   setPage(0);
                 }}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition hover:opacity-80"
@@ -2041,15 +2123,18 @@ export default function Products({
           <table className="w-full text-sm" style={{ minWidth: 700 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--gray-a6)", background: "var(--gray-a2)", color: "var(--gray-11)" }}>
-                {["المنتج", "الفئة", "البراند", "المتغيرات", "الحالة", "الإجراءات"].map((h) => (
+                <ProductSortableTh field="name" sort={sort} onSort={handleSort}>المنتج</ProductSortableTh>
+                {["الفئة", "البراند", "المتغيرات"].map((h) => (
                   <th key={h} className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">{h}</th>
                 ))}
+                <ProductSortableTh field="isActive" sort={sort} onSort={handleSort}>الحالة</ProductSortableTh>
+                <th className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
               {fetchLoading ? (
                 <tr>
-                  <td colSpan={5} className="py-16 text-center">
+                  <td colSpan={6} className="py-16 text-center">
                     <div className="flex items-center justify-center gap-2" style={{ color: "var(--gray-10)" }}>
                       <Spinner size={20} /> جاري التحميل...
                     </div>
@@ -2057,7 +2142,7 @@ export default function Products({
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-16 text-center text-sm" style={{ color: "var(--gray-10)" }}>
+                  <td colSpan={6} className="py-16 text-center text-sm" style={{ color: "var(--gray-10)" }}>
                     لا توجد منتجات مطابقة.
                   </td>
                 </tr>

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   FiAlertCircle,
+  FiChevronDown,
+  FiChevronUp,
   FiEdit2,
   FiImage,
   FiLoader,
@@ -27,6 +29,7 @@ const RESOURCE_CONFIG = {
     audienceFields: true,
     parentField: true,
     columns: ["image", "name", "slug", "audience", "parent", "status"],
+    sortableFields: ["name", "slug", "targetedAudience", "ageGroup", "isActive", "depthLevel", "createdAt", "updatedAt"],
   },
   brands: {
     title: "إدارة البراندات",
@@ -36,6 +39,7 @@ const RESOURCE_CONFIG = {
     imageField: true,
     audienceFields: true,
     columns: ["image", "name", "slug", "audience", "status"],
+    sortableFields: ["name", "slug", "targetedAudience", "ageGroup", "isActive", "createdAt", "updatedAt"],
   },
   attributes: {
     title: "إدارة الخصائص",
@@ -44,6 +48,7 @@ const RESOURCE_CONFIG = {
     searchKey: "name",
     attributeFields: true,
     columns: ["name", "slug", "type", "options", "status"],
+    sortableFields: ["name", "slug", "attributeType", "isActive", "createdAt", "updatedAt"],
   },
   tags: {
     title: "إدارة الوسوم",
@@ -52,8 +57,16 @@ const RESOURCE_CONFIG = {
     searchKey: "name",
     tagOnly: true,
     columns: ["name"],
+    sortableFields: ["name", "createdAt", "updatedAt"],
   },
 };
+
+const ATTRIBUTE_TYPE_OPTIONS = [{ value: "SELECT", label: "اختيار" }];
+
+const ROOT_CATEGORY_OPTIONS = [
+  { value: "true", label: "فئات رئيسية" },
+  { value: "false", label: "فئات فرعية" },
+];
 
 const inputClass =
   "w-full rounded-xl border px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
@@ -64,11 +77,7 @@ const inputStyle = {
 };
 
 function useThemeContainer() {
-  const [container, setContainer] = useState(null);
-
-  useEffect(() => {
-    setContainer(document.querySelector(".radix-themes") || document.body);
-  }, []);
+  const [container] = useState(() => document.querySelector(".radix-themes") || document.body);
 
   return container;
 }
@@ -85,6 +94,45 @@ function slugify(value) {
 
 function fileId(file) {
   return file?.id || file?.fileId ? String(file.id || file.fileId) : "";
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString("ar", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function labelFor(options, value) {
+  return options.find((option) => option.value === value)?.label || value || "—";
+}
+
+function nextSortState(current, field) {
+  if (current.field !== field) {
+    return { field, direction: "asc" };
+  }
+
+  if (current.direction === "asc") {
+    return { field, direction: "desc" };
+  }
+
+  return { field: "", direction: "" };
+}
+
+function tableColumnCount(config) {
+  return 7 + config.columns.filter((column) => column !== "name").length;
 }
 
 function defaultForm(type) {
@@ -468,7 +516,11 @@ function CatalogFormDialog({
           await Promise.all(
             [
               ...audienceConfig.filter((configItem) => !configItem.id),
-              ...changedExisting.map(({ id, ...configItem }) => configItem),
+              ...changedExisting.map((configItem) => {
+                const nextConfig = { ...configItem };
+                delete nextConfig.id;
+                return nextConfig;
+              }),
             ].map((configItem) => catalogApi.categories.addAudienceConfig(form.id, configItem))
           );
         } else {
@@ -860,6 +912,12 @@ export default function CatalogMetadataPage({ type }) {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [isActive, setIsActive] = useState("");
+  const [targetedAudience, setTargetedAudience] = useState("");
+  const [ageGroup, setAgeGroup] = useState("");
+  const [parentId, setParentId] = useState("");
+  const [isRoot, setIsRoot] = useState("");
+  const [attributeType, setAttributeType] = useState("");
+  const [sort, setSort] = useState({ field: "", direction: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [parentLoading, setParentLoading] = useState(false);
@@ -876,8 +934,29 @@ export default function CatalogMetadataPage({ type }) {
     const next = { page, size: 20 };
     if (search.trim()) next[config.searchKey] = search.trim();
     if (!config.tagOnly && isActive !== "") next.isActive = isActive;
+    if (config.audienceFields && targetedAudience) next.targetedAudience = targetedAudience;
+    if (config.audienceFields && ageGroup) next.ageGroup = ageGroup;
+    if (type === "categories" && parentId) next.parentId = parentId;
+    if (type === "categories" && isRoot !== "") next.isRoot = isRoot;
+    if (type === "attributes" && attributeType) next.type = attributeType;
+    if (sort.field) next.sort = `${sort.field},${sort.direction}`;
     return next;
-  }, [config.searchKey, config.tagOnly, isActive, page, search]);
+  }, [
+    ageGroup,
+    attributeType,
+    config.audienceFields,
+    config.searchKey,
+    config.tagOnly,
+    isActive,
+    isRoot,
+    page,
+    parentId,
+    search,
+    sort.direction,
+    sort.field,
+    targetedAudience,
+    type,
+  ]);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -947,6 +1026,38 @@ export default function CatalogMetadataPage({ type }) {
     }
   };
 
+  const handleSort = (field) => {
+    if (!config.sortableFields.includes(field)) {
+      return;
+    }
+
+    setSort((current) => nextSortState(current, field));
+    setPage(0);
+  };
+
+  const clearFilters = () => {
+    setSearch("");
+    setIsActive("");
+    setTargetedAudience("");
+    setAgeGroup("");
+    setParentId("");
+    setIsRoot("");
+    setAttributeType("");
+    setSort({ field: "", direction: "" });
+    setPage(0);
+  };
+
+  const hasActiveFilters =
+    search ||
+    isActive !== "" ||
+    targetedAudience ||
+    ageGroup ||
+    parentId ||
+    isRoot !== "" ||
+    attributeType ||
+    sort.field;
+  const columnCount = tableColumnCount(config);
+
   return (
     <div dir="rtl" className="space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -995,6 +1106,108 @@ export default function CatalogMetadataPage({ type }) {
               <option value="false">غير نشط</option>
             </select>
           ) : null}
+          {config.audienceFields ? (
+            <select
+              className={inputClass}
+              style={{ ...inputStyle, width: 170 }}
+              value={targetedAudience}
+              onChange={(event) => {
+                setTargetedAudience(event.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="">كل الجمهور</option>
+              {AUDIENCE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {config.audienceFields ? (
+            <select
+              className={inputClass}
+              style={{ ...inputStyle, width: 180 }}
+              value={ageGroup}
+              onChange={(event) => {
+                setAgeGroup(event.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="">كل الأعمار</option>
+              {AGE_GROUP_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {type === "categories" ? (
+            <select
+              className={inputClass}
+              style={{ ...inputStyle, width: 190 }}
+              value={parentId}
+              onChange={(event) => {
+                setParentId(event.target.value);
+                setPage(0);
+              }}
+              disabled={parentLoading}
+            >
+              <option value="">كل الفئات الأب</option>
+              {allCategories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {type === "categories" ? (
+            <select
+              className={inputClass}
+              style={{ ...inputStyle, width: 170 }}
+              value={isRoot}
+              onChange={(event) => {
+                setIsRoot(event.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="">كل المستويات</option>
+              {ROOT_CATEGORY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {type === "attributes" ? (
+            <select
+              className={inputClass}
+              style={{ ...inputStyle, width: 160 }}
+              value={attributeType}
+              onChange={(event) => {
+                setAttributeType(event.target.value);
+                setPage(0);
+              }}
+            >
+              <option value="">كل الأنواع</option>
+              {ATTRIBUTE_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold"
+              style={{ background: "var(--red-a3)", color: "var(--red-11)" }}
+            >
+              <FiX />
+              مسح
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={fetchItems}
@@ -1015,24 +1228,29 @@ export default function CatalogMetadataPage({ type }) {
 
       <div className="overflow-hidden rounded-2xl border" style={{ background: "var(--gray-1)", borderColor: "var(--gray-a7)" }}>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm" style={{ minWidth: 760 }}>
+          <table className="w-full text-sm" style={{ minWidth: 1280 }}>
             <thead style={{ background: "var(--gray-a2)", color: "var(--gray-11)" }}>
               <tr>
                 {config.columns.includes("image") ? <Th>الصورة</Th> : null}
-                <Th>الاسم</Th>
-                {config.columns.includes("slug") ? <Th>الرابط</Th> : null}
-                {config.columns.includes("audience") ? <Th>الجمهور</Th> : null}
+                <SortableTh field="name" sort={sort} onSort={handleSort}>الاسم</SortableTh>
+                {config.columns.includes("slug") ? <SortableTh field="slug" sort={sort} onSort={handleSort}>الرابط</SortableTh> : null}
+                {config.columns.includes("audience") ? <SortableTh field="targetedAudience" sort={sort} onSort={handleSort}>الجمهور</SortableTh> : null}
                 {config.columns.includes("parent") ? <Th>الأب</Th> : null}
-                {config.columns.includes("type") ? <Th>النوع</Th> : null}
+                {config.columns.includes("type") ? <SortableTh field="attributeType" sort={sort} onSort={handleSort}>النوع</SortableTh> : null}
                 {config.columns.includes("options") ? <Th>القيم</Th> : null}
-                {config.columns.includes("status") ? <Th>الحالة</Th> : null}
+                {config.columns.includes("status") ? <SortableTh field="isActive" sort={sort} onSort={handleSort}>الحالة</SortableTh> : null}
+                <Th>المنتجات</Th>
+                <SortableTh field="createdAt" sort={sort} onSort={handleSort}>تاريخ الإنشاء</SortableTh>
+                <Th>أنشئ بواسطة</Th>
+                <SortableTh field="updatedAt" sort={sort} onSort={handleSort}>آخر تحديث</SortableTh>
+                <Th>حُدث بواسطة</Th>
                 <Th>الإجراءات</Th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-14 text-center" style={{ color: "var(--gray-10)" }}>
+                  <td colSpan={columnCount} className="py-14 text-center" style={{ color: "var(--gray-10)" }}>
                     <FiLoader className="mx-auto animate-spin" />
                   </td>
                 </tr>
@@ -1045,7 +1263,11 @@ export default function CatalogMetadataPage({ type }) {
                       {item.id != null ? <div className="text-xs" style={{ color: "var(--gray-10)" }}>#{item.id}</div> : null}
                     </Td>
                     {config.columns.includes("slug") ? <Td><span dir="ltr">{item.slug}</span></Td> : null}
-                    {config.columns.includes("audience") ? <Td>{item.targetedAudience || "ALL"} / {item.ageGroup || "ALL"}</Td> : null}
+                    {config.columns.includes("audience") ? (
+                      <Td>
+                        {labelFor(AUDIENCE_OPTIONS, item.targetedAudience || "ALL")} / {labelFor(AGE_GROUP_OPTIONS, item.ageGroup || "ALL")}
+                      </Td>
+                    ) : null}
                     {config.columns.includes("parent") ? (
                       <Td>
                         {item.parentId
@@ -1053,9 +1275,14 @@ export default function CatalogMetadataPage({ type }) {
                           : "—"}
                       </Td>
                     ) : null}
-                    {config.columns.includes("type") ? <Td>{item.attributeType || "SELECT"}</Td> : null}
+                    {config.columns.includes("type") ? <Td>{labelFor(ATTRIBUTE_TYPE_OPTIONS, item.attributeType || "SELECT")}</Td> : null}
                     {config.columns.includes("options") ? <Td>{item.options?.length || 0}</Td> : null}
                     {config.columns.includes("status") ? <Td><StatusBadge active={item.isActive} /></Td> : null}
+                    <Td>{item.productsCount ?? 0}</Td>
+                    <Td>{formatDateTime(item.createdAt)}</Td>
+                    <Td>{item.createdBy || "—"}</Td>
+                    <Td>{formatDateTime(item.updatedAt)}</Td>
+                    <Td>{item.updatedBy || "—"}</Td>
                     <Td>
                       <div className="flex items-center gap-2">
                         <button type="button" onClick={() => openEdit(item)} className="rounded-lg border p-2" style={{ borderColor: "var(--gray-a6)", color: "var(--gray-12)" }}>
@@ -1076,7 +1303,7 @@ export default function CatalogMetadataPage({ type }) {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-14 text-center" style={{ color: "var(--gray-10)" }}>
+                  <td colSpan={columnCount} className="py-14 text-center" style={{ color: "var(--gray-10)" }}>
                     لا توجد بيانات.
                   </td>
                 </tr>
@@ -1114,6 +1341,25 @@ export default function CatalogMetadataPage({ type }) {
 
 function Th({ children }) {
   return <th className="px-5 py-3 text-right text-xs font-semibold">{children}</th>;
+}
+
+function SortableTh({ field, sort, onSort, children }) {
+  const active = sort.field === field;
+  const Icon = sort.direction === "asc" ? FiChevronUp : FiChevronDown;
+
+  return (
+    <Th>
+      <button
+        type="button"
+        onClick={() => onSort(field)}
+        className="inline-flex items-center gap-1 font-semibold"
+        style={{ color: active ? "var(--blue-11)" : "inherit" }}
+      >
+        <span>{children}</span>
+        {active ? <Icon size={13} /> : null}
+      </button>
+    </Th>
+  );
 }
 
 function Td({ children }) {

@@ -1,14 +1,30 @@
 import { catalogApi } from "../../../api/catalog";
 
 export const productsApi = {
-	getAll: (storeId, { page = 0, size = 20, name = "", slug = "", categoryId = "", brandId = "", isActive = "" } = {}) => {
+	getAll: (
+		storeId,
+		{
+			page = 0,
+			size = 20,
+			name = "",
+			slug = "",
+			categoryId = "",
+			brandId = "",
+			isActive = "",
+			targetedAudience = "",
+			ageGroup = "",
+			sort = "",
+		} = {}
+	) => {
 		const filter = {};
 		if (name) filter.q = name;
 		if (slug) filter.slug = slug;
 		if (categoryId) filter.categoryId = Number(categoryId);
 		if (brandId) filter.brandId = Number(brandId);
 		if (isActive !== "") filter.isActive = isActive === true || isActive === "true";
-		return catalogApi.products.storePage(storeId, filter, { page, size });
+		if (targetedAudience) filter.targetedAudience = targetedAudience;
+		if (ageGroup) filter.ageGroup = ageGroup;
+		return catalogApi.products.storePage(storeId, filter, { page, size, sort });
 	},
 	getById: (storeId, id) => catalogApi.products.storeById(storeId, id),
 	create: (storeId, body) => catalogApi.products.create(storeId, body),
