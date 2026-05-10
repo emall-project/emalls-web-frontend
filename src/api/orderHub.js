@@ -61,6 +61,8 @@ export const orderHubApi = {
     getAdmin: () => orderHubFetch("/dashboard/admin"),
     getShop: (shopId) => orderHubFetch(`/dashboard/shop/${shopId}`),
     getCustomer: () => orderHubFetch("/dashboard/customer"),
+    publicMostOrdered: (limit = 10) =>
+      orderHubFetch(`/dashboard/products/most-ordered/public?${queryString({ limit })}`),
   },
 
   carts: {

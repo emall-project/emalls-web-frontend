@@ -26,6 +26,28 @@ export const productsApi = {
 		if (ageGroup) filter.ageGroup = ageGroup;
 		return catalogApi.products.storePage(storeId, filter, { page, size, sort });
 	},
+	getSummary: (
+		storeId,
+		{
+			name = "",
+			slug = "",
+			categoryId = "",
+			brandId = "",
+			isActive = "",
+			targetedAudience = "",
+			ageGroup = "",
+		} = {}
+	) => {
+		const filter = {};
+		if (name) filter.q = name;
+		if (slug) filter.slug = slug;
+		if (categoryId) filter.categoryId = Number(categoryId);
+		if (brandId) filter.brandId = Number(brandId);
+		if (isActive !== "") filter.isActive = isActive === true || isActive === "true";
+		if (targetedAudience) filter.targetedAudience = targetedAudience;
+		if (ageGroup) filter.ageGroup = ageGroup;
+		return catalogApi.products.storeSummary(storeId, filter);
+	},
 	getById: (storeId, id) => catalogApi.products.storeById(storeId, id),
 	create: (storeId, body) => catalogApi.products.create(storeId, body),
 	update: (storeId, body) => catalogApi.products.update(storeId, body),

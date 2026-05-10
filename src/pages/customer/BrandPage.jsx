@@ -4,9 +4,10 @@ import { FiRefreshCw, FiTag } from "react-icons/fi";
 import Header from "../../components/customer/HomePageComponents/Header";
 import Footer from "../../components/customer/HomePageComponents/Footer";
 import ProductCard from "../../components/customer/HomePageComponents/ProductCard";
-import CatalogFilters, { buildCatalogFilterPayload } from "../../components/customer/CatalogFilters";
+import CatalogFilters from "../../components/customer/CatalogFilters";
 import { catalogApi, normalizeCatalogPage, unwrapCatalogPayload } from "../../api/catalog";
 import { toProductCard } from "../../utils/catalogProducts";
+import { buildCatalogFilterPayload } from "../../utils/catalogFilters";
 import { mapCatalogBrand } from "../../utils/customerBackendMappers";
 
 const defaultFilters = {
@@ -122,7 +123,15 @@ export default function BrandPage() {
         </section>
 
         <div className="mt-6">
-          <CatalogFilters filters={filters} onChange={setFilters} compact hiddenFields={["brandId"]} />
+          <CatalogFilters
+            filters={filters}
+            onChange={setFilters}
+            compact
+            hiddenFields={["brandId"]}
+            summaryScope="public"
+            fixedSummaryFilter={brand?.id ? { brandId: Number(brand.id) } : {}}
+            summaryEnabled={Boolean(brand?.id)}
+          />
         </div>
 
         {error ? <div className="mt-6 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}

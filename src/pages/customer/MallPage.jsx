@@ -18,7 +18,8 @@ import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
 import { catalogApi, normalizeCatalogPage, unwrapCatalogPayload } from "../../api/catalog";
 import { campaignsApi, unwrapCampaignPayload } from "../../api/campaigns";
 import { hasProductDiscount, toProductCard } from "../../utils/catalogProducts";
-import CatalogFilters, { buildCatalogFilterPayload } from "../../components/customer/CatalogFilters";
+import CatalogFilters from "../../components/customer/CatalogFilters";
+import { buildCatalogFilterPayload } from "../../utils/catalogFilters";
 import { mapAccountMall, mapAccountShop, mapCatalogCategory, mapDisplayedAd } from "../../utils/customerBackendMappers";
 
 function mapMallService(service) {
@@ -76,6 +77,14 @@ function MallPage() {
     ageGroup: "",
     selectedOptionsByAttribute: {},
   });
+  const mallSummaryScopeFilter = useMemo(
+    () => ({
+      mallId: Number(mallId),
+      ...(selectedCategoryId ? { categoryId: Number(selectedCategoryId) } : {}),
+      ...(selectedStoreId ? { storeId: Number(selectedStoreId) } : {}),
+    }),
+    [mallId, selectedCategoryId, selectedStoreId]
+  );
 
   const filteredMallProducts = useMemo(() => {
     return mallAllProducts;
@@ -299,7 +308,13 @@ function MallPage() {
         ) : null}
 
         <div className="mb-8">
-          <CatalogFilters filters={filters} onChange={setFilters} compact />
+          <CatalogFilters
+            filters={filters}
+            onChange={setFilters}
+            compact
+            summaryScope="public"
+            fixedSummaryFilter={mallSummaryScopeFilter}
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10">

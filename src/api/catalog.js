@@ -105,6 +105,10 @@ export const catalogApi = {
       catalogFetch(pagedPath("/products/all", params), bodyRequest("POST", cleanBody(filter))),
     publicSummary: (filter = {}) =>
       catalogFetch("/products/summary", bodyRequest("POST", cleanBody(filter))),
+    random: (limit = 10) =>
+      catalogFetch(`/products/random?${cleanParams({ limit })}`),
+    byIds: (productIds = []) =>
+      catalogFetch("/products/by-ids", bodyRequest("POST", { productIds })),
     byId: (id) => catalogFetch(`/products/${id}`),
     bySlug: (slug) => catalogFetch(`/products/slug/${encodeURIComponent(slug)}`),
     info: (id) => catalogFetch(`/products/${id}/info`),

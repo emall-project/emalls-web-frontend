@@ -4,9 +4,10 @@ import { FiChevronLeft, FiGrid, FiRefreshCw } from "react-icons/fi";
 import Header from "../../components/customer/HomePageComponents/Header";
 import Footer from "../../components/customer/HomePageComponents/Footer";
 import ProductCard from "../../components/customer/HomePageComponents/ProductCard";
-import CatalogFilters, { buildCatalogFilterPayload } from "../../components/customer/CatalogFilters";
+import CatalogFilters from "../../components/customer/CatalogFilters";
 import { catalogApi, normalizeCatalogPage, unwrapCatalogPayload } from "../../api/catalog";
 import { toProductCard } from "../../utils/catalogProducts";
+import { buildCatalogFilterPayload } from "../../utils/catalogFilters";
 import { mapCatalogCategory } from "../../utils/customerBackendMappers";
 
 const defaultFilters = {
@@ -85,6 +86,10 @@ export default function CategoryPage() {
     const ids = [Number(category?.id), ...descendantIds].filter(Number.isFinite);
     return Array.from(new Set(ids));
   }, [category?.id, descendantIds]);
+  const categorySummaryScopeFilter = useMemo(
+    () => (categoryIds.length ? { categoryIds } : {}),
+    [categoryIds]
+  );
 
   useEffect(() => {
     if (!categoryIds.length) {
@@ -178,7 +183,15 @@ export default function CategoryPage() {
         ) : null}
 
         <div className="mt-6">
-          <CatalogFilters filters={filters} onChange={setFilters} compact hiddenFields={["categoryId"]} />
+          <CatalogFilters
+            filters={filters}
+            onChange={setFilters}
+            compact
+            hiddenFields={["categoryId"]}
+            summaryScope="public"
+            fixedSummaryFilter={categorySummaryScopeFilter}
+            summaryEnabled={categoryIds.length > 0}
+          />
         </div>
 
         {error ? <div className="mt-6 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}

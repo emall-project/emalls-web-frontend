@@ -1,17 +1,17 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { FiGrid, FiMapPin, FiRefreshCw, FiShoppingBag, FiTag, FiX } from "react-icons/fi";
+import React, { useEffect, useMemo, useState } from "react";
+import { FiGrid, FiMapPin, FiRefreshCw, FiShoppingBag, FiTag } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import Header from "../../components/customer/HomePageComponents/Header";
 import CategoryBar from "../../components/customer/HomePageComponents/CategoryBar";
 import AdvSection from "../../components/customer/HomePageComponents/AdvSection";
 import CategoriesBanner from "../../components/customer/HomePageComponents/CategoriesBanner";
-import ProductCard from "../../components/customer/HomePageComponents/ProductCard";
 import ProductsRow from "../../components/customer/HomePageComponents/ProductsRow";
 import Footer from "../../components/customer/HomePageComponents/Footer";
-import { catalogApi, normalizeCatalogPage, unwrapCatalogPayload } from "../../api/catalog";
+import { catalogApi, unwrapCatalogPayload } from "../../api/catalog";
 import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
 import { campaignsApi, unwrapCampaignPayload } from "../../api/campaigns";
-import { hasProductDiscount, toProductCard } from "../../utils/catalogProducts";
+import { orderHubApi, unwrapOrderHubPayload } from "../../api/orderHub";
+import { toProductCard } from "../../utils/catalogProducts";
 import {
   mapAccountMall,
   mapAccountShop,
@@ -20,9 +20,7 @@ import {
   mapDisplayedAd,
 } from "../../utils/customerBackendMappers";
 
-function asBackendId(value) {
-  return value == null || value === "" ? null : Number(value);
-}
+const HOME_ROW_LIMIT = 10;
 
 function HomeNotice({ children, tone = "muted" }) {
   const toneClass =
@@ -64,42 +62,6 @@ function HomeStatsStrip({ productsCount, categoriesCount, mallsCount, storesCoun
   );
 }
 
-function ActiveFiltersBar({
-  selectedCategory,
-  selectedMall,
-  selectedStore,
-  onClearCategory,
-  onClearMall,
-  onClearStore,
-}) {
-  const chips = [
-    selectedCategory ? { label: selectedCategory.name, onClear: onClearCategory } : null,
-    selectedMall ? { label: selectedMall.name, onClear: onClearMall } : null,
-    selectedStore ? { label: selectedStore.name, onClear: onClearStore } : null,
-  ].filter(Boolean);
-
-  if (!chips.length) return null;
-
-  return (
-    <div className="border-b border-black/5 bg-neutral-50/80 px-4 py-3">
-      <div className="mx-auto flex max-w-400 flex-wrap items-center justify-center gap-2 text-xs 2xl:max-w-[1920px]">
-        <span className="font-semibold text-black/45">النتائج الحالية حسب</span>
-        {chips.map((chip) => (
-          <button
-            key={chip.label}
-            type="button"
-            onClick={chip.onClear}
-            className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-1.5 font-semibold text-black transition hover:border-black/25"
-          >
-            {chip.label}
-            <FiX size={12} />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function ProductsEmptyState({ loading, error, emptyText }) {
   return (
     <div className="mt-6 flex min-h-28 items-center justify-center border border-dashed border-black/10 bg-neutral-50 px-6 text-center text-sm font-light text-black/50">
@@ -112,6 +74,66 @@ function ProductsEmptyState({ loading, error, emptyText }) {
         error || emptyText
       )}
     </div>
+  );
+}
+
+function productIdFromRow(row) {
+  const id = row?.productId ?? row?.id;
+  const numericId = Number(id);
+  return Number.isFinite(numericId) ? numericId : null;
+}
+
+function orderedUniqueProductIds(rows = []) {
+  const seen = new Set();
+  const ids = [];
+
+  rows.forEach((row) => {
+    const id = productIdFromRow(row);
+    if (id != null && !seen.has(id)) {
+      seen.add(id);
+      ids.push(id);
+    }
+  });
+
+  return ids;
+}
+
+function orderProductsByIds(products = [], productIds = []) {
+  const productById = new Map(
+    products
+      .map((product) => [String(product?.id), product])
+      .filter(([id]) => id && id !== "undefined")
+  );
+
+  return productIds
+    .map((id) => productById.get(String(id)))
+    .filter(Boolean);
+}
+
+async function hydrateProductsByIds(productIds = []) {
+  const ids = orderedUniqueProductIds(productIds.map((productId) => ({ productId })));
+  if (!ids.length) {
+    return [];
+  }
+
+  const response = await catalogApi.products.byIds(ids);
+  const products = (unwrapCatalogPayload(response) || []).map(toProductCard);
+  return orderProductsByIds(products, ids);
+}
+
+function HomeProductRow({ title, products, loading, error, emptyText, onViewAll }) {
+  if (products.length) {
+    return <ProductsRow title={title} products={products} onViewAll={onViewAll} />;
+  }
+
+  return (
+    <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 py-8 md:py-10">
+      <div className="border-b border-black/10 pb-4 text-right">
+        <h2 className="text-2xl font-light tracking-wide text-black">{title}</h2>
+      </div>
+      <ProductsEmptyState loading={loading} error={error} emptyText={emptyText} />
+      <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mt-8" />
+    </section>
   );
 }
 
@@ -333,8 +355,6 @@ function BrandsHomeSection({ brands = [], loading, error }) {
 
 function HomePage() {
   const navigate = useNavigate();
-  const productsAnchorRef = useRef(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedMallId, setSelectedMallId] = useState(null);
   const [selectedStoreId, setSelectedStoreId] = useState(null);
 
@@ -356,9 +376,17 @@ function HomePage() {
   const [adsLoading, setAdsLoading] = useState(false);
   const [adsError, setAdsError] = useState("");
 
-  const [products, setProducts] = useState([]);
-  const [productsLoading, setProductsLoading] = useState(false);
-  const [productsError, setProductsError] = useState("");
+  const [suggestedProducts, setSuggestedProducts] = useState([]);
+  const [suggestedLoading, setSuggestedLoading] = useState(false);
+  const [suggestedError, setSuggestedError] = useState("");
+
+  const [bestSellerProducts, setBestSellerProducts] = useState([]);
+  const [bestSellersLoading, setBestSellersLoading] = useState(false);
+  const [bestSellersError, setBestSellersError] = useState("");
+
+  const [saleProducts, setSaleProducts] = useState([]);
+  const [saleProductsLoading, setSaleProductsLoading] = useState(false);
+  const [saleProductsError, setSaleProductsError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -480,68 +508,95 @@ function HomePage() {
 
   useEffect(() => {
     let cancelled = false;
-    const filter = {};
-    const categoryId = asBackendId(selectedCategoryId);
-    const mallId = asBackendId(selectedMallId);
-    const storeId = asBackendId(selectedStoreId);
+    setSuggestedLoading(true);
+    setSuggestedError("");
 
-    if (categoryId) filter.categoryId = categoryId;
-    if (storeId) {
-      filter.storeId = storeId;
-    } else if (mallId) {
-      filter.mallId = mallId;
-    }
-
-    setProductsLoading(true);
-    setProductsError("");
-
-    catalogApi.products.publicPage(filter, { page: 0, size: 30 })
+    catalogApi.products.random(HOME_ROW_LIMIT)
       .then((response) => {
         if (!cancelled) {
-          setProducts(normalizeCatalogPage(response).content.map(toProductCard));
+          setSuggestedProducts((unwrapCatalogPayload(response) || []).map(toProductCard));
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setProducts([]);
-          setProductsError("تعذر تحميل المنتجات.");
+          setSuggestedProducts([]);
+          setSuggestedError("تعذر تحميل المنتجات المقترحة.");
         }
       })
       .finally(() => {
-        if (!cancelled) setProductsLoading(false);
+        if (!cancelled) setSuggestedLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [selectedCategoryId, selectedMallId, selectedStoreId]);
+  }, []);
 
-  const deals = useMemo(
-    () => products.filter((product) => hasProductDiscount(product)).slice(0, 5),
-    [products]
-  );
+  useEffect(() => {
+    let cancelled = false;
+    setBestSellersLoading(true);
+    setBestSellersError("");
 
-  const featured = useMemo(() => products.slice(0, 5), [products]);
+    orderHubApi.dashboard.publicMostOrdered(HOME_ROW_LIMIT)
+      .then(async (response) => {
+        const rows = unwrapOrderHubPayload(response) || [];
+        const productIds = orderedUniqueProductIds(rows);
+        const products = await hydrateProductsByIds(productIds);
+        if (!cancelled) {
+          setBestSellerProducts(products);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBestSellerProducts([]);
+          setBestSellersError("تعذر تحميل المنتجات الأكثر مبيعًا.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setBestSellersLoading(false);
+      });
 
-  const bestSellers = useMemo(() => products.slice(0, 10), [products]);
-  const forYou = useMemo(() => products.slice(5, 15), [products]);
-  const selectedCategory = useMemo(
-    () => categories.find((category) => String(category.id) === String(selectedCategoryId)),
-    [categories, selectedCategoryId]
-  );
-  const selectedMall = useMemo(
-    () => malls.find((mall) => String(mall.id) === String(selectedMallId)),
-    [malls, selectedMallId]
-  );
-  const selectedStore = useMemo(
-    () => stores.find((store) => String(store.id) === String(selectedStoreId)),
-    [stores, selectedStoreId]
-  );
-  const scrollToProducts = () => {
-    window.requestAnimationFrame(() => {
-      productsAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSaleProductsLoading(true);
+    setSaleProductsError("");
+
+    campaignsApi.offers.publicActiveProducts(HOME_ROW_LIMIT)
+      .then(async (response) => {
+        const rows = unwrapCampaignPayload(response) || [];
+        const productIds = orderedUniqueProductIds(rows);
+        const products = await hydrateProductsByIds(productIds);
+        if (!cancelled) {
+          setSaleProducts(products);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSaleProducts([]);
+          setSaleProductsError("تعذر تحميل العروضات المميزة.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setSaleProductsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const productsCount = useMemo(() => {
+    const ids = new Set();
+    [...suggestedProducts, ...bestSellerProducts, ...saleProducts].forEach((product) => {
+      if (product?.id != null) ids.add(String(product.id));
     });
-  };
+    return ids.size;
+  }, [bestSellerProducts, saleProducts, suggestedProducts]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -549,8 +604,14 @@ function HomePage() {
 
       <CategoryBar
         categories={categories}
-        selectedCategoryId={selectedCategoryId}
-        onSelectCategory={setSelectedCategoryId}
+        selectedCategoryId={null}
+        onSelectCategory={(categoryId) => {
+          if (categoryId) {
+            navigate(`/categories/${categoryId}`);
+          } else {
+            navigate("/search");
+          }
+        }}
         malls={malls}
         stores={stores}
         selectedStoreId={selectedStoreId}
@@ -561,15 +622,6 @@ function HomePage() {
 
       {categoriesError ? <HomeNotice tone="error">{categoriesError}</HomeNotice> : null}
 
-      <ActiveFiltersBar
-        selectedCategory={selectedCategory}
-        selectedMall={selectedMall}
-        selectedStore={selectedStore}
-        onClearCategory={() => setSelectedCategoryId(null)}
-        onClearMall={() => setSelectedMallId(null)}
-        onClearStore={() => setSelectedStoreId(null)}
-      />
-
       {/* Hero Section */}
       {heroSlides.length ? (
         <AdvSection imgsUrl={heroSlides} intervalMs={5000} page="home" />
@@ -578,7 +630,7 @@ function HomePage() {
       )}
 
       <HomeStatsStrip
-        productsCount={products.length}
+        productsCount={productsCount}
         categoriesCount={categories.length}
         mallsCount={malls.length}
         storesCount={stores.length}
@@ -589,14 +641,8 @@ function HomePage() {
         stores={stores}
         loading={mallStoreLoading}
         error={mallStoreError}
-        onSelectMall={(id) => {
-          setSelectedMallId(id);
-          scrollToProducts();
-        }}
-        onSelectStore={(id) => {
-          setSelectedStoreId(id);
-          scrollToProducts();
-        }}
+        onSelectMall={(id) => navigate(`/malls/${id}`)}
+        onSelectStore={(id) => navigate(`/stores/${id}`)}
       />
 
       {/* Categories Banner */}
@@ -612,101 +658,31 @@ function HomePage() {
 
       <BrandsHomeSection brands={brands} loading={brandsLoading} error={brandsError} />
 
-      {/* Featured */}
-      <div ref={productsAnchorRef} className="scroll-mt-32" />
-      <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 py-8 sm:py-10 md:py-14">
-        <div className="flex flex-col gap-3 border-b border-black/10 pb-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-[10px] font-semibold tracking-[0.28em] text-black/35">كتالوج مباشر</p>
-            <h2 className="mt-2 text-2xl font-light tracking-wide text-black">أبرز المنتجات</h2>
-          </div>
-          <div className="text-xs font-light text-black/45">
-            {productsLoading ? "يتم تحديث المنتجات..." : `${featured.length} من ${products.length} منتج`}
-          </div>
-        </div>
-        <div className="mt-5 sm:mt-6 md:mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-          {featured.map((p) => (
-            <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
-          ))}
-        </div>
-        {!featured.length ? (
-          <ProductsEmptyState loading={productsLoading} error={productsError} emptyText="لا توجد منتجات متاحة حالياً." />
-        ) : null}
-      </section>
-
-      {/* Deals */}
-      <section className="w-full">
-        {/* Banner header */}
-        <div
-          className="relative w-full overflow-hidden py-10 sm:py-12 md:py-16"
-          style={{ background: "linear-gradient(135deg, #0a0a0a 0%, #1c1c1c 60%, #111111 100%)" }}
-        >
-          {/* Gold shine sweep */}
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "linear-gradient(120deg, transparent 30%, rgba(212,175,55,0.08) 50%, transparent 70%)" }} />
-          {/* Subtle top gold line */}
-          <div className="absolute top-0 inset-x-0 h-px"
-            style={{ background: "linear-gradient(to right, transparent, rgba(212,175,55,0.6), transparent)" }} />
-          {/* Subtle bottom gold line */}
-          <div className="absolute bottom-0 inset-x-0 h-px"
-            style={{ background: "linear-gradient(to right, transparent, rgba(212,175,55,0.4), transparent)" }} />
-
-          <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 relative z-10">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="mb-3 inline-block border border-white/20 px-3 py-1 text-[9px] font-semibold tracking-[0.28em] text-white/60 sm:text-[10px]">
-                  عروض مباشرة
-                </span>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-white tracking-[0.12em]">
-                  عروض رائعة
-                </h2>
-                <p className="mt-2 text-white/40 text-[10px] sm:text-xs font-light tracking-[0.25em] uppercase">
-                  أسعار استثنائية — لفترة محدودة
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => navigate("/search")}
-                className="shrink-0 text-[10px] sm:text-xs tracking-[0.25em] uppercase font-light px-5 sm:px-6 py-2.5 sm:py-3 border transition-all duration-300"
-                style={{ color: "#d4af37", borderColor: "rgba(212,175,55,0.5)" }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#d4af37"; e.currentTarget.style.color = "#0a0a0a"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#d4af37"; }}
-              >
-                عرض الكل
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Products */}
-        <div className="w-full bg-white border-b border-black/5 py-8 sm:py-10 md:py-12">
-          <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-              {deals.map((p) => (
-                <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
-              ))}
-            </div>
-            {!deals.length ? (
-              <ProductsEmptyState loading={productsLoading} error="" emptyText="لا توجد عروض متاحة حالياً." />
-            ) : null}
-          </div>
-        </div>
-      </section>
-
-      {/* Products Rows */}
-      <ProductsRow
-        title="الأكثر ملائمة لك"
-        products={forYou}
+      <HomeProductRow
+        title="مقترح لك"
+        products={suggestedProducts}
+        loading={suggestedLoading}
+        error={suggestedError}
+        emptyText="لا توجد منتجات مقترحة حالياً."
         onViewAll={() => navigate("/search")}
-        onAddToCart={() => {}}
       />
 
-      <ProductsRow
-        title="الأكثر مبيعًا"
-        products={bestSellers}
+      <HomeProductRow
+        title="الأكثر مبيعا"
+        products={bestSellerProducts}
+        loading={bestSellersLoading}
+        error={bestSellersError}
+        emptyText="لا توجد منتجات مباعة بعد."
         onViewAll={() => navigate("/search")}
-        onAddToCart={() => {}}
+      />
+
+      <HomeProductRow
+        title="عروضات مميزة"
+        products={saleProducts}
+        loading={saleProductsLoading}
+        error={saleProductsError}
+        emptyText="لا توجد عروضات مميزة حالياً."
+        onViewAll={() => navigate("/search")}
       />
 
       <Footer />

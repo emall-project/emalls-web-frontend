@@ -112,6 +112,8 @@ export const campaignsApi = {
   offers: {
     page: (params = {}) => campaignFetch(pagedPath("/api/offers", params)),
     all: (params = {}) => campaignFetch(pagedPath("/api/offers/all", params)),
+    publicActiveProducts: (limit = 10) =>
+      campaignFetch(`/api/offers/products/active/public?${cleanParams({ limit })}`),
     byId: (offerId) => campaignFetch(`/api/offers/${offerId}`),
     byShop: (shopId) => campaignFetch(`/api/offers/shop/${shopId}`),
     byShopStatus: (shopId, status) => campaignFetch(`/api/offers/shop/${shopId}/status/${status}`),

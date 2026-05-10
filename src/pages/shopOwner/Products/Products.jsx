@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import * as DDMenu from "@radix-ui/react-dropdown-menu";
 import * as Dialog from "@radix-ui/react-dialog";
 import { FiPlus, FiMoreVertical, FiEdit2, FiTrash2, FiPower, FiSearch, FiX, FiLoader, FiAlertCircle, FiChevronDown, FiChevronLeft, FiChevronRight, FiChevronUp, FiImage } from "react-icons/fi";
@@ -115,6 +115,21 @@ function nextSortState(current, field) {
   }
 
   return { field: "", direction: "" };
+}
+
+function mergeSelectedSummaryItem(items, selectedId, fallbackPrefix) {
+  if (!selectedId || items.some((item) => String(item.id) === String(selectedId))) {
+    return items;
+  }
+
+  return [
+    ...items,
+    {
+      id: selectedId,
+      name: `${fallbackPrefix} #${selectedId}`,
+      totalProduct: 0,
+    },
+  ];
 }
 
 function buildProductBasePayload(form) {
@@ -1777,8 +1792,7 @@ export default function Products({
   const [filterIsActive, setFilterIsActive] = useState("");
   const [filterTargetedAudience, setFilterTargetedAudience] = useState("");
   const [filterAgeGroup, setFilterAgeGroup] = useState("");
-  const [filterCategories, setFilterCategories] = useState([]);
-  const [filterBrands, setFilterBrands] = useState([]);
+  const [filterSummary, setFilterSummary] = useState(null);
   const [sort, setSort] = useState({ field: "", direction: "" });
   const debounceRef = useRef(null);
 
@@ -1794,9 +1808,102 @@ export default function Products({
   const showToast = useCallback((message, type = "success") => setToast({ message, type }), []);
 
   useEffect(() => {
-    productsApi.getCategories().then(r => setFilterCategories(r?.data || [])).catch(() => {});
-    productsApi.getBrands().then(r => setFilterBrands(r?.data || [])).catch(() => {});
-  }, []);
+    let cancelled = false;
+
+    if (!selectedStoreId) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    productsApi.getSummary(selectedStoreId, {
+      name: search,
+      categoryId: filterCategoryId,
+      brandId: filterBrandId,
+      isActive: filterIsActive,
+      targetedAudience: filterTargetedAudience,
+      ageGroup: filterAgeGroup,
+    })
+      .then((response) => {
+        if (!cancelled) {
+          setFilterSummary(unwrapData(response) || null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFilterSummary(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    filterAgeGroup,
+    filterBrandId,
+    filterCategoryId,
+    filterIsActive,
+    filterTargetedAudience,
+    search,
+    selectedStoreId,
+  ]);
+
+  const filterCategories = useMemo(
+    () =>
+      mergeSelectedSummaryItem(
+        (filterSummary?.categories || []).map((category) => ({
+          id: category.id,
+          name: category.name,
+          totalProduct: category.totalProduct ?? 0,
+        })),
+        filterCategoryId,
+        "فئة"
+      ),
+    [filterCategoryId, filterSummary?.categories]
+  );
+
+  const filterBrands = useMemo(
+    () =>
+      mergeSelectedSummaryItem(
+        (filterSummary?.brands || []).map((brand) => ({
+          id: brand.id,
+          name: brand.name,
+          totalProduct: brand.totalProduct ?? 0,
+        })),
+        filterBrandId,
+        "براند"
+      ),
+    [filterBrandId, filterSummary?.brands]
+  );
+
+  const filterAudienceOptions = useMemo(() => {
+    const distribution = filterSummary?.audienceDistribution || {};
+    const countsByAudience = {
+      MALE: distribution.productForMales ?? 0,
+      FEMALE: distribution.productForFemales ?? 0,
+      ALL: distribution.productForAll ?? 0,
+    };
+
+    return AUDIENCE_OPTIONS.filter(
+      (option) => (countsByAudience[option.value] ?? 0) > 0 || filterTargetedAudience === option.value
+    );
+  }, [filterSummary?.audienceDistribution, filterTargetedAudience]);
+
+  const filterAgeOptions = useMemo(() => {
+    const distribution = filterSummary?.ageDisTribution || {};
+    const countsByAge = {
+      NEWBORN: distribution.productSForNewborn ?? 0,
+      INFANT: distribution.productSForInfant ?? 0,
+      TODDLER: distribution.productSForToddler ?? 0,
+      CHILD: distribution.productSForChild ?? 0,
+      TEENAGER: distribution.productSForTeenager ?? 0,
+      YOUTH: distribution.productSForYouth ?? 0,
+      ADULT: distribution.productSForAdult ?? 0,
+      ALL: distribution.productSForAll ?? 0,
+    };
+
+    return AGE_GROUP_OPTIONS.filter(
+      (option) => (countsByAge[option.value] ?? 0) > 0 || filterAgeGroup === option.value
+    );
+  }, [filterAgeGroup, filterSummary?.ageDisTribution]);
 
   const fetchProducts = useCallback(async () => {
     if (!selectedStoreId) {
@@ -2060,7 +2167,7 @@ export default function Products({
                 style={{ paddingLeft: "28px" }}
               >
                 <option value="">كل الجمهور</option>
-                {AUDIENCE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                {filterAudienceOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
               <span className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none text-xs" style={{ color: "var(--gray-9)" }}>▾</span>
             </div>
@@ -2074,7 +2181,7 @@ export default function Products({
                 style={{ paddingLeft: "28px" }}
               >
                 <option value="">كل الأعمار</option>
-                {AGE_GROUP_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                {filterAgeOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
               <span className="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none text-xs" style={{ color: "var(--gray-9)" }}>▾</span>
             </div>

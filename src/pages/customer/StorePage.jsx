@@ -7,7 +7,8 @@ import SectionHeader from "../../components/customer/HomePageComponents/SectionH
 import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
 import { catalogApi, normalizeCatalogPage } from "../../api/catalog";
 import { toProductCard } from "../../utils/catalogProducts";
-import CatalogFilters, { buildCatalogFilterPayload } from "../../components/customer/CatalogFilters";
+import CatalogFilters from "../../components/customer/CatalogFilters";
+import { buildCatalogFilterPayload } from "../../utils/catalogFilters";
 import { mapAccountShop } from "../../utils/customerBackendMappers";
 
 export default function StorePage() {
@@ -100,7 +101,13 @@ export default function StorePage() {
         <SectionHeader title="منتجات المتجر" onViewAll={() => {}} />
 
         <div className="mt-5">
-          <CatalogFilters filters={filters} onChange={setFilters} compact />
+          <CatalogFilters
+            filters={filters}
+            onChange={setFilters}
+            compact
+            summaryScope="store"
+            summaryStoreId={Number(storeId)}
+          />
         </div>
 
         {storeError ? <div className="mt-6 border border-black/10 bg-white px-4 py-3 text-sm text-black/60">{storeError}</div> : null}

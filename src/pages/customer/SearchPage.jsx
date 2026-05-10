@@ -11,7 +11,8 @@ import {
 import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
 import { catalogApi, normalizeCatalogPage } from "../../api/catalog";
 import { toProductCard } from "../../utils/catalogProducts";
-import CatalogFilters, { buildCatalogFilterPayload, hasCatalogFilters } from "../../components/customer/CatalogFilters";
+import CatalogFilters from "../../components/customer/CatalogFilters";
+import { buildCatalogFilterPayload, hasCatalogFilters } from "../../utils/catalogFilters";
 import { mapAccountMall, mapAccountShop, toMallSearchItem, toShopSearchItem } from "../../utils/customerBackendMappers";
 
 function useQueryParam(name) {
@@ -40,6 +41,13 @@ export default function SearchPage() {
     ageGroup: "",
     selectedOptionsByAttribute: {},
   });
+  const summaryScopeFilter = useMemo(
+    () => ({
+      ...(q.trim().length >= 2 ? { q: q.trim() } : {}),
+      ...(mallIdParam ? { mallId: Number(mallIdParam) } : {}),
+    }),
+    [mallIdParam, q]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -218,7 +226,12 @@ export default function SearchPage() {
         </div>
 
         <div className="mb-8">
-          <CatalogFilters filters={filters} onChange={setFilters} />
+          <CatalogFilters
+            filters={filters}
+            onChange={setFilters}
+            summaryScope="public"
+            fixedSummaryFilter={summaryScopeFilter}
+          />
         </div>
 
         {directoryError || productsError ? (
