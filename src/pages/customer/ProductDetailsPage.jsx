@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiFlag, FiHeart, FiImage, FiLoader, FiMessageSquare, FiMinus, FiPlus, FiSend, FiShoppingCart, FiStar, FiTrash2 } from "react-icons/fi";
+import * as Dialog from "@radix-ui/react-dialog";
 import { useLocation } from "react-router-dom";
 import Header from "../../components/customer/HomePageComponents/Header";
 import Footer from "../../components/customer/HomePageComponents/Footer";
@@ -23,6 +24,14 @@ function notifyFavoritesChanged() {
   window.dispatchEvent(new CustomEvent("emall-favorites-changed"));
 }
 
+function getDisplayMediaUrl(file) {
+  return getMediaPreviewUrl(file, "medium") || getMediaPreviewUrl(file, "large") || getMediaPreviewUrl(file, "small");
+}
+
+function getOriginalMediaUrl(file) {
+  return getMediaPreviewUrl(file, "original") || getMediaPreviewUrl(file, "large") || getDisplayMediaUrl(file);
+}
+
 export default function ProductDetailsPage() {
   const { productId, slug } = useParams();
   const navigate = useNavigate();
@@ -35,6 +44,8 @@ export default function ProductDetailsPage() {
   const [selectedVariantId, setSelectedVariantId] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [activeMediaUrl, setActiveMediaUrl] = useState("");
+  const [activeOriginalMediaUrl, setActiveOriginalMediaUrl] = useState("");
+  const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
   const [similar, setSimilar] = useState([]);
   const [comments, setComments] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -66,7 +77,8 @@ export default function ProductDetailsPage() {
     () => (selectedVariant?.media || []).map((medium) => medium.mediumFile).filter(Boolean),
     [selectedVariant]
   );
-  const imageUrl = activeMediaUrl || getMediaPreviewUrl(variantMedia[0], "large") || getProductImage(product, "large");
+  const imageUrl = activeMediaUrl || getDisplayMediaUrl(variantMedia[0]) || getProductImage(product, "medium");
+  const originalImageUrl = activeOriginalMediaUrl || getOriginalMediaUrl(variantMedia[0]) || getProductImage(product, "original") || imageUrl;
   const displayPrice = Number(
     selectedVariant?.discountedPrice ??
     selectedInfoVariant?.basePrice ??
@@ -113,7 +125,9 @@ export default function ProductDetailsPage() {
           nextProduct.variants?.[0] ||
           null;
         setSelectedVariantId(initialVariant?.id ? String(initialVariant.id) : "");
-        setActiveMediaUrl(getMediaPreviewUrl(initialVariant?.media?.[0]?.mediumFile, "large") || "");
+        const initialMediaFile = initialVariant?.media?.[0]?.mediumFile;
+        setActiveMediaUrl(getDisplayMediaUrl(initialMediaFile) || "");
+        setActiveOriginalMediaUrl(getOriginalMediaUrl(initialMediaFile) || "");
 
         if (isCustomer) {
           const [favoriteResponse, myCommentResponse, myReviewResponse] = await Promise.all([
@@ -142,7 +156,9 @@ export default function ProductDetailsPage() {
   }, [loadProduct]);
 
   useEffect(() => {
-    setActiveMediaUrl(getMediaPreviewUrl(selectedVariant?.media?.[0]?.mediumFile, "large") || "");
+    const mediaFile = selectedVariant?.media?.[0]?.mediumFile;
+    setActiveMediaUrl(getDisplayMediaUrl(mediaFile) || "");
+    setActiveOriginalMediaUrl(getOriginalMediaUrl(mediaFile) || "");
   }, [selectedVariant?.id]);
 
   useEffect(() => {
@@ -373,11 +389,18 @@ export default function ProductDetailsPage() {
           </div>
         ) : null}
 
-        <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_420px]">
-          <div>
+        <section className="grid items-start gap-8 lg:grid-cols-[minmax(320px,520px)_minmax(0,1fr)] xl:grid-cols-[minmax(360px,560px)_minmax(0,1fr)]">
+          <div className="w-full max-w-[560px] justify-self-center lg:justify-self-start">
             <div className="bg-neutral-50">
               {imageUrl ? (
-                <img src={imageUrl} alt={product.name} className="aspect-square w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setImagePreviewOpen(true)}
+                  className="block w-full cursor-zoom-in bg-neutral-50"
+                  title="عرض الصورة بالحجم الأصلي"
+                >
+                  <img src={imageUrl} alt={product.name} className="aspect-square w-full object-cover" />
+                </button>
               ) : (
                 <div className="flex aspect-square w-full items-center justify-center text-black/30">
                   <FiImage size={36} />
@@ -388,14 +411,18 @@ export default function ProductDetailsPage() {
               <div className="mt-3 grid grid-cols-5 gap-2 sm:grid-cols-6 md:grid-cols-8">
                 {variantMedia.map((file) => {
                   const thumbnailUrl = getMediaPreviewUrl(file, "small");
-                  const fullUrl = getMediaPreviewUrl(file, "large");
-                  const url = thumbnailUrl || fullUrl;
+                  const displayUrl = getDisplayMediaUrl(file);
+                  const originalUrl = getOriginalMediaUrl(file);
+                  const url = thumbnailUrl || displayUrl || originalUrl;
                   if (!url) return null;
                   return (
                     <button
                       type="button"
                       key={file.id || url}
-                      onClick={() => setActiveMediaUrl(fullUrl || url)}
+                      onClick={() => {
+                        setActiveMediaUrl(displayUrl || url);
+                        setActiveOriginalMediaUrl(originalUrl || displayUrl || url);
+                      }}
                       className="border border-black/10 bg-white p-1"
                     >
                       <img src={url} alt={file.name || product.name} className="aspect-square w-full object-cover" />
@@ -512,6 +539,29 @@ export default function ProductDetailsPage() {
             ) : null}
           </div>
         </section>
+
+        <Dialog.Root open={imagePreviewOpen} onOpenChange={setImagePreviewOpen}>
+          <Dialog.Portal>
+            <Dialog.Overlay className="fixed inset-0 z-[120] bg-black/80" />
+            <Dialog.Content className="fixed inset-4 z-[121] flex items-center justify-center outline-none md:inset-8">
+              <Dialog.Title className="sr-only">{product.name}</Dialog.Title>
+              <button
+                type="button"
+                onClick={() => setImagePreviewOpen(false)}
+                className="absolute left-4 top-4 z-10 border border-white/30 bg-black/40 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white hover:text-black"
+              >
+                إغلاق
+              </button>
+              {originalImageUrl ? (
+                <img
+                  src={originalImageUrl}
+                  alt={product.name}
+                  className="max-h-full max-w-full object-contain"
+                />
+              ) : null}
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
 
         <section className="mt-12 grid gap-8 lg:grid-cols-2">
           <div className="border border-black/10 p-5">

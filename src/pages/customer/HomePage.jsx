@@ -166,11 +166,11 @@ function HeroFallback({ loading, error }) {
 }
 
 function imageFromMall(mall) {
-  return mall?.images?.[0]?.image || mall?.logoUrl || "";
+  return mall?.images?.[0]?.mediumImage || mall?.logoMediumUrl || mall?.logoUrl || "";
 }
 
 function DiscoveryCard({ item, type, onFilter }) {
-  const image = type === "mall" ? imageFromMall(item) : item?.image || item?.logoUrl;
+  const image = type === "mall" ? imageFromMall(item) : item?.imageMediumUrl || item?.image || item?.logoMediumUrl || item?.logoUrl;
   const href = type === "mall" ? `/malls/${item.id}` : `/stores/${item.id}`;
   const meta =
     type === "mall"
@@ -336,8 +336,8 @@ function BrandsHomeSection({ brands = [], loading, error }) {
               className="group flex min-h-36 flex-col items-center justify-center border border-black/10 bg-neutral-50 p-4 text-center transition hover:border-black hover:bg-white"
             >
               <div className="grid h-16 w-16 place-items-center overflow-hidden bg-white">
-                {brand.imageUrl ? (
-                  <img src={brand.imageUrl} alt={brand.name} className="max-h-full max-w-full object-contain" loading="lazy" />
+                {(brand.imageSmallUrl || brand.imageUrl) ? (
+                  <img src={brand.imageSmallUrl || brand.imageUrl} alt={brand.name} className="max-h-full max-w-full object-contain" loading="lazy" />
                 ) : (
                   <span className="text-2xl font-light text-black/25">{brand.name?.[0] || "ب"}</span>
                 )}

@@ -117,9 +117,9 @@ function CategoriesBanner({ categories = [], onSelectCategory }) {
                     onClick={() => onSelectCategory?.(c.id)}
                     className="block h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30"
                   >
-                    {c.imageUrl ? (
+                    {(c.imageSmallUrl || c.imageUrl) ? (
                       <img
-                        src={c.imageUrl}
+                        src={c.imageSmallUrl || c.imageUrl}
                         alt={c.name}
                         loading="lazy"
                         className="

@@ -98,9 +98,9 @@ function AllCategoriesMenu({ categories = [], selectedCategoryId, onSelectCatego
                   >
                     {/* image */}
                     <div className="w-12 h-12 bg-black/5 overflow-hidden shrink-0 flex items-center justify-center">
-                      {cat.imageUrl ? (
+                      {(cat.imageSmallUrl || cat.imageUrl) ? (
                         <img
-                          src={cat.imageUrl}
+                          src={cat.imageSmallUrl || cat.imageUrl}
                           alt={cat.name}
                           className="w-full h-full object-cover"
                           onError={(e) => (e.currentTarget.style.display = "none")}

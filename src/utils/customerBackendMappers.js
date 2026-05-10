@@ -39,6 +39,10 @@ export function mapMallRestaurant(restaurant) {
 }
 
 export function mapCatalogCategory(category) {
+  const imageSmallUrl = getMediaPreviewUrl(category?.image, "small");
+  const imageMediumUrl = getMediaPreviewUrl(category?.image, "medium");
+  const imageOriginalUrl = getMediaPreviewUrl(category?.image, "original");
+
   return {
     id: asStringId(category?.id ?? category?.categoryId),
     categoryId: category?.id ?? category?.categoryId ?? null,
@@ -49,30 +53,44 @@ export function mapCatalogCategory(category) {
       category?.parentId == null && category?.parent?.id == null
         ? null
         : asStringId(category?.parentId ?? category?.parent?.id),
-    imageUrl: getMediaPreviewUrl(category?.image, "medium"),
+    imageUrl: imageMediumUrl || imageSmallUrl,
+    imageSmallUrl,
+    imageMediumUrl,
+    imageOriginalUrl,
     children: (category?.children || []).map(mapCatalogCategory),
   };
 }
 
 export function mapCatalogBrand(brand) {
+  const imageSmallUrl = getMediaPreviewUrl(brand?.image, "small");
+  const imageMediumUrl = getMediaPreviewUrl(brand?.image, "medium");
+  const imageOriginalUrl = getMediaPreviewUrl(brand?.image, "original");
+
   return {
     id: asStringId(brand?.id ?? brand?.brandId),
     brandId: brand?.id ?? brand?.brandId ?? null,
     name: brand?.name || "براند",
     slug: brand?.slug || "",
     description: brand?.description || "",
-    imageUrl: getMediaPreviewUrl(brand?.image, "medium"),
+    imageUrl: imageMediumUrl || imageSmallUrl,
+    imageSmallUrl,
+    imageMediumUrl,
+    imageOriginalUrl,
     isActive: brand?.isActive ?? true,
   };
 }
 
 export function mapAccountMall(mall) {
   const id = mall?.mallId ?? mall?.id;
-  const logoUrl = getMediaPreviewUrl(mall?.logoImage);
+  const logoUrl = getMediaPreviewUrl(mall?.logoImage, "small");
+  const logoMediumUrl = getMediaPreviewUrl(mall?.logoImage, "medium") || logoUrl;
+  const logoOriginalUrl = getMediaPreviewUrl(mall?.logoImage, "original") || logoMediumUrl;
   const images = (mall?.mallImages || [])
     .map((image, index) => ({
       id: image?.id || `${id || "mall"}-${index}`,
       image: getMediaPreviewUrl(image, "original"),
+      mediumImage: getMediaPreviewUrl(image, "medium"),
+      smallImage: getMediaPreviewUrl(image, "small"),
       alt: mall?.name || "Mall",
     }))
     .filter((image) => image.image);
@@ -85,7 +103,15 @@ export function mapAccountMall(mall) {
     location: mall?.location || mall?.city?.name || "",
     city: mall?.city?.name || "",
     logoUrl,
-    images: images.length ? images : logoUrl ? [{ id: `${id || "mall"}-logo`, image: getMediaPreviewUrl(mall?.logoImage, "original") || logoUrl, alt: mall?.name || "Mall" }] : [],
+    logoMediumUrl,
+    logoOriginalUrl,
+    images: images.length ? images : logoUrl ? [{
+      id: `${id || "mall"}-logo`,
+      image: logoOriginalUrl || logoUrl,
+      mediumImage: logoMediumUrl || logoUrl,
+      smallImage: logoUrl,
+      alt: mall?.name || "Mall",
+    }] : [],
     services: (Array.isArray(mall?.services) ? mall.services : []).map(mapMallService),
     restaurants: (Array.isArray(mall?.restaurants) ? mall.restaurants : []).map(mapMallRestaurant),
     description,
@@ -104,13 +130,18 @@ export function mapAccountShop(shop) {
     name: shop?.name || "متجر",
     mallId: asStringId(mallId),
     mallName: shop?.mall?.name || "",
-    logoUrl: getMediaPreviewUrl(shop?.logoImage),
+    logoUrl: getMediaPreviewUrl(shop?.logoImage, "small"),
+    logoMediumUrl: getMediaPreviewUrl(shop?.logoImage, "medium"),
+    logoOriginalUrl: getMediaPreviewUrl(shop?.logoImage, "original"),
     floor: shop?.floor || shop?.location || "",
     specialist: category,
     category,
     description: shop?.description || "",
     location: shop?.location || "",
     image: firstImageUrl(shop?.shopPhotos, "medium") || getMediaPreviewUrl(shop?.logoImage, "medium"),
+    imageSmallUrl: firstImageUrl(shop?.shopPhotos, "small") || getMediaPreviewUrl(shop?.logoImage, "small"),
+    imageMediumUrl: firstImageUrl(shop?.shopPhotos, "medium") || getMediaPreviewUrl(shop?.logoImage, "medium"),
+    imageOriginalUrl: firstImageUrl(shop?.shopPhotos, "original") || getMediaPreviewUrl(shop?.logoImage, "original"),
     status: shop?.status || "",
   };
 }
