@@ -1,6 +1,6 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigationType } from "react-router-dom";
 import { Theme } from "@radix-ui/themes";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AuthProvider } from "./auth/AuthContext";
 import { CartProvider } from "./cart/CartContext";
 import { ROLE_ADMIN, ROLE_CUSTOMER, ROLE_SHOP_OWNER } from "./auth/session";
@@ -54,6 +54,64 @@ import ShopOwnerOrders from "./pages/shopOwner/Orders/Orders.jsx";
 import ShopOwnerReturns from "./pages/shopOwner/Returns/Returns.jsx";
 import ShopOwnerFinance from "./pages/shopOwner/Finance/Finance.jsx";
 
+const SCROLL_POSITIONS_KEY = "emall-route-scroll-positions";
+
+function readScrollPositions() {
+  try {
+    return JSON.parse(sessionStorage.getItem(SCROLL_POSITIONS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveScrollPositions(positions) {
+  try {
+    sessionStorage.setItem(SCROLL_POSITIONS_KEY, JSON.stringify(positions));
+  } catch {
+    // Session storage can fail in private contexts; scrolling should still work.
+  }
+}
+
+function RouteScrollManager() {
+  const location = useLocation();
+  const navigationType = useNavigationType();
+  const positionsRef = useRef(readScrollPositions());
+  const previousLocationKeyRef = useRef(location.key);
+
+  useLayoutEffect(() => {
+    const previousLocationKey = previousLocationKeyRef.current;
+    positionsRef.current[previousLocationKey] = {
+      x: window.scrollX,
+      y: window.scrollY,
+    };
+    saveScrollPositions(positionsRef.current);
+
+    previousLocationKeyRef.current = location.key;
+    const savedPosition = positionsRef.current[location.key];
+    const nextPosition =
+      navigationType === "POP" && savedPosition
+        ? savedPosition
+        : { x: 0, y: 0 };
+
+    window.requestAnimationFrame(() => {
+      window.scrollTo(nextPosition.x, nextPosition.y);
+    });
+  }, [location.key, navigationType]);
+
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+      return () => {
+        window.history.scrollRestoration = "auto";
+      };
+    }
+
+    return undefined;
+  }, []);
+
+  return null;
+}
+
 export default function App() {
   const [appearance, setAppearance] = useState("light"); // "light" | "dark"
 
@@ -73,6 +131,7 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <BrowserRouter>
+            <RouteScrollManager />
             <Routes>
             {/* Customer */}
             <Route path="/" element={<HomePage />} />
