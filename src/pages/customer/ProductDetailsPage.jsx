@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiFlag, FiHeart, FiImage, FiLoader, FiMessageSquare, FiMinus, FiPlus, FiSend, FiShoppingCart, FiStar, FiTrash2 } from "react-icons/fi";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -55,8 +55,11 @@ export default function ProductDetailsPage() {
   const [commentText, setCommentText] = useState("");
   const [rating, setRating] = useState(5);
   const [loading, setLoading] = useState(true);
+  const [secondaryLoading, setSecondaryLoading] = useState(false);
+  const [engagementLoading, setEngagementLoading] = useState(false);
   const [saving, setSaving] = useState("");
   const [error, setError] = useState("");
+  const loadSequenceRef = useRef(0);
   const mallId = Number(productInfo?.mallId ?? product?.mallId ?? 0) || null;
 
   const defaultVariant = useMemo(() => getDefaultVariant(product), [product]);
@@ -96,60 +99,122 @@ export default function ProductDetailsPage() {
     return map;
   }, [attributes]);
 
+  const loadEngagement = useCallback(async (nextProductId, requestId = loadSequenceRef.current) => {
+    if (!nextProductId) return;
+
+    setEngagementLoading(true);
+
+    try {
+      const [commentsResponse, reviewsResponse] = await Promise.all([
+        catalogApi.comments.approved(nextProductId).catch(() => null),
+        catalogApi.reviews.all(nextProductId).catch(() => null),
+      ]);
+
+      if (loadSequenceRef.current !== requestId) return;
+
+      setComments(unwrapCatalogPayload(commentsResponse) || []);
+      setReviews(unwrapCatalogPayload(reviewsResponse) || []);
+
+      if (isCustomer) {
+        const [favoriteResponse, myCommentResponse, myReviewResponse] = await Promise.all([
+          catalogApi.favorites.exists(nextProductId).catch(() => null),
+          catalogApi.comments.mineForProduct(nextProductId).catch(() => null),
+          catalogApi.reviews.mine(nextProductId).catch(() => null),
+        ]);
+
+        if (loadSequenceRef.current !== requestId) return;
+
+        setFavorite(!!unwrapCatalogPayload(favoriteResponse)?.favorite);
+        const ownedComment = unwrapCatalogPayload(myCommentResponse);
+        const ownedReview = unwrapCatalogPayload(myReviewResponse);
+        setMyComment(ownedComment?.commentId ? ownedComment : null);
+        setCommentText(ownedComment?.content || "");
+        setMyReview(ownedReview?.reviewId ? ownedReview : null);
+        setRating(ownedReview?.rating || 5);
+      } else {
+        setFavorite(false);
+        setMyComment(null);
+        setCommentText("");
+        setMyReview(null);
+        setRating(5);
+      }
+    } finally {
+      if (loadSequenceRef.current === requestId) {
+        setEngagementLoading(false);
+      }
+    }
+  }, [isCustomer]);
+
+  const loadSecondaryProductData = useCallback(async (nextProductId, requestId = loadSequenceRef.current) => {
+    if (!nextProductId) return;
+
+    setSecondaryLoading(true);
+
+    try {
+      const [infoResponse, similarResponse, attributesResponse] = await Promise.all([
+        catalogApi.products.info(nextProductId).catch(() => null),
+        catalogApi.products.similar(nextProductId, 8).catch(() => null),
+        catalogApi.attributes.all({ isActive: true }).catch(() => null),
+      ]);
+
+      if (loadSequenceRef.current !== requestId) return;
+
+      setProductInfo(unwrapCatalogPayload(infoResponse) || null);
+      setSimilar((unwrapCatalogPayload(similarResponse) || []).map(toProductCard));
+      setAttributes(unwrapCatalogPayload(attributesResponse) || []);
+    } finally {
+      if (loadSequenceRef.current === requestId) {
+        setSecondaryLoading(false);
+      }
+    }
+  }, []);
+
   const loadProduct = useCallback(async () => {
+    const requestId = loadSequenceRef.current + 1;
+    loadSequenceRef.current = requestId;
+
     setLoading(true);
+    setSecondaryLoading(false);
+    setEngagementLoading(false);
     setError("");
+    setProduct(null);
+    setProductInfo(null);
+    setSimilar([]);
+    setComments([]);
+    setReviews([]);
+    setAttributes([]);
+
     try {
       const response = slug
         ? await catalogApi.products.bySlug(slug)
         : await catalogApi.products.byId(productId);
       const nextProduct = unwrapCatalogPayload(response);
+
+      if (loadSequenceRef.current !== requestId) return;
+
       setProduct(nextProduct);
 
-      if (nextProduct?.id) {
-        const [infoResponse, similarResponse, commentsResponse, reviewsResponse, attributesResponse] = await Promise.all([
-          catalogApi.products.info(nextProduct.id).catch(() => null),
-          catalogApi.products.similar(nextProduct.id, 8).catch(() => null),
-          catalogApi.comments.approved(nextProduct.id).catch(() => null),
-          catalogApi.reviews.all(nextProduct.id).catch(() => null),
-          catalogApi.attributes.all({ isActive: true }).catch(() => null),
-        ]);
-        const info = unwrapCatalogPayload(infoResponse);
-        setProductInfo(info || null);
-        setSimilar((unwrapCatalogPayload(similarResponse) || []).map(toProductCard));
-        setComments(unwrapCatalogPayload(commentsResponse) || []);
-        setReviews(unwrapCatalogPayload(reviewsResponse) || []);
-        setAttributes(unwrapCatalogPayload(attributesResponse) || []);
-        const initialVariant =
-          nextProduct.variants?.find((variant) => variant.isDefault) ||
-          nextProduct.variants?.[0] ||
-          null;
-        setSelectedVariantId(initialVariant?.id ? String(initialVariant.id) : "");
-        const initialMediaFile = initialVariant?.media?.[0]?.mediumFile;
-        setActiveMediaUrl(getDisplayMediaUrl(initialMediaFile) || "");
-        setActiveOriginalMediaUrl(getOriginalMediaUrl(initialMediaFile) || "");
+      const initialVariant =
+        nextProduct?.variants?.find((variant) => variant.isDefault) ||
+        nextProduct?.variants?.[0] ||
+        null;
+      setSelectedVariantId(initialVariant?.id ? String(initialVariant.id) : "");
+      const initialMediaFile = initialVariant?.media?.[0]?.mediumFile;
+      setActiveMediaUrl(getDisplayMediaUrl(initialMediaFile) || "");
+      setActiveOriginalMediaUrl(getOriginalMediaUrl(initialMediaFile) || "");
+      setLoading(false);
 
-        if (isCustomer) {
-          const [favoriteResponse, myCommentResponse, myReviewResponse] = await Promise.all([
-            catalogApi.favorites.exists(nextProduct.id).catch(() => null),
-            catalogApi.comments.mineForProduct(nextProduct.id).catch(() => null),
-            catalogApi.reviews.mine(nextProduct.id).catch(() => null),
-          ]);
-          setFavorite(!!unwrapCatalogPayload(favoriteResponse)?.favorite);
-          const ownedComment = unwrapCatalogPayload(myCommentResponse);
-          const ownedReview = unwrapCatalogPayload(myReviewResponse);
-          setMyComment(ownedComment?.commentId ? ownedComment : null);
-          setCommentText(ownedComment?.content || "");
-          setMyReview(ownedReview?.reviewId ? ownedReview : null);
-          setRating(ownedReview?.rating || 5);
-        }
+      if (nextProduct?.id) {
+        void loadSecondaryProductData(nextProduct.id, requestId);
+        void loadEngagement(nextProduct.id, requestId);
       }
     } catch (requestError) {
-      setError(requestError.message || "فشل تحميل المنتج");
-    } finally {
-      setLoading(false);
+      if (loadSequenceRef.current === requestId) {
+        setError(requestError.message || "فشل تحميل المنتج");
+        setLoading(false);
+      }
     }
-  }, [isCustomer, productId, slug]);
+  }, [loadEngagement, loadSecondaryProductData, productId, slug]);
 
   useEffect(() => {
     loadProduct();
@@ -221,7 +286,7 @@ export default function ProductDetailsPage() {
           content: commentText.trim(),
         });
       }
-      await loadProduct();
+      await loadEngagement(product.id);
     } catch (requestError) {
       setError(requestError.message || "فشل حفظ التعليق");
     } finally {
@@ -236,7 +301,7 @@ export default function ProductDetailsPage() {
       await catalogApi.comments.delete(product.id);
       setMyComment(null);
       setCommentText("");
-      await loadProduct();
+      await loadEngagement(product.id);
     } catch (requestError) {
       setError(requestError.message || "فشل حذف التعليق");
     } finally {
@@ -249,7 +314,7 @@ export default function ProductDetailsPage() {
     setSaving(`report-${comment.commentId}`);
     try {
       await catalogApi.comments.report(product.id, comment.commentId);
-      await loadProduct();
+      await loadEngagement(product.id);
     } catch (requestError) {
       setError(requestError.message || "فشل الإبلاغ عن التعليق");
     } finally {
@@ -272,7 +337,7 @@ export default function ProductDetailsPage() {
           rating: Number(rating),
         });
       }
-      await loadProduct();
+      await loadEngagement(product.id);
     } catch (requestError) {
       setError(requestError.message || "فشل حفظ التقييم");
     } finally {
@@ -287,7 +352,7 @@ export default function ProductDetailsPage() {
       await catalogApi.reviews.delete(product.id);
       setMyReview(null);
       setRating(5);
-      await loadProduct();
+      await loadEngagement(product.id);
     } catch (requestError) {
       setError(requestError.message || "فشل حذف التقييم");
     } finally {
@@ -583,7 +648,9 @@ export default function ProductDetailsPage() {
               ) : null}
             </div>
             <div className="space-y-3">
-              {reviews.length ? reviews.map((review) => (
+              {engagementLoading && !reviews.length ? (
+                <p className="text-sm text-black/50">جاري تحميل التقييمات...</p>
+              ) : reviews.length ? reviews.map((review) => (
                 <div key={review.reviewId} className="border-t border-black/10 pt-3 text-sm text-black/70">
                   <div>{review.rating} / 5</div>
                   {review.averageRating ? (
@@ -618,7 +685,9 @@ export default function ProductDetailsPage() {
               ) : null}
             </div>
             <div className="space-y-3">
-              {comments.length ? comments.map((comment) => (
+              {engagementLoading && !comments.length ? (
+                <p className="text-sm text-black/50">جاري تحميل التعليقات...</p>
+              ) : comments.length ? comments.map((comment) => (
                 <div key={comment.commentId} className="border-t border-black/10 pt-3">
                   <p className="text-sm leading-7 text-black/70">{comment.content}</p>
                   <button
@@ -637,6 +706,11 @@ export default function ProductDetailsPage() {
         </section>
       </main>
 
+      {secondaryLoading && !similar.length ? (
+        <div className="mx-auto max-w-400 px-4 pb-8 text-right text-sm text-black/45 sm:px-6 md:px-12 2xl:max-w-[1920px]">
+          جاري تحميل المنتجات المشابهة...
+        </div>
+      ) : null}
       <ProductsRow title="منتجات مشابهة" products={similar} />
       <Footer />
     </div>
