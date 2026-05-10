@@ -1,4 +1,6 @@
-import { catalogApi } from "../../../api/catalog";
+import { catalogApi, normalizeCatalogPage } from "../../../api/catalog";
+
+const PRODUCT_FORM_BRANDS_PAGE_SIZE = 100;
 
 export const productsApi = {
 	getAll: (
@@ -55,7 +57,14 @@ export const productsApi = {
 	deleteVariant: (storeId, productId, variantId) => catalogApi.products.deleteVariant(storeId, productId, variantId),
 	delete: (storeId, id) => catalogApi.products.delete(storeId, id),
 	getCategories: () => catalogApi.categories.all(),
-	getBrands: () => catalogApi.brands.all(),
+	getBrands: async () => {
+		const response = await catalogApi.brands.page({
+			isActive: true,
+			page: 0,
+			size: PRODUCT_FORM_BRANDS_PAGE_SIZE,
+		});
+		return { data: normalizeCatalogPage(response).content };
+	},
 	getAttributes: () => catalogApi.attributes.all({ isActive: true }),
 	getTags: (name) => catalogApi.tags.all(name ? { name } : {}),
 	createAttribute: (body) => catalogApi.attributes.create(body),

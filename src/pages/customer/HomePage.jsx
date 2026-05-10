@@ -7,7 +7,7 @@ import AdvSection from "../../components/customer/HomePageComponents/AdvSection"
 import CategoriesBanner from "../../components/customer/HomePageComponents/CategoriesBanner";
 import ProductsRow from "../../components/customer/HomePageComponents/ProductsRow";
 import Footer from "../../components/customer/HomePageComponents/Footer";
-import { catalogApi, unwrapCatalogPayload } from "../../api/catalog";
+import { catalogApi, normalizeCatalogPage, unwrapCatalogPayload } from "../../api/catalog";
 import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
 import { campaignsApi, unwrapCampaignPayload } from "../../api/campaigns";
 import { orderHubApi, unwrapOrderHubPayload } from "../../api/orderHub";
@@ -423,9 +423,9 @@ function HomePage() {
     setBrandsLoading(true);
     setBrandsError("");
 
-    catalogApi.brands.all({ isActive: true })
+    catalogApi.brands.page({ isActive: true, page: 0, size: 10 })
       .then((response) => {
-        if (!cancelled) setBrands((unwrapCatalogPayload(response) || []).map(mapCatalogBrand));
+        if (!cancelled) setBrands(normalizeCatalogPage(response).content.map(mapCatalogBrand));
       })
       .catch(() => {
         if (!cancelled) {
