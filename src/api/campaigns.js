@@ -40,6 +40,10 @@ function pagedPath(path, params = {}) {
   return query ? `${path}?${query}` : path;
 }
 
+function boundedListParams(params = {}) {
+  return { page: 0, size: 100, ...params };
+}
+
 export function unwrapCampaignPayload(payload) {
   return unwrap(payload);
 }
@@ -69,7 +73,7 @@ export const campaignsApi = {
 
   templates: {
     page: (params = {}) => campaignFetch(pagedPath("/api/ad-templates", params)),
-    all: (params = {}) => campaignFetch(pagedPath("/api/ad-templates/all", params)),
+    all: (params = {}) => campaignFetch(pagedPath("/api/ad-templates", boundedListParams(params))),
     active: () => campaignFetch("/api/ad-templates/active"),
     byId: (id) => campaignFetch(`/api/ad-templates/${id}`),
     create: (body) => campaignFetch("/api/ad-templates", bodyRequest("POST", body)),
@@ -85,7 +89,7 @@ export const campaignsApi = {
 
   requests: {
     page: (params = {}) => campaignFetch(pagedPath("/api/ad-requests", params)),
-    all: (params = {}) => campaignFetch(pagedPath("/api/ad-requests/all", params)),
+    all: (params = {}) => campaignFetch(pagedPath("/api/ad-requests", boundedListParams(params))),
     byId: (id) => campaignFetch(`/api/ad-requests/${id}`),
     byShop: (shopId) => campaignFetch(`/api/ad-requests/shop/${shopId}`),
     byShopStatus: (shopId, status) =>
@@ -111,7 +115,7 @@ export const campaignsApi = {
 
   offers: {
     page: (params = {}) => campaignFetch(pagedPath("/api/offers", params)),
-    all: (params = {}) => campaignFetch(pagedPath("/api/offers/all", params)),
+    all: (params = {}) => campaignFetch(pagedPath("/api/offers", boundedListParams(params))),
     publicActiveProducts: (limit = 10) =>
       campaignFetch(`/api/offers/products/active/public?${cleanParams({ limit })}`),
     byId: (offerId) => campaignFetch(`/api/offers/${offerId}`),
@@ -135,7 +139,7 @@ export const campaignsApi = {
 
   plans: {
     page: (params = {}) => campaignFetch(pagedPath("/api/subscriptions/plans", params)),
-    all: (params = {}) => campaignFetch(pagedPath("/api/subscriptions/plans/all", params)),
+    all: (params = {}) => campaignFetch(pagedPath("/api/subscriptions/plans", boundedListParams(params))),
     active: () => campaignFetch("/api/subscriptions/plans/active"),
     byId: (planId) => campaignFetch(`/api/subscriptions/plans/${planId}`),
     create: (body) => campaignFetch("/api/subscriptions/plans", bodyRequest("POST", body)),
@@ -144,7 +148,7 @@ export const campaignsApi = {
 
   subscriptions: {
     page: (params = {}) => campaignFetch(pagedPath("/api/subscriptions", params)),
-    all: (params = {}) => campaignFetch(pagedPath("/api/subscriptions/all", params)),
+    all: (params = {}) => campaignFetch(pagedPath("/api/subscriptions", boundedListParams(params))),
     byId: (subscriptionId) => campaignFetch(`/api/subscriptions/${subscriptionId}`),
     cancel: (subscriptionId) =>
       campaignFetch(`/api/subscriptions/${subscriptionId}/cancel`, { method: "PUT" }),

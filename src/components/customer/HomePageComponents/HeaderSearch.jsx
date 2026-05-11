@@ -5,7 +5,7 @@ import { IoIosSearch, IoIosClose } from "react-icons/io";
 import { useNavigate } from "react-router-dom";
 
 import { catalogApi, normalizeCatalogPage } from "../../../api/catalog";
-import { accountsApi, unwrapAccountPayload } from "../../../api/accounts";
+import { accountsApi, normalizePage } from "../../../api/accounts";
 import { toProductCard } from "../../../utils/catalogProducts";
 import {
   mapAccountMall,
@@ -44,8 +44,8 @@ export default function HeaderSearch() {
     const timeout = setTimeout(() => {
       Promise.allSettled([
         catalogApi.products.publicPage({ q }, { page: 0, size: 8 }),
-        accountsApi.malls.all({ name: q, status: "ACTIVE" }),
-        accountsApi.shops.all({ name: q, status: "ACTIVE" }),
+        accountsApi.malls.page({ name: q, status: "ACTIVE", page: 0, size: 6 }),
+        accountsApi.shops.page({ name: q, status: "ACTIVE", page: 0, size: 8 }),
       ])
         .then(([productsResult, mallsResult, shopsResult]) => {
           if (cancelled) return;
@@ -57,12 +57,12 @@ export default function HeaderSearch() {
           );
           setLiveMalls(
             mallsResult.status === "fulfilled"
-              ? (unwrapAccountPayload(mallsResult.value) || []).map(mapAccountMall)
+              ? normalizePage(mallsResult.value).content.map(mapAccountMall)
               : []
           );
           setLiveStores(
             shopsResult.status === "fulfilled"
-              ? (unwrapAccountPayload(shopsResult.value) || []).map(mapAccountShop)
+              ? normalizePage(shopsResult.value).content.map(mapAccountShop)
               : []
           );
         })

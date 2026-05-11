@@ -157,7 +157,7 @@ function MallPage() {
     setCategoriesError("");
 
     Promise.allSettled([
-      catalogApi.categories.all({ isActive: true }),
+      catalogApi.categories.page({ isActive: true, page: 0, size: 60 }),
       catalogApi.products.publicPage(
         {
           mallId: Number(mallId),
@@ -172,7 +172,7 @@ function MallPage() {
         if (cancelled) return;
 
         if (categoriesResult.status === "fulfilled") {
-          setLiveCategories((unwrapCatalogPayload(categoriesResult.value) || []).map(mapCatalogCategory));
+          setLiveCategories(normalizeCatalogPage(categoriesResult.value).content.map(mapCatalogCategory));
         } else {
           setLiveCategories([]);
           setCategoriesError("تعذر تحميل تصنيفات المول.");

@@ -8,7 +8,9 @@ export async function getMallsPagination(params = {}) {
   return data;
 }
 export async function getMallsList(params = {}) {
-  const { data } = await api.get(`${BASE_PATH}/all`, { params });
+  const { data } = await api.get(`${BASE_PATH}`, {
+    params: { page: 0, size: 100, ...params },
+  });
   return data;
 }
 

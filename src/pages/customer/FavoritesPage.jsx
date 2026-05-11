@@ -3,7 +3,7 @@ import { FiLoader, FiTrash2 } from "react-icons/fi";
 import Header from "../../components/customer/HomePageComponents/Header";
 import Footer from "../../components/customer/HomePageComponents/Footer";
 import ProductCard from "../../components/customer/HomePageComponents/ProductCard";
-import { catalogApi, unwrapCatalogPayload } from "../../api/catalog";
+import { catalogApi, normalizeCatalogPage } from "../../api/catalog";
 import { toProductCard } from "../../utils/catalogProducts";
 
 export default function FavoritesPage() {
@@ -16,10 +16,10 @@ export default function FavoritesPage() {
     let cancelled = false;
     setLoading(true);
     setError("");
-    catalogApi.favorites.all()
+    catalogApi.favorites.page({ page: 0, size: 100 })
       .then((response) => {
         if (cancelled) return;
-        setFavorites(unwrapCatalogPayload(response) || []);
+        setFavorites(normalizeCatalogPage(response).content);
       })
       .catch((requestError) => {
         if (!cancelled) setError(requestError.message || "فشل تحميل المفضلة");

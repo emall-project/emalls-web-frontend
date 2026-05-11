@@ -6,7 +6,7 @@ import { useLocation } from "react-router-dom";
 import Header from "../../components/customer/HomePageComponents/Header";
 import Footer from "../../components/customer/HomePageComponents/Footer";
 import ProductsRow from "../../components/customer/HomePageComponents/ProductsRow";
-import { catalogApi, unwrapCatalogPayload } from "../../api/catalog";
+import { catalogApi, normalizeCatalogPage, unwrapCatalogPayload } from "../../api/catalog";
 import { useAuth } from "../../auth/AuthContext";
 import { useCart } from "../../cart/CartContext";
 import { getDefaultVariant, getProductImage, getProductPrice, getProductOldPrice, toProductCard } from "../../utils/catalogProducts";
@@ -154,14 +154,14 @@ export default function ProductDetailsPage() {
       const [infoResponse, similarResponse, attributesResponse] = await Promise.all([
         catalogApi.products.info(nextProductId).catch(() => null),
         catalogApi.products.similar(nextProductId, 8).catch(() => null),
-        catalogApi.attributes.all({ isActive: true }).catch(() => null),
+        catalogApi.attributes.page({ isActive: true, page: 0, size: 100 }).catch(() => null),
       ]);
 
       if (loadSequenceRef.current !== requestId) return;
 
       setProductInfo(unwrapCatalogPayload(infoResponse) || null);
       setSimilar((unwrapCatalogPayload(similarResponse) || []).map(toProductCard));
-      setAttributes(unwrapCatalogPayload(attributesResponse) || []);
+      setAttributes(attributesResponse ? normalizeCatalogPage(attributesResponse).content : []);
     } finally {
       if (loadSequenceRef.current === requestId) {
         setSecondaryLoading(false);

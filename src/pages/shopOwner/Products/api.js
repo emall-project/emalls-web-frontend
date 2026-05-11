@@ -2,6 +2,11 @@ import { catalogApi, normalizeCatalogPage } from "../../../api/catalog";
 
 const PRODUCT_FORM_BRANDS_PAGE_SIZE = 100;
 
+async function pageAsData(fetchPage, params = {}) {
+	const response = await fetchPage({ page: 0, size: 100, ...params });
+	return { data: normalizeCatalogPage(response).content };
+}
+
 export const productsApi = {
 	getAll: (
 		storeId,
@@ -56,7 +61,7 @@ export const productsApi = {
 	updateVariant: (storeId, productId, body) => catalogApi.products.updateVariant(storeId, productId, body),
 	deleteVariant: (storeId, productId, variantId) => catalogApi.products.deleteVariant(storeId, productId, variantId),
 	delete: (storeId, id) => catalogApi.products.delete(storeId, id),
-	getCategories: () => catalogApi.categories.all(),
+	getCategories: () => pageAsData(catalogApi.categories.page),
 	getBrands: async () => {
 		const response = await catalogApi.brands.page({
 			isActive: true,
@@ -65,8 +70,8 @@ export const productsApi = {
 		});
 		return { data: normalizeCatalogPage(response).content };
 	},
-	getAttributes: () => catalogApi.attributes.all({ isActive: true }),
-	getTags: (name) => catalogApi.tags.all(name ? { name } : {}),
+	getAttributes: () => pageAsData(catalogApi.attributes.page, { isActive: true }),
+	getTags: (name) => pageAsData(catalogApi.tags.page, name ? { name, size: 20 } : { size: 20 }),
 	createAttribute: (body) => catalogApi.attributes.create(body),
 	updateAttribute: (body) => catalogApi.attributes.update(body),
 	deleteAttribute: (id) => catalogApi.attributes.delete(id),

@@ -8,7 +8,7 @@ import {
   IoBusinessOutline,
 } from "react-icons/io5";
 
-import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
+import { accountsApi, normalizePage, unwrapAccountPayload } from "../../api/accounts";
 import { catalogApi, normalizeCatalogPage } from "../../api/catalog";
 import { toProductCard } from "../../utils/catalogProducts";
 import CatalogFilters from "../../components/customer/CatalogFilters";
@@ -108,11 +108,13 @@ export default function SearchPage() {
 
     const mallRequest = mallIdParam
       ? accountsApi.malls.byId(mallIdParam)
-      : accountsApi.malls.all({ name: searchTerm, status: "ACTIVE" });
-    const shopRequest = accountsApi.shops.all({
+      : accountsApi.malls.page({ name: searchTerm, status: "ACTIVE", page: 0, size: 12 });
+    const shopRequest = accountsApi.shops.page({
       ...(searchTerm.length >= 2 ? { name: searchTerm } : {}),
       ...(mallIdParam ? { mall_id: mallIdParam } : {}),
       status: "ACTIVE",
+      page: 0,
+      size: 24,
     });
 
     Promise.allSettled([mallRequest, shopRequest])
@@ -121,17 +123,17 @@ export default function SearchPage() {
 
         const mappedMalls =
           mallsResult.status === "fulfilled"
-            ? (Array.isArray(unwrapAccountPayload(mallsResult.value))
+            ? (mallIdParam
                 ? unwrapAccountPayload(mallsResult.value)
-                : unwrapAccountPayload(mallsResult.value)
-                ? [unwrapAccountPayload(mallsResult.value)]
-                : []
+                  ? [unwrapAccountPayload(mallsResult.value)]
+                  : []
+                : normalizePage(mallsResult.value).content
               ).map(mapAccountMall)
             : [];
 
         const mappedStores =
           shopsResult.status === "fulfilled"
-            ? (unwrapAccountPayload(shopsResult.value) || []).map(mapAccountShop)
+            ? normalizePage(shopsResult.value).content.map(mapAccountShop)
             : [];
 
         setLiveMalls(mappedMalls);

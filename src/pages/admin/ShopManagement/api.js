@@ -1,8 +1,14 @@
-import { accountsApi } from "../../../api/accounts";
+import { accountsApi, normalizePage } from "../../../api/accounts";
+
+async function pageAsList(fetchPage, params = {}) {
+  const response = await fetchPage({ page: 0, size: 100, ...params });
+  const content = normalizePage(response).content;
+  return { data: content, content };
+}
 
 export const shopsApi = {
   getAll: accountsApi.shops.page,
-  getList: accountsApi.shops.all,
+  getList: (params = {}) => pageAsList(accountsApi.shops.page, params),
   getById: accountsApi.shops.byId,
   create: accountsApi.shops.create,
   update: accountsApi.shops.update,
@@ -18,10 +24,10 @@ export const shopsApi = {
 };
 
 export const mallsApi = {
-  getList: accountsApi.malls.all,
+  getList: (params = {}) => pageAsList(accountsApi.malls.page, params),
 };
 
 export const usersApi = {
   getAll: accountsApi.users.page,
-  getList: accountsApi.users.all,
+  getList: (params = {}) => pageAsList(accountsApi.users.page, params),
 };

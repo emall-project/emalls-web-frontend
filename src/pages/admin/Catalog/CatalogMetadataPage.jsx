@@ -336,16 +336,6 @@ async function loadCategoryParentOptions() {
   let lastError = null;
 
   try {
-    const response = await catalogApi.categories.all();
-    const categories = normalizeCategoryOptions(unwrapCatalogPayload(response));
-    if (categories.length) {
-      return categories;
-    }
-  } catch (error) {
-    lastError = error;
-  }
-
-  try {
     const response = await catalogApi.categories.page({ page: 0, size: 500 });
     const categories = normalizeCategoryOptions(normalizeCatalogPage(response).content);
     if (categories.length) {

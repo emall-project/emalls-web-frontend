@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { accountsApi, unwrapAccountPayload } from "../../../api/accounts";
+import { accountsApi, normalizePage } from "../../../api/accounts";
 import { catalogApi, unwrapCatalogPayload } from "../../../api/catalog";
 import Products from "../../shopOwner/Products/Products";
 
@@ -18,10 +18,10 @@ export default function CatalogProductsPage() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    accountsApi.shops.all()
+    accountsApi.shops.page({ page: 0, size: 100 })
       .then((response) => {
         if (cancelled) return;
-        const list = unwrapAccountPayload(response) || [];
+        const list = normalizePage(response).content;
         setShops(Array.isArray(list) ? list : []);
         setSelectedShopId((current) => current || (list?.[0]?.shopId ? String(list[0].shopId) : list?.[0]?.id ? String(list[0].id) : ""));
       })

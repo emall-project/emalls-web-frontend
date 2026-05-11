@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { FiAlertCircle, FiLoader, FiSend } from "react-icons/fi";
-import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
+import { accountsApi, normalizePage } from "../../api/accounts";
 import { SHOP_CATEGORIES, CATEGORY_LABELS } from "../../pages/admin/ShopManagement/constants";
 import { MediaUuidField, MediaUuidListField } from "./MediaUuidField";
 
@@ -62,10 +62,9 @@ export function ShopRequestForm({
   const fieldError = (key) => fieldErrors[key] || externalFieldErrors[key];
 
   useEffect(() => {
-    accountsApi.malls.all()
+    accountsApi.malls.page({ page: 0, size: 100 })
       .then((response) => {
-        const data = unwrapAccountPayload(response);
-        setMalls(Array.isArray(data) ? data : data?.content || []);
+        setMalls(normalizePage(response).content);
       })
       .catch(() => setMalls([]));
   }, []);

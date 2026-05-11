@@ -40,6 +40,10 @@ function pagedPath(path, params = {}) {
   return query ? `${path}?${query}` : path;
 }
 
+function boundedListParams(params = {}) {
+  return { page: 0, size: 100, ...params };
+}
+
 export function unwrapCatalogPayload(payload) {
   return unwrap(payload);
 }
@@ -65,7 +69,7 @@ export function normalizeCatalogPage(payload) {
 function metadataApi(resource) {
   return {
     page: (params = {}) => catalogFetch(pagedPath(`/${resource}`, params)),
-    all: (params = {}) => catalogFetch(pagedPath(`/${resource}/all`, params)),
+    all: (params = {}) => catalogFetch(pagedPath(`/${resource}`, boundedListParams(params))),
     byId: (id) => catalogFetch(`/${resource}/${id}`),
     bySlug: (slug) => catalogFetch(`/${resource}/slug/${encodeURIComponent(slug)}`),
     create: (body) => catalogFetch(`/${resource}`, bodyRequest("POST", body)),
@@ -127,7 +131,7 @@ export const catalogApi = {
       ),
     storeList: (storeId, filter = {}) =>
       catalogFetch(
-        `/stores/${storeId}/products/all/list`,
+        pagedPath(`/stores/${storeId}/products/all`, { page: 0, size: 100 }),
         bodyRequest("POST", cleanBody(filter))
       ),
     storeById: (storeId, id) => catalogFetch(`/stores/${storeId}/products/${id}`),
@@ -161,7 +165,7 @@ export const catalogApi = {
 
   favorites: {
     page: (params = {}) => catalogFetch(pagedPath("/favorites", params)),
-    all: () => catalogFetch("/favorites/all"),
+    all: (params = {}) => catalogFetch(pagedPath("/favorites", boundedListParams(params))),
     byId: (id) => catalogFetch(`/favorites/${id}`),
     exists: (productId) => catalogFetch(`/favorites/product/${productId}/exists`),
     count: () => catalogFetch("/favorites/count"),

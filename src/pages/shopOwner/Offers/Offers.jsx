@@ -12,7 +12,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import { campaignsApi, unwrapCampaignPayload } from "../../../api/campaigns";
-import { catalogApi, unwrapCatalogPayload } from "../../../api/catalog";
+import { catalogApi, normalizeCatalogPage, unwrapCatalogPayload } from "../../../api/catalog";
 import { useAuth } from "../../../auth/AuthContext";
 import { buildApiFormError, getApiErrorMessage } from "../../../utils/apiErrors";
 import {
@@ -328,11 +328,15 @@ function OfferFormDialog({ open, onOpenChange, storeId, offer, onSaved }) {
     setSearchLoading(true);
 
     try {
-      const response = await catalogApi.products.storeList(storeId, {
+      const response = await catalogApi.products.storePage(
+        storeId,
+        {
         isActive: true,
         ...(search.trim() ? { q: search.trim() } : {}),
-      });
-      setSearchResults(unwrapCatalogPayload(response) || []);
+        },
+        { page: 0, size: 50 }
+      );
+      setSearchResults(normalizeCatalogPage(response).content);
     } catch {
       setSearchResults([]);
     } finally {

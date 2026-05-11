@@ -8,7 +8,7 @@ import CategoriesBanner from "../../components/customer/HomePageComponents/Categ
 import ProductsRow from "../../components/customer/HomePageComponents/ProductsRow";
 import Footer from "../../components/customer/HomePageComponents/Footer";
 import { catalogApi, normalizeCatalogPage, unwrapCatalogPayload } from "../../api/catalog";
-import { accountsApi, unwrapAccountPayload } from "../../api/accounts";
+import { accountsApi, normalizePage } from "../../api/accounts";
 import { campaignsApi, unwrapCampaignPayload } from "../../api/campaigns";
 import { orderHubApi, unwrapOrderHubPayload } from "../../api/orderHub";
 import { toProductCard } from "../../utils/catalogProducts";
@@ -394,12 +394,12 @@ function HomePage() {
     setCategoriesError("");
 
     Promise.all([
-      catalogApi.categories.all({ isActive: true }),
+      catalogApi.categories.page({ isActive: true, page: 0, size: 60 }),
       catalogApi.categories.tree().catch(() => null),
     ])
       .then(([flatResponse, treeResponse]) => {
         if (cancelled) return;
-        setCategories((unwrapCatalogPayload(flatResponse) || []).map(mapCatalogCategory));
+        setCategories(normalizeCatalogPage(flatResponse).content.map(mapCatalogCategory));
         setCategoryTree((unwrapCatalogPayload(treeResponse) || []).map(mapCatalogCategory));
       })
       .catch(() => {
@@ -448,19 +448,19 @@ function HomePage() {
     setMallStoreError("");
 
     Promise.allSettled([
-      accountsApi.malls.byStatus("ACTIVE"),
-      accountsApi.shops.all({ status: "ACTIVE" }),
+      accountsApi.malls.page({ status: "ACTIVE", page: 0, size: 30 }),
+      accountsApi.shops.page({ status: "ACTIVE", page: 0, size: 60 }),
     ])
       .then(([mallsResult, shopsResult]) => {
         if (cancelled) return;
         setMalls(
           mallsResult.status === "fulfilled"
-            ? (unwrapAccountPayload(mallsResult.value) || []).map(mapAccountMall)
+            ? normalizePage(mallsResult.value).content.map(mapAccountMall)
             : []
         );
         setStores(
           shopsResult.status === "fulfilled"
-            ? (unwrapAccountPayload(shopsResult.value) || []).map(mapAccountShop)
+            ? normalizePage(shopsResult.value).content.map(mapAccountShop)
             : []
         );
 

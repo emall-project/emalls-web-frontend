@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { FiX, FiEye, FiEyeOff } from "react-icons/fi";
-import { accountsApi, unwrapAccountPayload } from "../../../api/accounts";
+import { accountsApi, normalizePage } from "../../../api/accounts";
 import { MediaUuidField } from "../../../components/account/MediaUuidField";
 import { buildApiFormError } from "../../../utils/apiErrors";
 import { usersApi } from "./api";
@@ -54,10 +54,9 @@ export default function UserFormDialog({ open, onOpenChange, user, onSuccess, sh
 
   useEffect(() => {
     if (!open) return;
-    accountsApi.roles.all()
+    accountsApi.roles.page({ page: 0, size: 100 })
       .then((response) => {
-        const roles = unwrapAccountPayload(response);
-        const list = Array.isArray(roles) ? roles : roles?.content || [];
+        const list = normalizePage(response).content;
         if (list.length) {
           setRoleOptions(
             list.map((role) => ({

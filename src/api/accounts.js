@@ -38,6 +38,10 @@ function queryString(params = {}) {
   return query.toString();
 }
 
+function boundedListParams(params = {}) {
+  return { page: 0, size: 100, ...params };
+}
+
 function accountFetch(path, options = {}) {
   return requestJson(`${ACCOUNTS_BASE}${path}`, options);
 }
@@ -62,7 +66,7 @@ export const accountsApi = {
 
   users: {
     page: (params = {}) => accountFetch(`/api/users?${queryString(params)}`),
-    all: (params = {}) => accountFetch(`/api/users/all?${queryString(params)}`),
+    all: (params = {}) => accountFetch(`/api/users?${queryString(boundedListParams(params))}`),
     byId: (id) => accountFetch(`/api/users/${id}`),
     create: (body) => accountFetch("/api/users", bodyRequest("POST", body)),
     update: (body) => accountFetch("/api/users", bodyRequest("PUT", body)),
@@ -79,7 +83,7 @@ export const accountsApi = {
 
   roles: {
     page: (params = {}) => accountFetch(`/api/roles?${queryString(params)}`),
-    all: (params = {}) => accountFetch(`/api/roles/all?${queryString(params)}`),
+    all: (params = {}) => accountFetch(`/api/roles?${queryString(boundedListParams(params))}`),
     byId: (id) => accountFetch(`/api/roles/${id}`),
     create: (body) => accountFetch("/api/roles", bodyRequest("POST", body)),
     update: (body) => accountFetch("/api/roles", bodyRequest("PUT", body)),
@@ -88,7 +92,7 @@ export const accountsApi = {
 
   cities: {
     page: (params = {}) => accountFetch(`/api/cities?${queryString(params)}`),
-    all: (params = {}) => accountFetch(`/api/cities/all?${queryString(params)}`),
+    all: (params = {}) => accountFetch(`/api/cities?${queryString(boundedListParams(params))}`),
     active: () => accountFetch("/api/cities/active"),
     byId: (id) => accountFetch(`/api/cities/${id}`),
     create: (body) => accountFetch("/api/cities", bodyRequest("POST", body)),
@@ -99,7 +103,7 @@ export const accountsApi = {
 
   malls: {
     page: (params = {}) => accountFetch(`/api/malls?${queryString(params)}`),
-    all: (params = {}) => accountFetch(`/api/malls/all?${queryString(params)}`),
+    all: (params = {}) => accountFetch(`/api/malls?${queryString(boundedListParams(params))}`),
     byId: (id) => accountFetch(`/api/malls/${id}`),
     byCity: (cityId) => accountFetch(`/api/malls/city/${cityId}`),
     activeByCity: (cityId) => accountFetch(`/api/malls/city/${cityId}/active`),
@@ -116,7 +120,7 @@ export const accountsApi = {
 
   shops: {
     page: (params = {}) => accountFetch(`/api/shops?${queryString(params)}`),
-    all: (params = {}) => accountFetch(`/api/shops/all?${queryString(params)}`),
+    all: (params = {}) => accountFetch(`/api/shops?${queryString(boundedListParams(params))}`),
     byId: (id) => accountFetch(`/api/shops/${id}`),
     byMall: (mallId) => accountFetch(`/api/shops/mall/${mallId}`),
     activeByMall: (mallId) => accountFetch(`/api/shops/mall/${mallId}/active`),
@@ -164,7 +168,7 @@ export const accountsApi = {
     createExistingOwnerShopRequest: (body) =>
       accountFetch("/api/shop-owner-requests/existing-owner/shop-request", bodyRequest("POST", body)),
     page: (params = {}) => accountFetch(`/api/shop-owner-requests?${queryString(params)}`),
-    all: (params = {}) => accountFetch(`/api/shop-owner-requests/all?${queryString(params)}`),
+    all: (params = {}) => accountFetch(`/api/shop-owner-requests?${queryString(boundedListParams(params))}`),
     pending: () => accountFetch("/api/shop-owner-requests/pending"),
     byId: (id) => accountFetch(`/api/shop-owner-requests/${id}`),
     approve: (shopOwnerRequestId) =>
@@ -181,7 +185,7 @@ export const accountsApi = {
     existingOwnerPage: (params = {}) =>
       accountFetch(`/api/shop-owner-requests/existing-owner/shop-requests?${queryString(params)}`),
     existingOwnerAll: (params = {}) =>
-      accountFetch(`/api/shop-owner-requests/existing-owner/shop-requests/all?${queryString(params)}`),
+      accountFetch(`/api/shop-owner-requests/existing-owner/shop-requests?${queryString(boundedListParams(params))}`),
     approveShopRequest: (shopRequestId) =>
       accountFetch(`/api/shop-owner-requests/shop-requests/${shopRequestId}/approve`, { method: "PUT" }),
     rejectShopRequest: (shopRequestId, rejectionReason) =>
