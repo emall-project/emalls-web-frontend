@@ -11,6 +11,7 @@ import { buildCatalogFilterPayload } from "../../utils/catalogFilters";
 import { mapCatalogCategory } from "../../utils/customerBackendMappers";
 import {
   buildExplorationCandidates,
+  createExplorationCard,
   filtersFromCategorySearchParams,
   getCategoryNodeIds,
   getSummaryTotalProducts,
@@ -37,6 +38,37 @@ function findNode(nodes = [], id) {
     if (child) return child;
   }
   return null;
+}
+
+function buildCategoryTree(categories = []) {
+  const nodes = new Map();
+  const roots = [];
+
+  categories.forEach((category) => {
+    if (!category?.id) return;
+    nodes.set(String(category.id), { ...category, children: [] });
+  });
+
+  nodes.forEach((node) => {
+    const parentId = node.parentId == null ? null : String(node.parentId);
+    const parent = parentId ? nodes.get(parentId) : null;
+
+    if (parent && parent.id !== node.id) {
+      parent.children.push(node);
+      return;
+    }
+
+    roots.push(node);
+  });
+
+  return roots;
+}
+
+function normalizeCategoryHierarchy(categories = []) {
+  if (!categories.length) return [];
+  return categories.some((category) => category.parentId != null)
+    ? buildCategoryTree(categories)
+    : categories;
 }
 
 function createDefaultFilters(queryFilters = {}) {
@@ -91,12 +123,13 @@ export default function CategoryPage() {
     setError("");
 
     Promise.all([
-      catalogApi.categories.tree().catch(() => null),
+      catalogApi.categories.all().catch(() => catalogApi.categories.tree().catch(() => null)),
       slug ? catalogApi.categories.bySlug(slug) : catalogApi.categories.byId(categoryId),
     ])
-      .then(([treeResponse, categoryResponse]) => {
+      .then(([categoriesResponse, categoryResponse]) => {
         if (cancelled) return;
-        const mappedTree = (unwrapCatalogPayload(treeResponse) || []).map(mapCatalogCategory);
+        const mappedCategories = (unwrapCatalogPayload(categoriesResponse) || []).map(mapCatalogCategory);
+        const mappedTree = normalizeCategoryHierarchy(mappedCategories);
         const selected = mapCatalogCategory(unwrapCatalogPayload(categoryResponse));
         setCategoryTree(mappedTree);
         setCategory(selected);
@@ -132,12 +165,13 @@ export default function CategoryPage() {
     () => (categoryIds.length ? { categoryIds } : {}),
     [categoryIds]
   );
+  const hasChildCategories = Boolean(selectedTreeNode?.children?.length);
   const parentEmptyMode = Boolean(
-    selectedTreeNode?.children?.length && Number(selectedTreeNode?.productsCount ?? 0) === 0
+    hasChildCategories && Number(selectedTreeNode?.productsCount ?? 0) === 0
   );
 
   useEffect(() => {
-    if (!parentEmptyMode) {
+    if (!hasChildCategories) {
       setExplorationCards([]);
       setLoadingExploration(false);
       setExplorationError("");
@@ -161,9 +195,10 @@ export default function CategoryPage() {
           const childCategory = mergeTreeNodeWithCategory(child, detailedChild) || child;
           const summary = unwrapCatalogPayload(summaryResponse) || {};
           const candidates = buildExplorationCandidates(childCategory, summary);
+          const cardsToValidate = candidates.length ? candidates : [createExplorationCard(childCategory)];
 
           const validatedCards = await Promise.all(
-            candidates.map(async (card) => {
+            cardsToValidate.map(async (card) => {
               if (!card.needsValidation) return card;
 
               const candidateSummaryResponse = await catalogApi.products.publicSummary({
@@ -199,7 +234,7 @@ export default function CategoryPage() {
     return () => {
       cancelled = true;
     };
-  }, [parentEmptyMode, selectedTreeNode]);
+  }, [hasChildCategories, selectedTreeNode]);
 
   useEffect(() => {
     if (!categoryIds.length || parentEmptyMode) {
@@ -276,30 +311,9 @@ export default function CategoryPage() {
           </div>
         </section>
 
-        {selectedTreeNode?.children?.length && !parentEmptyMode ? (
-          <section className="mt-6 border border-black/10 bg-white p-5">
-            <div className="mb-4 flex items-center gap-2 text-sm font-semibold text-black">
-              <FiGrid />
-              فئات فرعية
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {selectedTreeNode.children.map((child) => (
-                <Link
-                  key={child.id}
-                  to={`/categories/${child.id}`}
-                  className="inline-flex items-center gap-2 border border-black/10 px-4 py-2 text-xs font-semibold text-black transition hover:border-black hover:bg-black hover:text-white"
-                >
-                  {child.name}
-                  <FiChevronLeft size={12} />
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
         {error ? <div className="mt-6 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
 
-        {parentEmptyMode ? (
+        {hasChildCategories ? (
           <section className="mt-6 border border-black/10 bg-white p-5">
             <div className="mb-5 flex items-center gap-2 text-sm font-semibold text-black">
               <FiGrid />
@@ -364,7 +378,9 @@ export default function CategoryPage() {
               </div>
             ) : null}
           </section>
-        ) : (
+        ) : null}
+
+        {!parentEmptyMode ? (
           <>
             <div className="mt-6">
               <CatalogFilters
@@ -397,7 +413,7 @@ export default function CategoryPage() {
               </div>
             ) : null}
           </>
-        )}
+        ) : null}
       </main>
       <Footer />
     </div>

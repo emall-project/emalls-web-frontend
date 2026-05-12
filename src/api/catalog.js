@@ -69,7 +69,7 @@ export function normalizeCatalogPage(payload) {
 function metadataApi(resource) {
   return {
     page: (params = {}) => catalogFetch(pagedPath(`/${resource}`, params)),
-    all: (params = {}) => catalogFetch(pagedPath(`/${resource}`, boundedListParams(params))),
+    all: (params = {}) => catalogFetch(pagedPath(`/${resource}/all`, params)),
     byId: (id) => catalogFetch(`/${resource}/${id}`),
     bySlug: (slug) => catalogFetch(`/${resource}/slug/${encodeURIComponent(slug)}`),
     create: (body) => catalogFetch(`/${resource}`, bodyRequest("POST", body)),
