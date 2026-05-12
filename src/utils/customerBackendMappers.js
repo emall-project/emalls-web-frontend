@@ -53,10 +53,30 @@ export function mapCatalogCategory(category) {
       category?.parentId == null && category?.parent?.id == null
         ? null
         : asStringId(category?.parentId ?? category?.parent?.id),
+    targetedAudience: category?.targetedAudience || "ALL",
+    ageGroup: category?.ageGroup || "ALL",
+    productsCount: category?.productsCount ?? 0,
     imageUrl: imageMediumUrl || imageSmallUrl,
     imageSmallUrl,
     imageMediumUrl,
     imageOriginalUrl,
+    audienceConfig: (category?.audienceConfig || []).map((config) => {
+      const configImageSmallUrl = getMediaPreviewUrl(config?.image, "small");
+      const configImageMediumUrl = getMediaPreviewUrl(config?.image, "medium");
+      const configImageOriginalUrl = getMediaPreviewUrl(config?.image, "original");
+
+      return {
+        id: asStringId(config?.id),
+        targetedAudience: config?.targetedAudience || "ALL",
+        ageGroup: config?.ageGroup || "ALL",
+        imageId: asStringId(config?.imageId ?? config?.image?.id),
+        image: config?.image || null,
+        imageUrl: configImageMediumUrl || configImageSmallUrl,
+        imageSmallUrl: configImageSmallUrl,
+        imageMediumUrl: configImageMediumUrl,
+        imageOriginalUrl: configImageOriginalUrl,
+      };
+    }),
     children: (category?.children || []).map(mapCatalogCategory),
   };
 }

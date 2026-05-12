@@ -914,6 +914,7 @@ export default function CatalogMetadataPage({ type }) {
   const [parentError, setParentError] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [editLoadingId, setEditLoadingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const categoryById = useMemo(
     () => new Map(allCategories.map((category) => [String(category.id), category])),
@@ -998,9 +999,24 @@ export default function CatalogMetadataPage({ type }) {
     setDialogOpen(true);
   };
 
-  const openEdit = (item) => {
-    setSelectedItem(item);
-    setDialogOpen(true);
+  const openEdit = async (item) => {
+    if (type !== "categories") {
+      setSelectedItem(item);
+      setDialogOpen(true);
+      return;
+    }
+
+    setEditLoadingId(item.id);
+    setError("");
+    try {
+      const response = await config.api.byId(item.id);
+      setSelectedItem(unwrapCatalogPayload(response) || item);
+      setDialogOpen(true);
+    } catch (requestError) {
+      setError(requestError.message || "فشل تحميل تفاصيل الفئة");
+    } finally {
+      setEditLoadingId(null);
+    }
   };
 
   const deleteItem = async (item) => {
@@ -1275,8 +1291,14 @@ export default function CatalogMetadataPage({ type }) {
                     <Td>{item.updatedBy || "—"}</Td>
                     <Td>
                       <div className="flex items-center gap-2">
-                        <button type="button" onClick={() => openEdit(item)} className="rounded-lg border p-2" style={{ borderColor: "var(--gray-a6)", color: "var(--gray-12)" }}>
-                          <FiEdit2 />
+                        <button
+                          type="button"
+                          disabled={editLoadingId === item.id}
+                          onClick={() => openEdit(item)}
+                          className="rounded-lg border p-2 disabled:opacity-50"
+                          style={{ borderColor: "var(--gray-a6)", color: "var(--gray-12)" }}
+                        >
+                          {editLoadingId === item.id ? <FiLoader className="animate-spin" /> : <FiEdit2 />}
                         </button>
                         <button
                           type="button"
