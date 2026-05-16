@@ -1,161 +1,119 @@
-import React, { useEffect, useMemo, useRef } from "react";
-import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
+import React, { useMemo } from "react";
+import { FiArrowLeft, FiGrid } from "react-icons/fi";
 
-function CategoriesBanner({ categories = [], onSelectCategory }) {
-  const scrollerRef = useRef(null);
+import SectionHeader from "./SectionHeader";
 
-  const items = useMemo(() => categories.filter((c) => c.imageUrl), [categories]);
-
-  // RTL: start from the right
-  useEffect(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    el.scrollLeft = el.scrollWidth;
-  }, [items.length]);
-
-  const scrollByAmount = (dir) => {
-    const el = scrollerRef.current;
-    if (!el) return;
-
-    // responsive scroll amount based on visible width
-    const amount = Math.max(240, Math.floor(el.clientWidth * 0.85));
-    el.scrollBy({ left: dir * amount, behavior: "smooth" });
-  };
-
-  if (!items.length) return null;
-
+function CategoryCard({ category, featured = false, onOpen }) {
   return (
-    <section className="relative w-full bg-neutral-50 py-7 sm:py-10 md:py-14">
-      <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12">
-        {/* Header */}
-        <div className="mb-5 sm:mb-7 md:mb-10 text-center">
-          <h2 className="text-xs sm:text-sm md:text-lg font-extralight text-black/70 tracking-[0.18em]">
-            التشكيلات الحصرية
-          </h2>
+    <button
+      type="button"
+      onClick={onOpen}
+      className={[
+        "group relative overflow-hidden rounded-[28px] border text-right transition hover:-translate-y-1",
+        featured
+          ? "border-[rgba(15,23,42,0.08)] bg-[linear-gradient(160deg,#0f172a_0%,#16346b_55%,#2563eb_100%)] text-white shadow-[0_22px_55px_rgba(15,23,42,0.22)]"
+          : "border-[var(--customer-border)] bg-white shadow-[var(--customer-shadow-soft)] hover:shadow-[var(--customer-shadow-md)]",
+      ].join(" ")}
+    >
+      <div className={`flex h-full flex-col ${featured ? "justify-between" : ""}`}>
+        <div className={featured ? "px-5 py-5 sm:px-6 sm:py-6" : "flex items-center gap-4 px-4 py-4 sm:px-5 sm:py-5"}>
+          {featured ? (
+            <>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold text-white/90">
+                <FiGrid className="text-xs" />
+                تصفّح بحسب الفئة
+              </div>
+              <h3 className="mt-4 text-2xl font-black leading-tight">{category.name}</h3>
+              <p className="mt-3 max-w-sm text-sm leading-7 text-white/80">
+                انتقل مباشرة إلى كل المنتجات المرتبطة بهذه الفئة عبر المولات والمتاجر المختلفة.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[20px] bg-[linear-gradient(135deg,rgba(27,79,240,0.08),rgba(15,23,42,0.04))]">
+                {category.imageUrl ? (
+                  <img src={category.imageUrl} alt={category.name} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-2xl font-black text-[var(--customer-accent)]/40">{category.name?.[0] || "ف"}</span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="line-clamp-1 text-base font-black text-[var(--customer-text)]">{category.name}</h3>
+                <p className="mt-1 text-xs leading-6 text-[var(--customer-muted)]">افتح منتجات هذه الفئة عبر المنصة</p>
+              </div>
+            </>
+          )}
         </div>
 
-        <div className="relative">
-          {/* arrows (md+) */}
-          <button
-            type="button"
-            aria-label="Previous"
-            onClick={() => scrollByAmount(-1)}
-            className="
-              hidden md:flex
-              absolute -left-4 lg:-left-10 top-1/2 -translate-y-1/2 z-10
-              h-11 w-11 rounded-full
-              bg-white border border-black/10 shadow-sm
-              items-center justify-center
-              hover:bg-black hover:border-black
-              transition
-              group
-            "
-          >
-            <IoIosArrowBack className="text-black text-lg group-hover:text-white transition-colors" />
-          </button>
-
-          <button
-            type="button"
-            aria-label="Next"
-            onClick={() => scrollByAmount(1)}
-            className="
-              hidden md:flex
-              absolute -right-4 lg:-right-10 top-1/2 -translate-y-1/2 z-10
-              h-11 w-11 rounded-full
-              bg-white border border-black/10 shadow-sm
-              items-center justify-center
-              hover:bg-black hover:border-black
-              transition
-              group
-            "
-          >
-            <IoIosArrowForward className="text-black text-lg group-hover:text-white transition-colors" />
-          </button>
-
-          {/* scroller */}
-          <div className="relative">
-            <div
-              ref={scrollerRef}
-              dir="rtl"
-              className="
-                flex gap-3 sm:gap-4 md:gap-6
-                overflow-x-auto scroll-smooth
-                snap-x snap-mandatory
-                pb-2
-                [-ms-overflow-style:none] [scrollbar-width:none]
-              "
-              style={{ WebkitOverflowScrolling: "touch" }}
-            >
-              <style>{`
-                .no-scrollbar::-webkit-scrollbar { display: none; }
-              `}</style>
-
-              {items.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => onSelectCategory?.(c.id)}
-                  className="
-                    group relative shrink-0 snap-center
-                    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/30
-                    overflow-hidden
-                    transition
-                    hover:shadow-2xl
-                  "
-                  style={{
-                    width: "clamp(150px, 44vw, 220px)",
-                    borderRadius: "clamp(80px, 18vw, 140px)",
-                    aspectRatio: "3 / 4",
-                  }}
-                >
-                  {/* image */}
-                  <img
-                    src={c.imageUrl}
-                    alt={c.name}
-                    loading="lazy"
-                    className="
-                      w-full h-full object-cover
-                      transition-transform duration-700
-                      group-hover:scale-[1.04]
-                    "
-                    onError={(e) => (e.currentTarget.style.display = "none")}
-                  />
-
-                  {/* overlay */}
-                  <div className="absolute inset-0 bg-linear-to-t from-black/65 via-black/20 to-transparent transition group-hover:from-black/70" />
-
-                  {/* text */}
-                  <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 md:p-7 text-center">
-                    <h3
-                      className="
-                        text-[10px] sm:text-xs md:text-sm
-                        font-light uppercase text-white
-                        tracking-[0.22em] sm:tracking-[0.25em]
-                        transition-all duration-500
-                        group-hover:tracking-[0.30em]
-                      "
-                    >
-                      {c.name}
-                    </h3>
-
-                    <div className="mx-auto mt-2 sm:mt-3 h-px w-0 bg-white/90 transition-all duration-500 group-hover:w-10 sm:group-hover:w-14 md:group-hover:w-20" />
-
-                    <span className="mt-3 sm:mt-4 block text-[9px] sm:text-[10px] text-white/80 tracking-[0.25em] uppercase opacity-0 transition duration-500 group-hover:opacity-100">
-                      تسوق الآن
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* edge fades (always, helps on mobile too) */}
-            <div className="pointer-events-none absolute left-0 top-0 h-full w-10 sm:w-12 bg-linear-to-r from-neutral-50 to-transparent" />
-            <div className="pointer-events-none absolute right-0 top-0 h-full w-10 sm:w-12 bg-linear-to-l from-neutral-50 to-transparent" />
+        <div className={featured ? "border-t border-white/10 px-5 py-4 sm:px-6" : "border-t border-[var(--customer-border)] px-4 py-3 sm:px-5"}>
+          <div className={`inline-flex items-center gap-2 text-xs font-bold ${featured ? "text-white" : "text-[var(--customer-accent)]"}`}>
+            استكشف الفئة
+            <FiArrowLeft className="transition-transform group-hover:-translate-x-0.5" />
           </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function CategorySkeleton({ featured = false }) {
+  return (
+    <div
+      className={[
+        "animate-pulse rounded-[28px] border bg-white",
+        featured ? "min-h-[280px]" : "min-h-[120px]",
+      ].join(" ")}
+      style={{ borderColor: "var(--customer-border)" }}
+    >
+      <div className="space-y-4 p-5">
+        <div className="h-5 w-28 rounded-full bg-slate-100" />
+        <div className="h-7 w-2/3 rounded-[18px] bg-slate-100" />
+        {featured ? (
+          <>
+            <div className="h-4 w-4/5 rounded-full bg-slate-100" />
+            <div className="h-4 w-2/3 rounded-full bg-slate-100" />
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export default function CategoriesBanner({ categories = [], onSelectCategory }) {
+  const visible = useMemo(() => categories.slice(0, 7), [categories]);
+  const featured = visible[0] ?? null;
+  const compact = visible.slice(1);
+
+  if (!visible.length) return null;
+
+  return (
+    <section className="customer-shell px-4 py-8 sm:px-6 md:px-10 md:py-12">
+      <SectionHeader
+        eyebrow="الفئات"
+        title="ابدأ من حيث تنتمي حاجتك"
+        subtitle="الفئات الرئيسية مرتبة بشكل يمنحك دخولًا أسرع إلى المنتجات المناسبة، دون ازدحام أو قوائم مربكة."
+      />
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-[1.18fr_0.82fr]">
+        {featured ? (
+          <CategoryCard category={featured} featured onOpen={() => onSelectCategory?.(featured.id)} />
+        ) : (
+          <CategorySkeleton featured />
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {compact.map((category) => (
+            <CategoryCard
+              key={category.id}
+              category={category}
+              onOpen={() => onSelectCategory?.(category.id)}
+            />
+          ))}
+          {!compact.length
+            ? Array.from({ length: 4 }).map((_, index) => <CategorySkeleton key={index} />)
+            : null}
         </div>
       </div>
     </section>
   );
 }
-
-export default CategoriesBanner;

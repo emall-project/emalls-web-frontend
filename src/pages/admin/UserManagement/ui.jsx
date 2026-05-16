@@ -282,6 +282,14 @@ export function TextInput({ label, value, onChange, placeholder, type = "text", 
   );
 }
 
+export function PhoneValue({ value }) {
+  return (
+    <span dir="ltr" className="inline-block text-left" style={{ unicodeBidi: "isolate" }}>
+      {value}
+    </span>
+  );
+}
+
 // ── InfoCard ───────────────────────────────────────────────────────────────────
 export function InfoCard({ label, value, icon }) {
   return (

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { useSortedData, SortableTh } from "../../../utils/tableSort";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   FiPlus, FiSearch, FiRefreshCw, FiAlertCircle,
@@ -16,6 +17,13 @@ import AdTemplateFormDialog    from "./AdTemplateFormDialog";
 import { AdRequestFormDialog, RejectDialog } from "./AdRequestDialogs";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+function calcHours(startDate, endDate) {
+  if (!startDate || !endDate) return 0;
+  const s = new Date(startDate), e = new Date(endDate);
+  if (isNaN(s) || isNaN(e) || e <= s) return 0;
+  return (e - s) / (1000 * 60 * 60);
+}
+
 function useThemeContainer() {
   const [c, setC] = React.useState(null);
   React.useEffect(() => { setC(document.querySelector(".radix-themes") || document.body); }, []);
@@ -165,6 +173,7 @@ function Pagination({ page, totalPages, onPageChange }) {
 function TemplatesTab({ showToast, addOpen, setAddOpen }) {
   const themeContainer = useThemeContainer();
   const [templates,   setTemplates]   = useState([]);
+  const { sorted: sortedTemplates, sortKey: tmplSortKey, sortDir: tmplSortDir, onSort: tmplOnSort } = useSortedData(templates, "name");
   const [totalPages,  setTotalPages]  = useState(1);
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState("");
@@ -180,10 +189,12 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
     setLoading(true); setError("");
     try {
       const res  = await adTemplatesApi.getAll({ page, size: 10, ...(search ? { name: search } : {}), ...(statusF ? { status: statusF } : {}), ...(positionF ? { position: positionF } : {}) });
-      const data = res?.data || res?.content || [];
-      const list = Array.isArray(data) ? data : (data?.content || []);
+      const raw  = res?.data ?? res ?? {};
+      const data = raw?.data ?? raw;
+      const meta = data?.meta ?? raw?.meta ?? {};
+      const list = Array.isArray(data?.content) ? data.content : (Array.isArray(raw?.content) ? raw.content : []);
       setTemplates(list);
-      setTotalPages(data?.totalPages || 1);
+      setTotalPages(meta?.totalPages || data?.totalPages || raw?.totalPages || 1);
     } catch (e) { setError(e.message); setTemplates([]); }
     finally { setLoading(false); }
   }, [page, search, statusF, positionF]);
@@ -263,22 +274,24 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
         <table className="w-full text-sm" style={{ minWidth: 640 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--gray-a6)", background: "var(--gray-a2)", color: "var(--gray-11)" }}>
-              {["الاسم", "الموضع", "السعر", "الفترة", "الحالة", ""].map((h) => (
-                <th key={h} className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">{h}</th>
-              ))}
+              <SortableTh label="الاسم" sortKey="name" currentKey={tmplSortKey} direction={tmplSortDir} onSort={tmplOnSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+              <SortableTh label="الموضع" sortKey="position" currentKey={tmplSortKey} direction={tmplSortDir} onSort={tmplOnSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+              <SortableTh label="سعر الساعة" sortKey="pricePerHour" currentKey={tmplSortKey} direction={tmplSortDir} onSort={tmplOnSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+              <SortableTh label="الحالة" sortKey="status" currentKey={tmplSortKey} direction={tmplSortDir} onSort={tmplOnSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+              <th className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="py-16 text-center">
+              <tr><td colSpan={5} className="py-16 text-center">
                 <div className="flex items-center justify-center gap-2" style={{ color: "var(--gray-10)" }}>
                   <Spinner size={20} /> جاري التحميل...
                 </div>
               </td></tr>
             ) : templates.length === 0 ? (
-              <tr><td colSpan={6} className="py-16 text-center text-sm" style={{ color: "var(--gray-10)" }}>لا توجد نماذج مطابقة.</td></tr>
+              <tr><td colSpan={5} className="py-16 text-center text-sm" style={{ color: "var(--gray-10)" }}>لا توجد نماذج مطابقة.</td></tr>
             ) : (
-              templates.map((t, idx) => (
+              sortedTemplates.map((t, idx) => (
                 <tr key={t.adTemplateId}
                   style={{ borderTop: idx === 0 ? "none" : "1px solid var(--gray-a5)", color: "var(--gray-12)", background: "transparent" }}
                   className="transition hover:bg-(--gray-a3)">
@@ -293,15 +306,7 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
                   </td>
                   <td className="px-5 py-4">
                     <div className="font-semibold text-sm flex items-center gap-1">
-                      <FiDollarSign size={12} style={{ color: "var(--gray-10)" }} /> ₪{t.price}
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="text-xs flex items-center gap-1" style={{ color: "var(--gray-11)" }}>
-                      <FiCalendar size={10} /> {t.startDate}
-                    </div>
-                    <div className="text-xs flex items-center gap-1 mt-0.5" style={{ color: "var(--gray-11)" }}>
-                      <FiCalendar size={10} /> {t.endDate}
+                      <FiDollarSign size={12} style={{ color: "var(--gray-10)" }} /> {t.pricePerHour} ₪/ساعة
                     </div>
                   </td>
                   <td className="px-5 py-4">
@@ -351,6 +356,7 @@ function TemplatesTab({ showToast, addOpen, setAddOpen }) {
 function RequestsTab({ showToast, addOpen, setAddOpen }) {
   const themeContainer = useThemeContainer();
   const [requests,    setRequests]    = useState([]);
+  const { sorted: sortedRequests, sortKey: reqSortKey, sortDir: reqSortDir, onSort: reqOnSort } = useSortedData(requests, "title");
   const [totalPages,  setTotalPages]  = useState(1);
   const [loading,     setLoading]     = useState(false);
   const [error,       setError]       = useState("");
@@ -422,23 +428,30 @@ function RequestsTab({ showToast, addOpen, setAddOpen }) {
         <table className="w-full text-sm" style={{ minWidth: 640 }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--gray-a6)", background: "var(--gray-a2)", color: "var(--gray-11)" }}>
-              {["الطلب", "المتجر", "النموذج", "الحالة", "الدفع", ""].map((h) => (
-                <th key={h} className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">{h}</th>
-              ))}
+              <SortableTh label="الطلب" sortKey="title" currentKey={reqSortKey} direction={reqSortDir} onSort={reqOnSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+              <SortableTh label="المتجر" sortKey="shop.name" currentKey={reqSortKey} direction={reqSortDir} onSort={reqOnSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+              <th className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">النموذج</th>
+              <th className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">الفترة</th>
+              <SortableTh label="الإجمالي" sortKey="totalPrice" currentKey={reqSortKey} direction={reqSortDir} onSort={reqOnSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+              <SortableTh label="الحالة" sortKey="status" currentKey={reqSortKey} direction={reqSortDir} onSort={reqOnSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+              <SortableTh label="الدفع" sortKey="paymentStatus" currentKey={reqSortKey} direction={reqSortDir} onSort={reqOnSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+              <th className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="py-16 text-center">
+              <tr><td colSpan={8} className="py-16 text-center">
                 <div className="flex items-center justify-center gap-2" style={{ color: "var(--gray-10)" }}>
                   <Spinner size={20} /> جاري التحميل...
                 </div>
               </td></tr>
             ) : requests.length === 0 ? (
-              <tr><td colSpan={6} className="py-16 text-center text-sm" style={{ color: "var(--gray-10)" }}>لا توجد طلبات مطابقة.</td></tr>
+              <tr><td colSpan={8} className="py-16 text-center text-sm" style={{ color: "var(--gray-10)" }}>لا توجد طلبات مطابقة.</td></tr>
             ) : (
-              requests.map((r, idx) => {
+              sortedRequests.map((r, idx) => {
                 const pmtColor = PAYMENT_STATUS_COLORS[r.paymentStatus] || { bg: "var(--gray-a3)", fg: "var(--gray-10)" };
+                const hours     = calcHours(r.startDate, r.endDate);
+                const total     = r.totalPrice ?? (hours > 0 && r.template?.pricePerHour ? r.template.pricePerHour * hours : null);
                 return (
                   <tr key={r.adRequestId}
                     style={{ borderTop: idx === 0 ? "none" : "1px solid var(--gray-a4)", color: "var(--gray-12)", background: "transparent" }}
@@ -452,10 +465,20 @@ function RequestsTab({ showToast, addOpen, setAddOpen }) {
                       <div className="text-xs mt-0.5" style={{ color: "var(--gray-11)" }}>{r.shop?.ownerName}</div>
                     </td>
                     <td className="px-5 py-4">
-                      <div className="text-sm font-medium">{r.نموذج?.name || `نموذج #${r.نموذجId}`}</div>
+                      <div className="text-sm font-medium">{r.template?.name || `نموذج #${r.templateId}`}</div>
                       <div className="text-xs mt-0.5" style={{ color: "var(--gray-10)" }}>
-                        {POSITION_LABELS[r.نموذج?.position] || r.نموذج?.position}
+                        {POSITION_LABELS[r.template?.position] || r.template?.position}
                       </div>
+                    </td>
+                    <td className="px-5 py-4 text-xs" style={{ color: "var(--gray-11)" }}>
+                      {r.startDate && <div>{r.startDate.replace("T", " ").slice(0, 16)}</div>}
+                      {r.endDate   && <div>{r.endDate.replace("T", " ").slice(0, 16)}</div>}
+                      {hours > 0   && <div className="font-medium mt-0.5" style={{ color: "var(--gray-12)" }}>{hours % 1 === 0 ? hours : hours.toFixed(1)} ساعة</div>}
+                    </td>
+                    <td className="px-5 py-4">
+                      {total != null && total > 0
+                        ? <span className="font-bold text-sm" style={{ color: "var(--green-11)" }}>{total % 1 === 0 ? total : total.toFixed(2)} ₪</span>
+                        : <span style={{ color: "var(--gray-8)" }}>—</span>}
                     </td>
                     <td className="px-5 py-4">
                       <StatusBadge status={r.status} labels={REQUEST_STATUS_LABELS} colors={REQUEST_STATUS_COLORS} />

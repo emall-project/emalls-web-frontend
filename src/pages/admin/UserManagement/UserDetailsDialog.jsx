@@ -1,7 +1,7 @@
 import React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { FiX, FiUser, FiMail, FiPhone, FiShield, FiCheckCircle, FiXCircle, FiEdit2, FiAtSign } from "react-icons/fi";
-import { useThemeContainer, InfoCard, dialogSurface } from "./ui";
+import { useThemeContainer, InfoCard, PhoneValue, dialogSurface } from "./ui";
 import { getRoleLabel, formatPhone } from "./constants";
 
 export default function UserDetailsDialog({ open, onOpenChange, user, onEdit }) {
@@ -41,7 +41,7 @@ export default function UserDetailsDialog({ open, onOpenChange, user, onEdit }) 
               <InfoCard label="الاسم الكامل"        value={user.fullName  || "—"}        icon={<FiUser size={14} />} />
               <InfoCard label="اسم المستخدم"        value={user.username  || "—"}        icon={<FiAtSign size={14} />} />
               <InfoCard label="البريد الإلكتروني"   value={user.email    || "—"}         icon={<FiMail size={14} />} />
-              <InfoCard label="رقم الهاتف"          value={formatPhone(user)}            icon={<FiPhone size={14} />} />
+              <InfoCard label="رقم الهاتف"          value={<PhoneValue value={formatPhone(user)} />} icon={<FiPhone size={14} />} />
               <InfoCard label="الدور"               value={getRoleLabel(user)}           icon={<FiShield size={14} />} />
               <InfoCard label="الحالة"              value={user.isActive ? "نشط" : "غير نشط"}
                 icon={user.isActive ? <FiCheckCircle size={14} /> : <FiXCircle size={14} />} />

@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { useSortedData, SortableTh } from "../../../utils/tableSort";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   FiPlus, FiSearch, FiMail, FiPhone, FiRefreshCw,
@@ -13,7 +14,7 @@ import {
 } from "./constants";
 import {
   useThemeContainer, Toast, StatusBadge, RoleBadge,
-  FilterInput, CustomDropdown, Spinner,
+  FilterInput, CustomDropdown, Spinner, PhoneValue,
 } from "./ui";
 import UserDetailsDialog from "./UserDetailsDialog";
 import UserFormDialog    from "./UserFormDialog";
@@ -77,6 +78,7 @@ export default function UserManagement() {
   const [totalElements, setTotalElements] = useState(1);
   const [fetchLoading,  setFetchLoading]  = useState(false);
   const [fetchError,    setFetchError]    = useState("");
+  const { sorted: sortedUsers, sortKey, sortDir, onSort } = useSortedData(users, "fullName");
 
   const [page,            setPage]            = useState(0);
   const [fullNameFilter,  setFullNameFilter]  = useState("");
@@ -222,9 +224,12 @@ export default function UserManagement() {
           <table className="w-full text-sm" style={{ minWidth: 660 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--gray-a6)", background: "var(--gray-a2)", color: "var(--gray-11)" }}>
-                {["المستخدم", "البريد الإلكتروني", "الهاتف", "الدور", "الحالة", "الإجراءات"].map((h) => (
-                  <th key={h} className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">{h}</th>
-                ))}
+                <SortableTh label="المستخدم" sortKey="fullName" currentKey={sortKey} direction={sortDir} onSort={onSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+                <SortableTh label="البريد الإلكتروني" sortKey="email" currentKey={sortKey} direction={sortDir} onSort={onSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+                <th className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">الهاتف</th>
+                <SortableTh label="الدور" sortKey="role" currentKey={sortKey} direction={sortDir} onSort={onSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+                <SortableTh label="الحالة" sortKey="isActive" currentKey={sortKey} direction={sortDir} onSort={onSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+                <th className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -243,7 +248,7 @@ export default function UserManagement() {
                   </td>
                 </tr>
               ) : (
-                users.map((user, idx) => (
+                sortedUsers.map((user, idx) => (
                   <tr key={user.userId}
                     style={{
                       borderTop:  idx === 0 ? "none" : "1px solid var(--gray-a5)",
@@ -273,7 +278,9 @@ export default function UserManagement() {
 
                     {/* Phone */}
                     <td className="px-5 py-4">
-                      <div className="text-sm font-medium">{formatPhone(user)}</div>
+                      <div className="text-sm font-medium">
+                        <PhoneValue value={formatPhone(user)} />
+                      </div>
                     </td>
 
                     {/* Role */}

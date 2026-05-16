@@ -96,8 +96,8 @@ export default function MallDetailsDialog({ open, onOpenChange, mall, onEdit }) 
                 <div className="flex gap-4 items-start">
                   <div className="h-[90px] w-[90px] rounded-xl overflow-hidden flex-shrink-0"
                     style={{ background: "var(--gray-a3)", border: "1px solid var(--gray-a5)" }}>
-                    {m.logoUrl
-                      ? <img src={m.logoUrl} alt={m.name} className="h-full w-full object-cover" />
+                    {(m.logoImage?.mediumFileUrl || m.logoImage?.originalFileUrl)
+                      ? <img src={m.logoImage.mediumFileUrl || m.logoImage.originalFileUrl} alt={m.name} className="h-full w-full object-cover" />
                       : <div className="h-full w-full flex items-center justify-center text-2xl">🏬</div>}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -123,6 +123,26 @@ export default function MallDetailsDialog({ open, onOpenChange, mall, onEdit }) 
                     <div className="rounded-xl px-4 py-3 text-sm leading-relaxed"
                       style={{ background: "var(--gray-a2)", border: "1px solid var(--gray-a4)", color: "var(--gray-11)" }}>
                       {m.description}
+                    </div>
+                  </div>
+                )}
+
+                {/* Mall Images */}
+                {Array.isArray(m.mallImages) && m.mallImages.length > 0 && (
+                  <div>
+                    <p className="text-sm font-bold mb-2" style={{ color: "var(--gray-12)" }}>صور المول</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {m.mallImages.map((img, i) => (
+                        <div key={img.id || i} className="rounded-xl overflow-hidden aspect-video"
+                          style={{ border: "1px solid var(--gray-a5)" }}>
+                          <img
+                            src={img.mediumFileUrl || img.originalFileUrl}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            onError={(e) => { e.currentTarget.style.display = "none"; }}
+                          />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

@@ -1,181 +1,145 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { FiShoppingBag } from "react-icons/fi";
 import { IoLogoInstagram } from "react-icons/io5";
 import { FaFacebookF, FaWhatsapp } from "react-icons/fa";
 import { MdEmail, MdLocationOn } from "react-icons/md";
 
+const QUICK_LINKS = [
+  { label: "الرئيسية", to: "/" },
+  { label: "المفضلة", to: "/favorites" },
+  { label: "السلة", to: "/cart" },
+  { label: "طلباتي", to: "/orders" },
+];
+
+const SUPPORT_LINKS = [
+  { label: "الأسئلة الشائعة", to: "/faq" },
+  { label: "سياسة الاسترجاع", to: "/return-policy" },
+  { label: "الشروط والأحكام", to: "/terms-and-conditions" },
+  { label: "تواصل معنا", href: "mailto:support@emalls.ps" },
+];
+
 export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-12 md:mt-16 lg:mt-20 border-t border-black/10 bg-white" dir="rtl">
-      {/* Top accent line */}
-      <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent"></div>
-
-      <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-8 md:py-12 lg:py-16">
-        {/* Top grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10 lg:gap-12">
-          {/* Brand */}
-          <div className="sm:col-span-2 lg:col-span-1">
-            <div className="flex items-center gap-2.5">
-              <FiShoppingBag className="text-black text-xl md:text-2xl" />
-              <div className="text-xl md:text-2xl font-light tracking-wider text-black">
-                سوقَنا
+    <footer className="customer-shell mt-14 px-4 pb-8 sm:px-6 md:px-10 md:pb-10">
+      <div className="customer-panel-strong overflow-hidden rounded-[32px]">
+        <div className="grid gap-8 border-b border-[var(--customer-border)] p-6 md:grid-cols-[1.35fr_0.8fr_0.8fr_1fr] md:p-8 lg:p-10">
+          <div>
+            <div className="mb-4 flex items-center gap-3">
+              <div className="customer-icon-chip">
+                <FiShoppingBag className="text-xl" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black tracking-tight text-[var(--customer-text)]">
+                  سوقنا
+                </h3>
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-[var(--customer-muted-soft)]">
+                  E-MALL
+                </p>
               </div>
             </div>
 
-            <p className="mt-3 md:mt-4 text-xs md:text-sm font-light text-black/60 leading-relaxed">
-              منصّة تجمع منتجات المولات والمتاجر في مكان واحد لتجربة تسوّق أسرع وأسهل.
+            <p className="max-w-md text-sm leading-8 text-[var(--customer-muted)]">
+              تجربة تسوّق أوضح وأسرع تجمع المولات والمتاجر في مكان واحد، مع متابعة
+              الطلبات والمفضلة والسلة بسهولة من أي شاشة.
             </p>
 
-            {/* Socials - minimal square buttons */}
-            <div className="mt-4 md:mt-6 flex items-center gap-2 md:gap-3">
-              <a
-                href="#"
-                className="h-9 w-9 md:h-10 md:w-10 border border-black/10 flex items-center justify-center transition-all duration-300 hover:bg-black group"
-                aria-label="Facebook"
-              >
-                <FaFacebookF className="text-black text-xs md:text-sm transition-colors group-hover:text-white" />
-              </a>
-              <a
-                href="#"
-                className="h-9 w-9 md:h-10 md:w-10 border border-black/10 flex items-center justify-center transition-all duration-300 hover:bg-black group"
-                aria-label="Instagram"
-              >
-                <IoLogoInstagram className="text-black text-sm md:text-base transition-colors group-hover:text-white" />
-              </a>
-              <a
-                href="#"
-                className="h-9 w-9 md:h-10 md:w-10 border border-black/10 flex items-center justify-center transition-all duration-300 hover:bg-black group"
-                aria-label="WhatsApp"
-              >
-                <FaWhatsapp className="text-black text-sm md:text-base transition-colors group-hover:text-white" />
-              </a>
+            <div className="mt-6 flex items-center gap-3">
+              {[
+                { icon: <FaFacebookF className="text-sm" />, label: "Facebook" },
+                { icon: <IoLogoInstagram className="text-base" />, label: "Instagram" },
+                { icon: <FaWhatsapp className="text-base" />, label: "WhatsApp" },
+              ].map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  aria-label={item.label}
+                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--customer-border)] bg-[var(--customer-surface-muted)] text-[var(--customer-muted)] hover:-translate-y-0.5 hover:border-[rgba(15,109,255,0.18)] hover:text-[var(--customer-text)]"
+                >
+                  {item.icon}
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Links 1 */}
           <div>
-            <h3 className="text-xs md:text-sm lg:text-base font-light tracking-wide text-black mb-3 md:mb-4">
-              روابط سريعة
-            </h3>
-            <div className="h-px w-8 bg-black mb-3 md:mb-4"></div>
-            <ul className="space-y-2 md:space-y-2.5 text-xs md:text-sm">
-              <li>
-                <a href="#" className="text-black/60 font-light hover:text-black transition-colors duration-300">
-                  الرئيسية
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-black/60 font-light hover:text-black transition-colors duration-300">
-                  جميع الفئات
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-black/60 font-light hover:text-black transition-colors duration-300">
-                  العروض
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-black/60 font-light hover:text-black transition-colors duration-300">
-                  المولات والمتاجر
-                </a>
-              </li>
+            <h4 className="mb-4 text-sm font-extrabold text-[var(--customer-text)]">روابط سريعة</h4>
+            <ul className="space-y-3 text-sm text-[var(--customer-muted)]">
+              {QUICK_LINKS.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.to} className="hover:text-[var(--customer-text)]">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Links 2 */}
           <div>
-            <h3 className="text-xs md:text-sm lg:text-base font-light tracking-wide text-black mb-3 md:mb-4">
-              الدعم
-            </h3>
-            <div className="h-px w-8 bg-black mb-3 md:mb-4"></div>
-            <ul className="space-y-2 md:space-y-2.5 text-xs md:text-sm">
-              <li>
-                <a href="#" className="text-black/60 font-light hover:text-black transition-colors duration-300">
-                  الأسئلة الشائعة
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-black/60 font-light hover:text-black transition-colors duration-300">
-                  سياسة الاسترجاع
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-black/60 font-light hover:text-black transition-colors duration-300">
-                  الشروط والأحكام
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-black/60 font-light hover:text-black transition-colors duration-300">
-                  تواصل معنا
-                </a>
-              </li>
+            <h4 className="mb-4 text-sm font-extrabold text-[var(--customer-text)]">الدعم</h4>
+            <ul className="space-y-3 text-sm text-[var(--customer-muted)]">
+              {SUPPORT_LINKS.map((link) => (
+                <li key={link.label}>
+                  {link.to ? (
+                    <Link to={link.to} className="hover:text-[var(--customer-text)]">
+                      {link.label}
+                    </Link>
+                  ) : (
+                    <a href={link.href} className="hover:text-[var(--customer-text)]">
+                      {link.label}
+                    </a>
+                  )}
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Contact */}
           <div>
-            <h3 className="text-xs md:text-sm lg:text-base font-light tracking-wide text-black mb-3 md:mb-4">
-              تواصل
-            </h3>
-            <div className="h-px w-8 bg-black mb-3 md:mb-4"></div>
-
-            <div className="space-y-2.5 md:space-y-3 text-xs md:text-sm">
-              <div className="flex items-start gap-2 md:gap-2.5 text-black/60 font-light">
-                <MdLocationOn className="mt-0.5 text-black/40 flex-shrink-0" size={16} />
-                <span>الخليل – فلسطين</span>
+            <h4 className="mb-4 text-sm font-extrabold text-[var(--customer-text)]">تواصل</h4>
+            <div className="space-y-3 text-sm text-[var(--customer-muted)]">
+              <div className="flex items-start gap-2.5">
+                <MdLocationOn className="mt-1 shrink-0 text-[var(--customer-muted-soft)]" size={17} />
+                <span>الخليل - فلسطين</span>
               </div>
-
               <a
-                href="mailto:support@emalls.com"
-                className="flex items-center gap-2 md:gap-2.5 text-black/60 font-light hover:text-black transition-colors duration-300 break-all"
+                href="mailto:support@emalls.ps"
+                className="flex items-center gap-2.5 break-all hover:text-[var(--customer-text)]"
               >
-                <MdEmail className="text-black/40 flex-shrink-0" size={16} />
-                <span>support@emalls.com</span>
+                <MdEmail className="shrink-0 text-[var(--customer-muted-soft)]" size={17} />
+                <span>support@emalls.ps</span>
               </a>
+            </div>
 
-              {/* Newsletter - minimal */}
-              <div className="mt-5 md:mt-6 pt-5 md:pt-6 border-t border-black/10">
-                <p className="text-[9px] md:text-[10px] tracking-widest uppercase text-black/60 font-light mb-2 md:mb-3">
-                  اشترك في النشرة
-                </p>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="email"
-                    placeholder="بريدك الإلكتروني"
-                    className="flex-1 h-9 md:h-10 bg-white border border-black/10 px-3 text-xs md:text-sm font-light outline-none focus:border-black transition-colors"
-                  />
-                  <button className="h-9 md:h-10 px-3 md:px-4 bg-black text-white text-[9px] md:text-[10px] tracking-widest uppercase font-light hover:bg-black/90 transition-all duration-300 whitespace-nowrap">
-                    إرسال
-                  </button>
-                </div>
+            <div className="mt-6 rounded-[22px] border border-[var(--customer-border)] bg-[var(--customer-surface-muted)] p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-[var(--customer-muted-soft)]">
+                اشترك في النشرة
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="email"
+                  placeholder="بريدك الإلكتروني"
+                  className="h-11 flex-1 rounded-2xl border border-[var(--customer-border)] bg-white px-4 text-sm outline-none focus:border-[rgba(15,109,255,0.25)]"
+                />
+                <button type="button" className="customer-primary-btn rounded-2xl px-5">
+                  اشتراك
+                </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-8 md:mt-12 lg:mt-16 pt-5 md:pt-6 border-t border-black/10 flex flex-col sm:flex-row items-center justify-between gap-3 md:gap-4">
-          <p className="text-[10px] md:text-xs font-light text-black/50 tracking-wide text-center sm:text-right">
-            © {year} E-Malls. جميع الحقوق محفوظة.
-          </p>
-
-          <div className="flex items-center gap-2 md:gap-3">
-            <span className="text-[9px] md:text-[10px] tracking-widest uppercase text-black/50 font-light">
-              طرق الدفع:
+        <div className="flex flex-col gap-3 px-6 py-4 text-sm text-[var(--customer-muted)] md:flex-row md:items-center md:justify-between md:px-8">
+          <p>© {year} سوقنا. جميع الحقوق محفوظة.</p>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[var(--customer-muted-soft)]">
+            <span>طرق الدفع</span>
+            <span className="rounded-full border border-[var(--customer-border)] bg-[var(--customer-surface-muted)] px-3 py-1 text-[11px] text-[var(--customer-text)]">
+              Cash
             </span>
-            <div className="flex gap-2">
-              <span className="h-7 md:h-8 px-2 md:px-3 border border-black/10 text-[9px] md:text-[10px] tracking-wider uppercase text-black/60 font-light flex items-center">
-                Cash
-              </span>
-            </div>
           </div>
         </div>
       </div>
-
-      {/* Bottom accent line */}
-      <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent"></div>
     </footer>
   );
 }

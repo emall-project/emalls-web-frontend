@@ -1,98 +1,132 @@
 import React from "react";
-import { FiShoppingCart } from "react-icons/fi";
-import { GrFavorite } from "react-icons/gr";
-import { VscAccount } from "react-icons/vsc";
 import { useNavigate } from "react-router-dom";
+import { FiHeart, FiShoppingBag, FiShoppingCart } from "react-icons/fi";
+import { IoReceiptOutline } from "react-icons/io5";
+import { PiUserCircleBold } from "react-icons/pi";
 
 import HeaderSearch from "./HeaderSearch";
+import { auth } from "../../../api/auth";
+import { useCart } from "../../../context/CartContext";
+import { useFavorites } from "../../../context/FavoritesContext";
 
-function Header() {
-  const navigate = useNavigate();
-
+function ActionButton({ icon, badge, label, onClick, accent = false, hiddenOnMobile = false }) {
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-black/10">
-      {/* Top thin line - luxury accent */}
-      <div className="h-px bg-black"></div>
-      
-      <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-6 md:px-12 py-4 md:py-5">
-        <div className="flex items-center justify-between gap-6">
-          
-          {/* Logo */}
-          <button
-            className="shrink-0 cursor-pointer bg-transparent border-0 outline-none p-0"
-            onClick={() => navigate("/")}
-          >
-            <div className="flex flex-col items-end leading-none gap-0.5">
-              <span className="text-2xl md:text-3xl font-black tracking-tight text-black">سوقنا</span>
-              <span className="text-[9px] md:text-[10px] tracking-[0.35em] text-black/40 uppercase font-light self-stretch text-right">e-mall</span>
-            </div>
-          </button>
-
-          {/* Search - Centered & Clean */}
-          <div className="flex-1 max-w-2xl">
-            <HeaderSearch />
-          </div>
-
-          {/* Actions - Minimalist Icons */}
-          <div className="flex items-center gap-6 md:gap-8">
-            
-            {/* Favorites */}
-            <button
-              aria-label="favorites"
-              className="group relative flex flex-col items-center gap-1 transition-all duration-300"
-            >
-              <div className="relative">
-                <GrFavorite className="text-black text-xl md:text-2xl transition-all duration-300 group-hover:scale-110" />
-                {/* Subtle badge */}
-                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-black text-white text-[10px] font-medium rounded-full flex items-center justify-center">
-                  3
-                </span>
-              </div>
-              <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-medium group-hover:text-black transition-colors">
-                المفضلة
-              </span>
-            </button>
-
-            {/* Cart */}
-            <button
-              aria-label="cart"
-              className="group relative flex flex-col items-center gap-1 transition-all duration-300"
-            >
-              <div className="relative">
-                <FiShoppingCart className="text-black text-xl md:text-2xl transition-all duration-300 group-hover:scale-110" />
-                {/* Subtle badge */}
-                <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-black text-white text-[10px] font-medium rounded-full flex items-center justify-center">
-                  5
-                </span>
-              </div>
-              <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-medium group-hover:text-black transition-colors">
-                السلة
-              </span>
-            </button>
-
-            {/* Divider - Thin vertical line */}
-            <div className="hidden md:block h-8 w-px bg-black/20"></div>
-
-            {/* Account/Login */}
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="group flex flex-col items-center gap-1 transition-all duration-300"
-            >
-              <VscAccount className="text-black text-xl md:text-2xl transition-all duration-300 group-hover:scale-110" />
-              <span className="hidden md:block text-[10px] uppercase tracking-widest text-black/70 font-medium group-hover:text-black transition-colors">
-                الحساب
-              </span>
-            </button>
-
-          </div>
-        </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        hiddenOnMobile ? "hidden sm:flex" : "flex",
+        "group relative min-w-[72px] flex-col items-center justify-center gap-1 rounded-[22px] border px-3 py-2.5 text-center shadow-[var(--customer-shadow-soft)]",
+        accent
+          ? "border-[rgba(27,79,240,0.16)] bg-[var(--customer-accent-soft)] text-[var(--customer-accent)]"
+          : "border-[var(--customer-border)] bg-white/92 text-[var(--customer-muted)] hover:border-[rgba(27,79,240,0.16)] hover:text-[var(--customer-text)]",
+      ].join(" ")}
+    >
+      <div className="relative text-[1.25rem]">
+        {React.cloneElement(icon, { className: "transition-transform group-hover:scale-105" })}
+        {badge > 0 ? (
+          <span className="absolute -left-2 -top-2 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--customer-deal)] px-1 text-[9px] font-extrabold text-white shadow-sm">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        ) : null}
       </div>
-
-      {/* Bottom subtle shadow */}
-      <div className="h-px bg-gradient-to-r from-transparent via-black/5 to-transparent"></div>
-    </header>
+      <span className="text-[11px] font-bold leading-none">{label}</span>
+    </button>
   );
 }
 
-export default Header;
+function AccountButton({ user, isCustomer, onClick }) {
+  const displayName = user?.fullName || user?.username || "حسابي";
+  const initial = displayName.trim()?.[0]?.toUpperCase?.() || "U";
+
+  if (!isCustomer) {
+    return (
+      <button type="button" onClick={onClick} className="customer-primary-btn rounded-[22px] px-5">
+        <PiUserCircleBold className="text-[1.1rem]" />
+        تسجيل الدخول
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex items-center gap-3 rounded-[24px] border border-[var(--customer-border)] bg-white/94 px-3 py-2 shadow-[var(--customer-shadow-soft)] hover:border-[rgba(27,79,240,0.18)]"
+    >
+      <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#2257F5_0%,#153CC7_100%)] text-sm font-black text-white shadow-[0_12px_24px_rgba(27,79,240,0.22)]">
+        {initial}
+      </div>
+      <div className="hidden min-w-0 text-right md:block">
+        <div className="max-w-[120px] truncate text-sm font-extrabold text-[var(--customer-text)]">
+          {displayName}
+        </div>
+        <div className="mt-0.5 text-[11px] font-semibold text-[var(--customer-muted)]">
+          إدارة الطلبات والحساب
+        </div>
+      </div>
+    </button>
+  );
+}
+
+export default function Header() {
+  const navigate = useNavigate();
+  const user = auth.getUser();
+  const isCustomer = user?.role === "ROLE_CUSTOMER";
+  const { totalItems } = useCart();
+  const { favCount } = useFavorites();
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-[var(--customer-border)] bg-[rgba(248,249,253,0.92)] backdrop-blur-xl">
+      <div className="customer-shell px-4 py-3 sm:px-6 md:px-10">
+        <div className="flex items-center gap-3 md:gap-5">
+          <div className="order-3 shrink-0 md:order-1">
+            <button type="button" onClick={() => navigate("/")} className="flex items-center gap-3 text-right">
+              <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-[linear-gradient(135deg,#2257F5_0%,#153CC7_100%)] text-white shadow-[0_18px_40px_rgba(27,79,240,0.24)]">
+                <FiShoppingBag className="text-[1.4rem]" />
+              </div>
+              <div className="hidden sm:block leading-none">
+                <div className="text-[1.75rem] font-black tracking-tight text-[var(--customer-text)]">سوقنا</div>
+                <div className="mt-1 text-[9px] font-black uppercase tracking-[0.36em] text-[var(--customer-muted-soft)]">
+                  E-MALL MARKETPLACE
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <div className="order-1 min-w-0 flex-1 md:order-2">
+            <HeaderSearch />
+          </div>
+
+          <div className="order-2 flex shrink-0 items-center gap-2 md:order-3">
+            <ActionButton
+              icon={<FiHeart />}
+              badge={favCount}
+              label="المفضلة"
+              onClick={() => navigate(isCustomer ? "/favorites" : "/customer/login")}
+              hiddenOnMobile
+            />
+            <ActionButton
+              icon={<IoReceiptOutline />}
+              label="طلباتي"
+              onClick={() => navigate(isCustomer ? "/orders" : "/customer/login")}
+              hiddenOnMobile
+            />
+            <ActionButton
+              icon={<FiShoppingCart />}
+              badge={totalItems}
+              label="السلة"
+              onClick={() => navigate("/cart")}
+              accent
+            />
+            <AccountButton
+              user={user}
+              isCustomer={isCustomer}
+              onClick={() => navigate(isCustomer ? "/customer/profile" : "/customer/login")}
+            />
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}

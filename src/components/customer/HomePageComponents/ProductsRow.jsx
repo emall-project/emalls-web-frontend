@@ -1,97 +1,72 @@
 import React, { useEffect, useRef } from "react";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
+
 import ProductCard from "./ProductCard";
 import SectionHeader from "./SectionHeader";
 
-export default function ProductsRow({ title, products = [], onViewAll, onAddToCart }) {
+export default function ProductsRow({
+  title,
+  subtitle,
+  products = [],
+  onViewAll,
+  onAddToCart,
+}) {
   const scrollerRef = useRef(null);
 
-  const scrollByAmount = (dir) => {
+  const scrollBy = (dir) => {
     const el = scrollerRef.current;
     if (!el) return;
-    const amount = Math.max(280, Math.floor(el.clientWidth * 0.85));
-    el.scrollBy({ left: dir * amount, behavior: "smooth" });
+    el.scrollBy({ left: dir * Math.max(320, el.clientWidth * 0.72), behavior: "smooth" });
   };
 
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
-    // ابدأ من اليمين (RTL)
     el.scrollLeft = el.scrollWidth;
   }, [products.length]);
 
   if (!products.length) return null;
 
   return (
-    <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-6 md:px-12 py-3 md:py-3">
-      {/* Top accent line */}
-      
-      <div className="bg-white">
-        <SectionHeader title={title} onViewAll={onViewAll} />
-
-        <div className="relative mt-8 md:mt-10">
-          {/* arrows - luxury square style */}
+    <section className="customer-shell px-4 py-6 sm:px-6 md:px-10 md:py-10">
+      <div className="mb-6 flex items-end justify-between gap-4">
+        <SectionHeader title={title} subtitle={subtitle} onViewAll={onViewAll} />
+        <div className="hidden shrink-0 items-center gap-2 md:flex">
           <button
             type="button"
-            aria-label="scroll left"
-            onClick={() => scrollByAmount(-1)}
-            className="
-              hidden md:flex
-              absolute left-0 md:-left-14 top-1/2 -translate-y-1/2 z-10
-              h-12 w-12 bg-white border border-black/10
-              items-center justify-center 
-              transition-all duration-300
-              hover:bg-black hover:border-black
-              group
-            "
+            aria-label="السابق"
+            onClick={() => scrollBy(-1)}
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--customer-border)] bg-white text-[var(--customer-muted)] shadow-[var(--customer-shadow-soft)] hover:border-[rgba(27,79,240,0.2)] hover:text-[var(--customer-accent)]"
           >
-            <IoIosArrowBack className="text-black text-xl transition-colors group-hover:text-white" />
+            <IoIosArrowBack className="text-base" />
           </button>
-
           <button
             type="button"
-            aria-label="scroll right"
-            onClick={() => scrollByAmount(1)}
-            className="
-              hidden md:flex
-              absolute right-0 md:-right-14 top-1/2 -translate-y-1/2 z-10
-              h-12 w-12 bg-white border border-black/10
-              items-center justify-center 
-              transition-all duration-300
-              hover:bg-black hover:border-black
-              group
-            "
+            aria-label="التالي"
+            onClick={() => scrollBy(1)}
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--customer-border)] bg-white text-[var(--customer-muted)] shadow-[var(--customer-shadow-soft)] hover:border-[rgba(27,79,240,0.2)] hover:text-[var(--customer-accent)]"
           >
-            <IoIosArrowForward className="text-black text-xl transition-colors group-hover:text-white" />
+            <IoIosArrowForward className="text-base" />
           </button>
-
-          {/* scroller */}
-          <div
-            ref={scrollerRef}
-            className="
-              flex gap-4 md:gap-6
-              overflow-x-auto scroll-smooth
-              pb-2
-              [-ms-overflow-style:none] [scrollbar-width:none]
-              [&::-webkit-scrollbar]:hidden
-            "
-            style={{ WebkitOverflowScrolling: "touch" }}
-          >
-            {products.map((p) => (
-              <div key={p.id} className="shrink-0 w-[200px] sm:w-[240px] md:w-[280px]">
-                <ProductCard p={p} onAddToCart={onAddToCart} />
-              </div>
-            ))}
-          </div>
-
-          {/* Elegant fade gradients */}
-          <div className="pointer-events-none hidden md:block absolute left-0 top-0 h-full w-20 bg-gradient-to-r from-white via-white/80 to-transparent" />
-          <div className="pointer-events-none hidden md:block absolute right-0 top-0 h-full w-20 bg-gradient-to-l from-white via-white/80 to-transparent" />
         </div>
       </div>
 
-      {/* Bottom accent line */}
-      <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mt-8"></div>
+      <div className="relative overflow-hidden rounded-[34px] border border-[var(--customer-border)] bg-[linear-gradient(180deg,#ffffff_0%,#f8faff_100%)] p-4 shadow-[var(--customer-shadow-soft)] sm:p-5">
+        <div
+          ref={scrollerRef}
+          className="flex items-stretch gap-4 overflow-x-auto pb-2 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          {products.map((product) => (
+            <div key={product.id} className="flex w-[210px] shrink-0 sm:w-[230px] md:w-[250px] lg:w-[268px]">
+              <ProductCard p={product} onAddToCart={onAddToCart} />
+            </div>
+          ))}
+        </div>
+
+        <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-12 bg-gradient-to-r from-white to-transparent md:block" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-12 bg-gradient-to-l from-white to-transparent md:block" />
+      </div>
     </section>
   );
 }

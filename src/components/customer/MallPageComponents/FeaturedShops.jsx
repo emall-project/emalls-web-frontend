@@ -1,192 +1,113 @@
 import React, { useEffect, useRef } from "react";
-import {
-  IoStorefrontOutline,
-  IoChevronBack,
-  IoStarSharp,
-} from "react-icons/io5";
+import { useNavigate } from "react-router-dom";
+import { IoChevronBack, IoLocationOutline, IoStorefrontOutline } from "react-icons/io5";
 import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 
 function FeaturedShops({ shops = [], mallName }) {
+  const navigate = useNavigate();
   const scrollRef = useRef(null);
 
-  const specialistShops = (shops || []).filter((shop) => shop.specialist === true);
-  if (specialistShops.length === 0) return null;
+  const activeShops = Array.isArray(shops) ? shops : [];
 
-  const scrollByAmount = (dir) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const amount = Math.max(280, Math.floor(el.clientWidth * 0.85));
-    el.scrollBy({ left: dir * amount, behavior: "smooth" });
+  const scrollByAmount = (direction) => {
+    const element = scrollRef.current;
+    if (!element) return;
+    const amount = Math.max(280, Math.floor(element.clientWidth * 0.82));
+    element.scrollBy({ left: direction * amount, behavior: "smooth" });
   };
 
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    // ابدأ من اليمين (RTL)
-    el.scrollLeft = el.scrollWidth;
-  }, [specialistShops.length]);
+    const element = scrollRef.current;
+    if (!element) return;
+    element.scrollLeft = element.scrollWidth;
+  }, [activeShops.length]);
+
+  if (activeShops.length === 0) return null;
 
   return (
-    <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-8 md:py-12">
-      {/* Top accent line */}
-      <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mb-8 md:mb-10"></div>
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 mb-6 md:mb-8">
-        <div className="flex items-center gap-3 md:gap-4">
-          <div className="w-10 h-10 md:w-12 md:h-12 bg-black flex items-center justify-center flex-shrink-0">
-            <IoStarSharp className="text-lg md:text-xl text-white" />
-          </div>
-
+    <section className="customer-shell px-4 py-4 sm:px-6 md:px-12 md:py-6">
+      <div className="customer-panel-strong overflow-hidden px-5 py-6 sm:px-6 md:px-8">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="text-right">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-wide text-black">
-              متاجر مميزة
-            </h2>
-            <p className="text-xs sm:text-sm md:text-base text-black/60 mt-1 font-semibold">
-              تجارب تسوق استثنائية في{" "}
-              <span className="text-black">{mallName}</span>
+            <span className="customer-kicker">متاجر المول</span>
+            <h2 className="mt-3 text-2xl font-extrabold text-slate-900 md:text-3xl">استكشف المتاجر النشطة</h2>
+            <p className="mt-2 text-sm leading-7 text-slate-500">
+              تصفّح المتاجر المفتوحة داخل <span className="font-bold text-slate-700">{mallName}</span> بسهولة أكبر.
             </p>
           </div>
+
+          <div className="hidden items-center gap-2 md:flex">
+            <button
+              type="button"
+              aria-label="السابق"
+              onClick={() => scrollByAmount(-1)}
+              className="grid h-11 w-11 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm hover:border-blue-200 hover:text-blue-700"
+            >
+              <IoIosArrowBack className="text-lg" />
+            </button>
+            <button
+              type="button"
+              aria-label="التالي"
+              onClick={() => scrollByAmount(1)}
+              className="grid h-11 w-11 place-items-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm hover:border-blue-200 hover:text-blue-700"
+            >
+              <IoIosArrowForward className="text-lg" />
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Container */}
-      <div className="bg-white">
-        <div className="relative">
-          {/* Arrows - luxury square style */}
-          <button
-            type="button"
-            aria-label="scroll left"
-            onClick={() => scrollByAmount(-1)}
-            className="
-              hidden md:flex
-              absolute left-0 md:-left-14 top-1/2 -translate-y-1/2 z-10
-              h-10 w-10 md:h-12 md:w-12
-              bg-white border border-black/10
-              items-center justify-center
-              transition-all duration-300
-              hover:bg-black hover:border-black
-              group
-            "
-          >
-            <IoIosArrowBack className="text-black text-lg md:text-xl transition-colors group-hover:text-white" />
-          </button>
-
-          <button
-            type="button"
-            aria-label="scroll right"
-            onClick={() => scrollByAmount(1)}
-            className="
-              hidden md:flex
-              absolute right-0 md:-right-14 top-1/2 -translate-y-1/2 z-10
-              h-10 w-10 md:h-12 md:w-12
-              bg-white border border-black/10
-              items-center justify-center
-              transition-all duration-300
-              hover:bg-black hover:border-black
-              group
-            "
-          >
-            <IoIosArrowForward className="text-black text-lg md:text-xl transition-colors group-hover:text-white" />
-          </button>
-
-          {/* Scroller */}
-          <div
-            ref={scrollRef}
-            className="
-              flex gap-4 md:gap-6
-              overflow-x-auto scroll-smooth
-              pb-2
-              [-ms-overflow-style:none] [scrollbar-width:none]
-              [&::-webkit-scrollbar]:hidden
-            "
-            style={{ WebkitOverflowScrolling: "touch" }}
-          >
-            {specialistShops.map((shop) => (
-              <article
-                key={shop.id}
-                className="
-                  group
-                  shrink-0
-                  w-[260px] sm:w-[280px] md:w-[320px]
-                  bg-white
-                  border border-black/10
-                  overflow-hidden
-                  transition-all duration-500
-                  hover:shadow-xl
-                  hover:-translate-y-1
-                "
-              >
-                {/* Image / Logo area */}
-                <div className="relative h-40 sm:h-44 md:h-48 bg-neutral-50 flex items-center justify-center overflow-hidden">
-                  {/* Badge */}
-                  <div className="absolute top-3 left-3 z-10">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black text-white text-[10px] sm:text-xs font-semibold tracking-wider uppercase">
-                      <IoStarSharp className="text-xs sm:text-sm" />
-                      مميز
+        <div
+          ref={scrollRef}
+          className="flex gap-4 overflow-x-auto pb-2 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
+          {activeShops.map((shop) => (
+            <article
+              key={shop.id}
+              className="customer-panel w-[290px] shrink-0 overflow-hidden p-0 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(15,23,42,0.12)]"
+            >
+              <div className="relative h-44 overflow-hidden bg-slate-100">
+                {shop.categoryLabel ? (
+                  <div className="absolute left-3 top-3 z-10">
+                    <span className="rounded-full bg-slate-950/80 px-3 py-1 text-[11px] font-semibold text-white">
+                      {shop.categoryLabel}
                     </span>
                   </div>
+                ) : null}
 
-                  {shop.image ? (
-                    <img
-                      src={shop.image}
-                      alt={shop.name}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                  ) : shop.logoUrl ? (
-                    <div className="w-full h-full flex items-center justify-center p-6">
-                      <img
-                        src={shop.logoUrl}
-                        alt={shop.name}
-                        className="max-w-full max-h-full object-contain"
-                      />
-                    </div>
-                  ) : (
-                    <IoStorefrontOutline className="text-5xl md:text-6xl text-black/20" />
-                  )}
+                {shop.image ? (
+                  <img src={shop.image} alt={shop.name} className="h-full w-full object-cover transition-transform duration-700 hover:scale-105" />
+                ) : shop.logoUrl ? (
+                  <div className="flex h-full w-full items-center justify-center p-6">
+                    <img src={shop.logoUrl} alt={shop.name} className="max-h-full max-w-full object-contain" />
+                  </div>
+                ) : (
+                  <IoStorefrontOutline className="mx-auto mt-16 text-6xl text-slate-300" />
+                )}
+              </div>
 
-                  {/* Overlay on hover */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-all duration-500"></div>
-                </div>
+              <div className="p-5 text-right">
+                <h3 className="line-clamp-1 text-lg font-extrabold text-slate-900">{shop.name}</h3>
+                {shop.location ? (
+                  <div className="mt-3 flex items-center justify-end gap-1.5 text-sm text-slate-500">
+                    <span className="line-clamp-1">{shop.location}</span>
+                    <IoLocationOutline className="text-base shrink-0" />
+                  </div>
+                ) : null}
 
-                {/* Details */}
-                <div className="p-4 sm:p-5 text-right border-t border-black/5">
-                  <h3 className="text-base sm:text-lg md:text-xl font-semibold tracking-wide text-black line-clamp-1 mb-4">
-                    {shop.name}
-                  </h3>
-
-                  {/* CTA Button */}
-                  <button
-                    className="
-                      w-full
-                      h-10 sm:h-11 md:h-12
-                      bg-black
-                      text-white
-                      text-xs sm:text-sm
-                      font-semibold
-                      tracking-widest
-                      uppercase
-                      hover:bg-black/90
-                      transition-all duration-300
-                      flex items-center justify-center gap-3
-                    "
-                  >
-                    <span>استكشف المتجر</span>
-                    <IoChevronBack className="text-base sm:text-lg" />
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          {/* Elegant fade gradients */}
-          <div className="pointer-events-none hidden md:block absolute left-0 top-0 h-full w-20 bg-gradient-to-r from-white via-white/80 to-transparent" />
-          <div className="pointer-events-none hidden md:block absolute right-0 top-0 h-full w-20 bg-gradient-to-l from-white via-white/80 to-transparent" />
+                <button
+                  type="button"
+                  onClick={() => navigate(`/stores/${shop.id}`)}
+                  className="customer-primary-btn mt-5 w-full justify-center"
+                >
+                  <span>استكشف المتجر</span>
+                  <IoChevronBack className="text-base" />
+                </button>
+              </div>
+            </article>
+          ))}
         </div>
       </div>
-
-      {/* Bottom accent line */}
-      <div className="h-px bg-gradient-to-r from-transparent via-black/10 to-transparent mt-8 md:mt-10"></div>
     </section>
   );
 }

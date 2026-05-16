@@ -3,7 +3,14 @@
     "allow": [
       "Bash(find c:/Users/BonBon/emalls-frontend/src/pages/admin/MallManagement c:/Users/BonBon/emalls-frontend/src/pages/admin/ShopManagement c:/Users/BonBon/emalls-frontend/src/pages/admin/AdsManagement -type f -name *.js -o -name *.jsx -o -name *.json)",
       "Bash(node -e \"const fi = require\\(''react-icons/fi''\\); const icons = [''FiGrid'',''FiShoppingBag'',''FiPackage'',''FiRotateCcw'',''FiTag'',''FiDollarSign'',''FiGift'',''FiCreditCard'',''FiX'',''FiEdit2'',''FiFileText'']; icons.forEach\\(i => console.log\\(i, fi[i] ? ''OK'' : ''MISSING''\\)\\);\")",
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "Bash(npx vite:*)",
+      "Bash(curl -s http://localhost:5173/ -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s http://localhost:5174/ -o /dev/null -w \"%{http_code}\")",
+      "Bash(curl -s http://localhost:5175/ -o /dev/null -w \"%{http_code}\")",
+      "Bash(grep -E \"\\\\.\\(java|kt\\)$\")",
+      "Bash(xargs grep *)",
+      "Bash(xargs cat *)"
     ]
   }
 }

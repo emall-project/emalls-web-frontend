@@ -1,19 +1,20 @@
 export const MALL_STATUSES = [
-  "ACTIVE", "INACTIVE", "MAINTENANCE", "COMING_SOON", "UNDER_CONSTRUCTION",
+  "ACTIVE",
+  "INACTIVE",
+  "MAINTENANCE",
 ];
 
 export const STATUS_LABELS = {
-  ACTIVE:             "نشط",
-  INACTIVE:           "غير نشط",
-  MAINTENANCE:        "صيانة"
+  ACTIVE: "نشط",
+  INACTIVE: "غير نشط",
+  MAINTENANCE: "صيانة",
 };
 
 export const STATUS_COLORS = {
-  ACTIVE:      { bg: "var(--green-a3)", fg: "var(--green-11)", dot: "var(--green-9)" },
-  INACTIVE:    { bg: "var(--red-a3)",   fg: "var(--red-11)",   dot: "var(--red-9)"   },
-  MAINTENANCE: { bg: "var(--blue-a3)",  fg: "var(--blue-11)",  dot: "var(--blue-9)"  },
+  ACTIVE: { bg: "var(--green-a3)", fg: "var(--green-11)", dot: "var(--green-9)" },
+  INACTIVE: { bg: "var(--red-a3)", fg: "var(--red-11)", dot: "var(--red-9)" },
+  MAINTENANCE: { bg: "var(--blue-a3)", fg: "var(--blue-11)", dot: "var(--blue-9)" },
 };
-
 
 export const GLOBAL_STYLES = `
   @keyframes dropIn {

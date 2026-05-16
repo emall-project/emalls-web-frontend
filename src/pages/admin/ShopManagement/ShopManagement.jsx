@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { useSortedData, SortableTh } from "../../../utils/tableSort";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   FiPlus,
@@ -21,6 +22,8 @@ import {
   SHOP_STATUSES,
   SHOP_STATUS_LABELS,
   SHOP_STATUS_COLORS,
+  SHOP_ADMIN_STATUS_LABELS,
+  SHOP_ADMIN_STATUS_COLORS,
   CATEGORY_LABELS,
 } from "./constants";
 import ShopDetailsDialog from "./ShopDetailsDialog";
@@ -198,6 +201,28 @@ function StatusBadge({ status }) {
   );
 }
 
+function AdminStatusBadge({ status }) {
+  const s =
+    SHOP_ADMIN_STATUS_COLORS[status] || {
+      bg: "var(--gray-a3)",
+      fg: "var(--gray-11)",
+      dot: "var(--gray-9)",
+    };
+
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
+      style={{ background: s.bg, color: s.fg }}
+    >
+      <span
+        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+        style={{ background: s.dot }}
+      />
+      {SHOP_ADMIN_STATUS_LABELS[status] || status}
+    </span>
+  );
+}
+
 function Toast({ message, type = "success", onClose }) {
   useEffect(() => {
     const t = setTimeout(onClose, 3500);
@@ -222,10 +247,22 @@ function Toast({ message, type = "success", onClose }) {
 }
 
 // ── Actions Menu ──────────────────────────────────────────────────────────────
-function ShopActionsMenu({ shop, loading, onView, onEdit, onChangeStatus }) {
+function getAdminStatus(shop) {
+  return String(shop?.adminStatus || "NONE").toUpperCase();
+}
+
+function ShopActionsMenu({
+  shop,
+  loading,
+  onView,
+  onEdit,
+  onSetMaintenance,
+  onBlock,
+  onClearAdminOverride,
+}) {
   const themeContainer = useThemeContainer();
-  const isActive = shop?.status === "ACTIVE";
-  const otherStatuses = SHOP_STATUSES.filter((s) => s !== shop?.status);
+  const adminStatus = getAdminStatus(shop);
+  const hasAdminOverride = adminStatus !== "NONE";
 
   const menuStyle = {
     background: "var(--gray-1)",
@@ -258,7 +295,7 @@ function ShopActionsMenu({ shop, loading, onView, onEdit, onChangeStatus }) {
             className="px-2 py-1.5 text-xs font-semibold"
             style={{ color: "var(--gray-10)" }}
           >
-            الإجراءات
+            إجراءات الإدارة
           </DropdownMenu.Label>
 
           <DDItem icon={<FiEye />} onSelect={() => onView(shop)}>
@@ -266,7 +303,7 @@ function ShopActionsMenu({ shop, loading, onView, onEdit, onChangeStatus }) {
           </DDItem>
 
           <DDItem icon={<FiEdit />} onSelect={() => onEdit(shop)}>
-            تعديل المتجر
+            تعديل البيانات
           </DDItem>
 
           <DropdownMenu.Separator
@@ -274,52 +311,26 @@ function ShopActionsMenu({ shop, loading, onView, onEdit, onChangeStatus }) {
             style={{ height: 1, background: "var(--gray-a5)" }}
           />
 
-          <DDItem
-            icon={isActive ? <FiXCircle /> : <FiCheckCircle />}
-            onSelect={() =>
-              onChangeStatus(shop, isActive ? "INACTIVE" : "ACTIVE")
-            }
-          >
-            {isActive ? "تعطيل المتجر" : "تفعيل المتجر"}
-          </DDItem>
+          {hasAdminOverride ? (
+            <DDItem icon={<FiCheckCircle />} onSelect={() => onClearAdminOverride(shop)}>
+              {getAdminMenuLabel(adminStatus)}
+            </DDItem>
+          ) : (
+            <>
+              <DDItem icon={<FiAlertCircle />} onSelect={() => onSetMaintenance(shop)}>
+                وضع تحت الصيانة
+              </DDItem>
+              <DDItem icon={<FiXCircle />} onSelect={() => onBlock(shop)}>
+                حظر المتجر
+              </DDItem>
+            </>
+          )}
 
-          <DropdownMenu.Sub>
-            <DropdownMenu.SubTrigger
-              className="flex items-center gap-2 w-full px-2 py-2 rounded-lg text-sm cursor-pointer select-none outline-none transition-colors hover:bg-black/5"
-              style={{ color: "var(--gray-12)" }}
-            >
-              <span
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ background: SHOP_STATUS_COLORS[shop?.status]?.dot }}
-              />
-              <span className="font-medium flex-1">تحويل الحالة</span>
-              <FiArrowLeft size={13} style={{ color: "var(--gray-10)" }} />
-            </DropdownMenu.SubTrigger>
-
-            <DropdownMenu.Portal container={themeContainer}>
-              <DropdownMenu.SubContent
-                sideOffset={4}
-                alignOffset={-6}
-                className="z-[9999] min-w-[170px] rounded-xl p-2 outline-none"
-                style={menuStyle}
-              >
-                {otherStatuses.map((s) => (
-                  <DDItem
-                    key={s}
-                    icon={
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ background: SHOP_STATUS_COLORS[s]?.dot }}
-                      />
-                    }
-                    onSelect={() => onChangeStatus(shop, s)}
-                  >
-                    {SHOP_STATUS_LABELS[s]}
-                  </DDItem>
-                ))}
-              </DropdownMenu.SubContent>
-            </DropdownMenu.Portal>
-          </DropdownMenu.Sub>
+          {hasAdminOverride && adminStatus !== "BLOCKED" && (
+            <DDItem icon={<FiXCircle />} onSelect={() => onBlock(shop)}>
+              تحويل إلى محظور
+            </DDItem>
+          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
@@ -342,7 +353,33 @@ function DDItem({ children, icon, onSelect }) {
   );
 }
 
+function getAdminMenuLabel(adminStatus) {
+  if (adminStatus === "BLOCKED") return "إزالة الحظر";
+  if (adminStatus === "MAINTENANCE") return "إعادة للوضع الطبيعي";
+  return "إعادة للوضع الطبيعي";
+}
+
 // ── Filter Input ──────────────────────────────────────────────────────────────
+function extractPaginatedResult(response) {
+  const raw = response?.data ?? response ?? {};
+  const pageData = raw?.data ?? raw;
+
+  const list =
+    (Array.isArray(pageData?.content) && pageData.content) ||
+    (Array.isArray(raw?.content) && raw.content) ||
+    (Array.isArray(pageData) && pageData) ||
+    (Array.isArray(raw) && raw) ||
+    [];
+
+  const meta = pageData?.meta ?? raw?.meta ?? {};
+
+  return {
+    list,
+    totalPages: meta?.totalPages ?? pageData?.totalPages ?? raw?.totalPages ?? 1,
+    totalItems: meta?.totalItems ?? pageData?.totalItems ?? raw?.totalItems ?? list.length,
+  };
+}
+
 function FilterInput({ value, onChange, placeholder, icon: Icon }) {
   const [focused, setFocused] = useState(false);
 
@@ -461,6 +498,7 @@ function CustomDropdown({ value, onChange, options, placeholder }) {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function ShopManagement() {
   const [shops, setShops] = useState([]);
+  const { sorted: sortedShops, sortKey, sortDir, onSort } = useSortedData(shops, "name");
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(1);
   const [fetchLoading, setFetchLoading] = useState(false);
@@ -504,12 +542,11 @@ export default function ShopManagement() {
       };
 
       const res = await shopsApi.getAll(params);
-      const data = res?.data || res?.content || [];
-      const list = Array.isArray(data) ? data : data?.content || [];
+      const { list, totalPages, totalItems } = extractPaginatedResult(res);
 
       setShops(list);
-      setTotalPages(data?.totalPages || 1);
-      setTotalElements(data?.totalElements || list.length);
+      setTotalPages(totalPages || 1);
+      setTotalElements(totalItems || list.length);
     } catch (e) {
       setFetchError(e.message || "فشل في جلب البيانات");
       setShops([]);
@@ -537,12 +574,12 @@ export default function ShopManagement() {
     setPage(0);
   }, [search, mallIdFilter, statusFilter, categoryFilter, locationFilter]);
 
-  const handleChangeStatus = async (shop, status) => {
+  const runRowAction = async (shop, action, successMessage) => {
     setRowLoading((p) => ({ ...p, [shop.shopId]: true }));
 
     try {
-      await shopsApi.changeStatus(shop.shopId, status);
-      showToast(`تم تغيير حالة ${shop.name}`);
+      await action();
+      showToast(successMessage);
       fetchShops();
     } catch (e) {
       showToast(e.message, "error");
@@ -550,6 +587,27 @@ export default function ShopManagement() {
       setRowLoading((p) => ({ ...p, [shop.shopId]: false }));
     }
   };
+
+  const handleSetMaintenance = async (shop) =>
+    runRowAction(
+      shop,
+      () => shopsApi.setMaintenance(shop.shopId),
+      `تم وضع ${shop.name} تحت الصيانة.`,
+    );
+
+  const handleBlock = async (shop) =>
+    runRowAction(
+      shop,
+      () => shopsApi.block(shop.shopId),
+      `تم حظر ${shop.name}.`,
+    );
+
+  const handleClearAdminOverride = async (shop) =>
+    runRowAction(
+      shop,
+      () => shopsApi.clearAdminOverride(shop.shopId),
+      `تمت إعادة ${shop.name} إلى الوضع الطبيعي.`,
+    );
 
   const clearFilters = () => {
     setSearch("");
@@ -777,21 +835,12 @@ export default function ShopManagement() {
                   color: "var(--gray-11)",
                 }}
               >
-                {[
-                  "المتجر",
-                  "المول / الموقع",
-                  "الفئة",
-                  "المالك",
-                  "الحالة",
-                  "الإجراءات",
-                ].map((h) => (
-                  <th
-                    key={h}
-                    className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide"
-                  >
-                    {h}
-                  </th>
-                ))}
+                <SortableTh label="المتجر" sortKey="name" currentKey={sortKey} direction={sortDir} onSort={onSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+                <SortableTh label="المول / الموقع" sortKey="mall.name" currentKey={sortKey} direction={sortDir} onSort={onSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+                <SortableTh label="الفئة" sortKey="category" currentKey={sortKey} direction={sortDir} onSort={onSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+                <SortableTh label="المالك" sortKey="owner.username" currentKey={sortKey} direction={sortDir} onSort={onSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+                <SortableTh label="الحالة" sortKey="status" currentKey={sortKey} direction={sortDir} onSort={onSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+                <th className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">الإجراءات</th>
               </tr>
             </thead>
 
@@ -818,7 +867,7 @@ export default function ShopManagement() {
                   </td>
                 </tr>
               ) : (
-                shops.map((shop, idx) => (
+                sortedShops.map((shop, idx) => (
                   <tr
                     key={shop.shopId}
                     style={{
@@ -839,17 +888,21 @@ export default function ShopManagement() {
                             border: "1px solid var(--gray-a5)",
                           }}
                         >
-                          {shop.logoUrl ? (
-                            <img
-                              src={shop.logoUrl}
-                              alt={shop.name}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-lg">
-                              🏪
-                            </div>
-                          )}
+                          {(() => {
+                            const src = shop.logoUrl || shop.logoImage?.mediumFileUrl || shop.logoImage?.originalFileUrl || null;
+                            return src ? (
+                              <img
+                                src={src}
+                                alt={shop.name}
+                                className="h-full w-full object-cover"
+                                onError={(e) => { e.currentTarget.style.display = "none"; }}
+                              />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-lg">
+                                🏪
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         <div>
@@ -912,7 +965,10 @@ export default function ShopManagement() {
 
                     {/* Status */}
                     <td className="px-5 py-4">
-                      <StatusBadge status={shop.status} />
+                      <div className="flex flex-wrap gap-2">
+                        <AdminStatusBadge status={getAdminStatus(shop)} />
+                        <StatusBadge status={shop.status} />
+                      </div>
                     </td>
 
                     {/* Actions */}
@@ -928,7 +984,9 @@ export default function ShopManagement() {
                           setSelectedShop(s);
                           setEditOpen(true);
                         }}
-                        onChangeStatus={handleChangeStatus}
+                        onSetMaintenance={handleSetMaintenance}
+                        onBlock={handleBlock}
+                        onClearAdminOverride={handleClearAdminOverride}
                       />
                     </td>
                   </tr>
@@ -1038,3 +1096,4 @@ export default function ShopManagement() {
     </>
   );
 }
+

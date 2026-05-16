@@ -1,15 +1,286 @@
 @import "tailwindcss";
 
-html, body {
-  font-family: "Cairo", sans-serif;
-  direction: rtl;
+:root {
+  --customer-bg: #f5f7fb;
+  --customer-bg-soft: #fbfcff;
+  --customer-surface: rgba(255, 255, 255, 0.96);
+  --customer-surface-strong: #ffffff;
+  --customer-surface-muted: #eef2f7;
+
+  --customer-border: rgba(15, 23, 42, 0.08);
+  --customer-border-strong: rgba(15, 23, 42, 0.16);
+
+  --customer-text: #0f172a;
+  --customer-muted: #5f6c85;
+  --customer-muted-soft: #94a3b8;
+
+  --customer-accent: #1b4ff0;
+  --customer-accent-hover: #153cc7;
+  --customer-accent-soft: rgba(27, 79, 240, 0.08);
+
+  --customer-deal: #e54828;
+  --customer-deal-soft: rgba(229, 72, 40, 0.1);
+  --customer-success: #0f9f6e;
+
+  --customer-shadow-xs: 0 2px 10px rgba(15, 23, 42, 0.04);
+  --customer-shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.06);
+  --customer-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+  --customer-shadow-md: 0 22px 55px rgba(15, 23, 42, 0.12);
+  --customer-shadow-lg: 0 28px 80px rgba(15, 23, 42, 0.14);
+
+  --app-header-h: 86px;
 }
 
-/* Force Cairo on Radix Themes (overrides its built-in font stack) */
+@media (max-width: 767px) {
+  :root {
+    --app-header-h: 78px;
+  }
+}
+
+html,
+body {
+  font-family: "Cairo", sans-serif;
+  direction: rtl;
+  background: var(--customer-bg);
+  color: var(--customer-text);
+}
+
 .radix-themes {
   --default-font-family: "Cairo", sans-serif;
 }
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   font-family: "Cairo", sans-serif;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 200ms ease,
+    opacity 160ms ease;
+}
+
+::selection {
+  background: rgba(27, 79, 240, 0.12);
+  color: var(--customer-text);
+}
+
+/* Dark native select — forces OS to render dropdown in dark mode */
+select.dark-select {
+  background-color: var(--gray-3);
+  color: var(--gray-12);
+  color-scheme: dark;
+}
+select.dark-select option {
+  background-color: var(--gray-3);
+  color: var(--gray-12);
+}
+
+.customer-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top right, rgba(27, 79, 240, 0.06), transparent 24%),
+    radial-gradient(circle at bottom left, rgba(15, 23, 42, 0.05), transparent 22%),
+    var(--customer-bg);
+}
+
+.customer-shell {
+  width: min(1440px, 100%);
+  margin-inline: auto;
+}
+
+.customer-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(15, 23, 42, 0.08), transparent);
+}
+
+.customer-panel {
+  background: var(--customer-surface);
+  border: 1px solid var(--customer-border);
+  border-radius: 22px;
+  box-shadow: var(--customer-shadow-soft);
+  backdrop-filter: blur(12px);
+}
+
+.customer-panel-strong {
+  background: var(--customer-surface-strong);
+  border: 1px solid var(--customer-border);
+  border-radius: 28px;
+  box-shadow: var(--customer-shadow);
+}
+
+.customer-soft-panel {
+  background: var(--customer-bg-soft);
+  border: 1px solid var(--customer-border);
+  border-radius: 24px;
+  box-shadow: var(--customer-shadow-soft);
+}
+
+.customer-icon-chip {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 16px;
+  border: 1px solid rgba(27, 79, 240, 0.14);
+  background: linear-gradient(180deg, rgba(27, 79, 240, 0.11) 0%, rgba(27, 79, 240, 0.06) 100%);
+  color: var(--customer-accent);
+}
+
+.customer-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 999px;
+  border: 1px solid rgba(27, 79, 240, 0.12);
+  background: rgba(27, 79, 240, 0.07);
+  color: var(--customer-accent);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.customer-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.customer-page-title {
+  font-size: clamp(1.5rem, 2vw, 2.2rem);
+  line-height: 1.15;
+  font-weight: 900;
+  color: var(--customer-text);
+}
+
+.customer-page-subtitle {
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--customer-muted);
+}
+
+.customer-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 3rem;
+  border-radius: 16px;
+  padding-inline: 1.2rem;
+  background: linear-gradient(180deg, #2257f5 0%, #1b4ff0 100%);
+  color: white;
+  font-size: 0.92rem;
+  font-weight: 800;
+  box-shadow: 0 12px 24px rgba(27, 79, 240, 0.22);
+}
+
+.customer-primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(27, 79, 240, 0.28);
+  background: linear-gradient(180deg, #2d60f6 0%, #1f54f1 100%);
+}
+
+.customer-secondary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  border-radius: 16px;
+  padding-inline: 1.2rem;
+  border: 1px solid var(--customer-border-strong);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--customer-text);
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.customer-secondary-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(27, 79, 240, 0.2);
+  box-shadow: var(--customer-shadow-soft);
+}
+
+.customer-catbar-surface {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(249, 250, 252, 0.94) 100%);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08), 0 20px 46px rgba(15, 23, 42, 0.05);
+  backdrop-filter: blur(18px);
+}
+
+.customer-catbar-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 3.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.98);
+  color: var(--customer-text);
+  padding-inline: 0.7rem 1.05rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+  transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.customer-catbar-trigger:hover,
+.customer-catbar-trigger[data-state="open"] {
+  border-color: rgba(27, 79, 240, 0.2);
+  color: var(--customer-accent);
+  box-shadow: 0 14px 28px rgba(27, 79, 240, 0.1);
+  transform: translateY(-1px);
+}
+
+.customer-catbar-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  padding-inline: 0.95rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--customer-muted);
+  background: transparent;
+  white-space: nowrap;
+}
+
+.customer-catbar-chip:hover {
+  border-color: rgba(27, 79, 240, 0.14);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--customer-text);
+}
+
+.customer-catbar-chip[data-active="true"] {
+  border-color: rgba(27, 79, 240, 0.15);
+  background: linear-gradient(180deg, #2257f5 0%, #1b4ff0 100%);
+  color: white;
+  box-shadow: 0 10px 22px rgba(27, 79, 240, 0.22);
+}
+
+.customer-catbar-menu {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.99);
+  box-shadow: 0 34px 90px rgba(15, 23, 42, 0.16);
+  backdrop-filter: blur(24px);
 }

@@ -1,100 +1,140 @@
-// src/components/HomePageComponents/HeaderSearch.jsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
-import { IoIosSearch, IoIosClose } from "react-icons/io";
-import { useNavigate } from "react-router-dom";
+import { IoIosClose } from "react-icons/io";
+import { FiSearch } from "react-icons/fi";
+import { useMatch, useNavigate } from "react-router-dom";
 
-import { buildSearchIndex, searchInIndex } from "../../../utils/searchUtils";
+import { customerApi } from "../../../api/customerApi";
+import {
+  filterMallSearchResults,
+  filterStoreSearchResults,
+  toMallSearchItem,
+  toProductSearchItem,
+  toStoreSearchItem,
+} from "../../../utils/customerSearch";
 
-import rawMalls from "../../../assets/malls.json";
-import rawStores from "../../../assets/stores.json";
-import rawProducts from "../../../assets/products.json";
+function buildSearchUrl(query, mallId = null) {
+  const params = new URLSearchParams({ q: query });
+  if (mallId) params.set("mallId", String(mallId));
+  return `/search?${params.toString()}`;
+}
 
 export default function HeaderSearch() {
   const navigate = useNavigate();
+  const mallMatch = useMatch("/malls/:mallId");
+  const scopedMallId = mallMatch?.params?.mallId ?? null;
 
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
-
-  const searchIndex = useMemo(
-    () => buildSearchIndex({ rawMalls, rawStores, rawProducts }),
-    []
-  );
-
-  const results = useMemo(
-    () => searchInIndex(query, searchIndex, { limit: 12 }),
-    [query, searchIndex]
-  );
+  const [loading, setLoading] = useState(false);
+  const [malls, setMalls] = useState([]);
+  const [stores, setStores] = useState([]);
+  const [results, setResults] = useState({ malls: [], stores: [], products: [], all: [] });
 
   const shouldOpen = query.trim().length >= 2;
 
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      customerApi.getAllMalls().catch(() => []),
+      customerApi.getAllShops({ status: "ACTIVE" }).catch(() => []),
+    ]).then(([mallList, shopList]) => {
+      if (!active) return;
+      setMalls(mallList);
+      setStores(shopList);
+    });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!shouldOpen) {
+      setResults({ malls: [], stores: [], products: [], all: [] });
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+    const timeout = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const q = query.trim();
+        const [productResponse] = await Promise.all([
+          customerApi.getProducts(
+            { q, ...(scopedMallId ? { mallId: Number(scopedMallId) } : {}) },
+            0,
+            8
+          ),
+        ]);
+        if (!active) return;
+
+        const mallItems  = filterMallSearchResults(malls, q, scopedMallId).slice(0, 4).map(toMallSearchItem);
+        const storeItems = filterStoreSearchResults(stores, q, scopedMallId).slice(0, 4).map(toStoreSearchItem);
+        const productItems = (productResponse?.products ?? []).slice(0, 6).map(toProductSearchItem);
+        const all = [...mallItems, ...storeItems, ...productItems];
+
+        setResults({ malls: mallItems, stores: storeItems, products: productItems, all });
+      } catch {
+        if (!active) return;
+        setResults({ malls: [], stores: [], products: [], all: [] });
+      } finally {
+        if (active) setLoading(false);
+      }
+    }, 300);
+
+    return () => { active = false; clearTimeout(timeout); };
+  }, [query, shouldOpen, malls, stores, scopedMallId]);
+
+  const searchUrl = useMemo(() => {
+    const trimmed = query.trim();
+    return trimmed ? buildSearchUrl(trimmed, scopedMallId) : "";
+  }, [query, scopedMallId]);
+
+  const inputBase = [
+    "h-[52px] w-full rounded-[24px] text-sm text-[var(--customer-text)] outline-none shadow-[var(--customer-shadow-soft)]",
+    "border border-[rgba(15,23,42,0.08)] bg-white/94",
+    "pr-12 pl-10 font-semibold",
+    "placeholder:text-[var(--customer-muted-soft)]",
+    "transition-all",
+    "focus:border-[rgba(27,79,240,0.25)] focus:bg-white focus:shadow-[0_0_0_4px_rgba(27,79,240,0.08)]",
+  ].join(" ");
+
   return (
-    <div className="flex-1 min-w-0">
+    <div className="min-w-0 flex-1">
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Anchor asChild>
-          <div className="relative group">
-            {/* desktop */}
-            <input
-              className="hidden md:flex w-full h-11 border-b-2 border-black/20 bg-transparent pr-10 pl-10 text-base outline-none focus:border-black transition-all placeholder:text-black/40 font-light tracking-wide"
-              type="text"
-              placeholder="ابحث عن متاجر، منتجات، أو مولات..."
-              value={query}
-              onChange={(e) => {
-                const v = e.target.value;
-                setQuery(v);
-                setOpen(v.trim().length >= 2);
-              }}
-              onFocus={() => setOpen(shouldOpen)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") setOpen(false);
-                if (e.key === "Enter") {
-                  const q = query.trim();
-                  if (q) {
-                    navigate(`/search?q=${encodeURIComponent(q)}`);
-                    setOpen(false);
-                  }
-                }
-              }}
-            />
-
-            {/* mobile */}
-            <input
-              className="md:hidden w-full h-10 border-b-2 border-black/20 bg-transparent pr-10 pl-10 text-sm outline-none focus:border-black transition-all placeholder:text-black/40 font-light"
-              type="text"
-              placeholder="بحث..."
-              value={query}
-              onChange={(e) => {
-                const v = e.target.value;
-                setQuery(v);
-                setOpen(v.trim().length >= 2);
-              }}
-              onFocus={() => setOpen(shouldOpen)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") setOpen(false);
-                if (e.key === "Enter") {
-                  const q = query.trim();
-                  if (q) {
-                    navigate(`/search?q=${encodeURIComponent(q)}`);
-                    setOpen(false);
-                  }
-                }
-              }}
-            />
-
-            {/* Search Icon - minimal */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center">
-              <IoIosSearch className="text-black/60 text-xl group-hover:text-black transition-colors" />
+          <div className="relative">
+            {/* Search icon */}
+            <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2">
+              <FiSearch className="text-[1.05rem] text-[var(--customer-accent)]" />
             </div>
 
-            {/* Clear Button - minimal */}
+            {/* Input */}
+            <input
+              className={inputBase}
+              type="text"
+              placeholder="ابحث عن منتجات، متاجر، مولات..."
+              value={query}
+              onChange={(e) => {
+                const val = e.target.value;
+                setQuery(val);
+                setOpen(val.trim().length >= 2);
+              }}
+              onFocus={() => setOpen(shouldOpen)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setOpen(false);
+                if (e.key === "Enter" && searchUrl) {
+                  navigate(searchUrl);
+                  setOpen(false);
+                }
+              }}
+            />
+
+            {/* Clear */}
             {query && (
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setQuery("");
-                  setOpen(false);
-                }}
-                className="absolute left-0 top-1/2 -translate-y-1/2 text-black/40 hover:text-black transition-colors"
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setQuery(""); setOpen(false); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-[var(--customer-muted-soft)] hover:text-[var(--customer-text)]"
               >
                 <IoIosClose className="text-lg" />
               </button>
@@ -102,7 +142,6 @@ export default function HeaderSearch() {
           </div>
         </Popover.Anchor>
 
-        {/* dropdown */}
         <Popover.Portal>
           <Popover.Content
             dir="rtl"
@@ -111,88 +150,55 @@ export default function HeaderSearch() {
             sideOffset={8}
             onOpenAutoFocus={(e) => e.preventDefault()}
             onCloseAutoFocus={(e) => e.preventDefault()}
-            className="
-              z-50
-              w-[min(720px,calc(100vw-32px))]
-              bg-white
-              border border-black/10
-              shadow-[0_8px_30px_rgba(0,0,0,0.12)]
-              overflow-hidden
-              outline-none
-            "
+            className="z-50 w-[min(760px,calc(100vw-32px))] overflow-hidden rounded-[28px] border border-[var(--customer-border)] bg-white shadow-[var(--customer-shadow-lg)] outline-none"
           >
             {!shouldOpen ? (
-              <div className="p-12 text-center">
-                <IoIosSearch className="mx-auto text-5xl text-black/20 mb-4" />
-                <p className="text-black/60 font-light text-sm tracking-wide">
-                  اكتب حرفين على الأقل للبحث
-                </p>
+              <div className="px-6 py-10 text-center">
+                <FiSearch className="mx-auto mb-3 text-4xl text-[var(--customer-muted-soft)]" />
+                <p className="text-sm text-[var(--customer-muted)]">اكتب حرفين على الأقل للبحث</p>
+              </div>
+            ) : loading ? (
+              <div className="space-y-3 p-5">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex animate-pulse items-center gap-3">
+                    <div className="h-11 w-11 shrink-0 rounded-xl bg-[var(--customer-surface-muted)]" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-2/3 rounded-full bg-[var(--customer-surface-muted)]" />
+                      <div className="h-3 w-1/2 rounded-full bg-[var(--customer-surface-muted)]" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : results.all.length === 0 ? (
-              <div className="p-12 text-center">
-                <IoIosSearch className="mx-auto text-5xl text-black/20 mb-4" />
-                <p className="text-black font-light text-base mb-2">لا توجد نتائج</p>
-                <p className="text-black/50 font-light text-xs tracking-wide">
-                  جرب كلمات بحث مختلفة
-                </p>
+              <div className="px-6 py-10 text-center">
+                <FiSearch className="mx-auto mb-3 text-4xl text-[var(--customer-muted-soft)]" />
+                <p className="mb-1 text-sm font-bold text-[var(--customer-text)]">لا توجد نتائج</p>
+                <p className="text-xs text-[var(--customer-muted)]">جرّب كلمات بحث مختلفة</p>
               </div>
             ) : (
-              <div className="max-h-[500px] overflow-auto">
+              <div className="max-h-[480px] overflow-auto">
                 {results.malls.length > 0 && (
-                  <Group
-                    title="المولات"
-                    items={results.malls}
-                    onPick={(item) => {
-                      navigate(item.href);
-                      setOpen(false);
-                    }}
-                  />
+                  <SearchGroup title="المولات" items={results.malls} onPick={(item) => { navigate(item.href); setOpen(false); }} />
                 )}
-
                 {results.stores.length > 0 && (
-                  <Group
-                    title="المتاجر"
-                    items={results.stores}
-                    onPick={(item) => {
-                      navigate(item.href);
-                      setOpen(false);
-                    }}
-                  />
+                  <SearchGroup title="المتاجر" items={results.stores} onPick={(item) => { navigate(item.href); setOpen(false); }} />
                 )}
-
                 {results.products.length > 0 && (
-                  <Group
-                    title="المنتجات"
-                    items={results.products}
-                    onPick={(item) => {
-                      navigate(item.href);
-                      setOpen(false);
-                    }}
-                  />
+                  <SearchGroup title="المنتجات" items={results.products} onPick={(item) => { navigate(item.href); setOpen(false); }} />
                 )}
 
-                {/* Footer - minimal luxury style */}
-                <div className="border-t border-black/10 p-4 flex items-center justify-between">
+                <div className="flex items-center justify-between border-t border-[var(--customer-border)] px-5 py-3">
                   <button
                     type="button"
-                    onClick={() => {
-                      const q = query.trim();
-                      if (!q) return;
-                      navigate(`/search?q=${encodeURIComponent(q)}`);
-                      setOpen(false);
-                    }}
-                    className="text-black font-light text-sm underline hover:no-underline transition-all tracking-wide"
+                    onClick={() => { if (searchUrl) { navigate(searchUrl); setOpen(false); } }}
+                    className="text-sm font-bold text-[var(--customer-accent)] hover:underline"
                   >
                     عرض كل النتائج ({results.all.length})
                   </button>
-
                   <button
                     type="button"
-                    onClick={() => {
-                      setQuery("");
-                      setOpen(false);
-                    }}
-                    className="text-black/60 font-light text-xs hover:text-black transition-colors tracking-widest uppercase"
+                    onClick={() => { setQuery(""); setOpen(false); }}
+                    className="text-xs font-semibold text-[var(--customer-muted)] hover:text-[var(--customer-text)]"
                   >
                     مسح
                   </button>
@@ -206,62 +212,52 @@ export default function HeaderSearch() {
   );
 }
 
-function Group({ title, items, onPick }) {
+function SearchGroup({ title, items, onPick }) {
   return (
-    <div className="py-4">
-      {/* Group header - minimal */}
-      <div className="px-6 pb-3 text-[10px] font-light text-black/50 uppercase tracking-[0.2em] border-b border-black/5">
+    <div className="py-2">
+      <div className="px-5 pb-1.5 pt-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--customer-muted-soft)]">
         {title}
       </div>
-
-      <div className="divide-y divide-black/5">
+      <div>
         {items.map((item) => (
           <button
             key={`${item.type}-${item.id}`}
             type="button"
             onClick={() => onPick(item)}
-            className="
-              w-full text-right
-              px-6 py-4
-              hover:bg-black/[0.02]
-              transition-colors
-              flex items-center gap-4
-              group
-            "
+            className="group flex w-full items-center gap-3 px-5 py-2.5 text-right transition-colors hover:bg-[var(--customer-surface-muted)]"
           >
-            {/* Image/Icon - minimal square */}
-            <div className="w-12 h-12 bg-black/5 flex items-center justify-center overflow-hidden shrink-0 group-hover:bg-black/10 transition-colors">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--customer-surface-muted)]">
               {item.imageUrl ? (
-                <img
-                  src={item.imageUrl}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                />
+                <img src={item.imageUrl} alt={item.title} className="h-full w-full object-cover" />
               ) : (
-                <span className="text-black/40 font-light text-lg">
-                  {item.title?.[0] || "?"}
+                <span className="text-base font-bold text-[var(--customer-muted)]">
+                  {item.title?.[0] || "؟"}
                 </span>
               )}
             </div>
 
-            {/* Text Content - minimal typography */}
             <div className="min-w-0 flex-1">
-              <div className="font-light text-black truncate text-base tracking-wide group-hover:underline">
+              <div className="truncate text-sm font-bold text-[var(--customer-text)] group-hover:text-[var(--customer-accent)]">
                 {item.title}
               </div>
-              {item.subtitle ? (
-                <div className="text-xs text-black/50 font-light truncate mt-1 tracking-wide">
+              {item.subtitle && (
+                <div className="mt-0.5 truncate text-xs text-[var(--customer-muted)]">
                   {item.subtitle}
                 </div>
-              ) : null}
+              )}
+              {item.price != null && (
+                <div className="mt-0.5 flex items-baseline gap-1.5">
+                  <span className="text-sm font-black text-[var(--customer-text)]">₪{item.price}</span>
+                  {item.oldPrice != null && (
+                    <span className="text-xs text-[var(--customer-muted-soft)] line-through">₪{item.oldPrice}</span>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Arrow - minimal */}
-            <div className="text-black/20 group-hover:text-black/60 transition-colors">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </div>
+            <svg className="h-4 w-4 shrink-0 text-[var(--customer-muted-soft)] group-hover:text-[var(--customer-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
         ))}
       </div>

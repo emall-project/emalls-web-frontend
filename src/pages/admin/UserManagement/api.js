@@ -1,8 +1,10 @@
+import { auth } from "../../../api/auth";
+
 const BASE_URL = "/accounts";
 
 export async function apiFetch(path, options = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    headers: { "Content-Type": "application/json", ...auth.getHeaders(), ...(options.headers || {}) },
     ...options,
   });
   const json = await res.json();

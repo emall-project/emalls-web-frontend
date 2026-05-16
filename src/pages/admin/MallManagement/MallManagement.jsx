@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { useSortedData, SortableTh } from "../../../utils/tableSort";
 import {
   FiPlus, FiSearch, FiMapPin, FiRefreshCw,
   FiChevronLeft, FiChevronRight, FiAlertCircle,
@@ -11,8 +12,27 @@ import AdminActionsMenu         from "./AdminActionsMenu";
 import MallDetailsDialog        from "./MallDetailsDialog";
 import MallFormDialog           from "./MallFormDialog";
 
+function extractPaginatedResult(response) {
+  const raw = response?.data ?? response ?? {};
+  const pageData = raw?.data ?? raw;
+  const list =
+    (Array.isArray(pageData?.content) && pageData.content) ||
+    (Array.isArray(raw?.content) && raw.content) ||
+    (Array.isArray(pageData) && pageData) ||
+    (Array.isArray(raw) && raw) ||
+    [];
+  const meta = pageData?.meta ?? raw?.meta ?? {};
+
+  return {
+    list,
+    totalPages: meta?.totalPages ?? pageData?.totalPages ?? raw?.totalPages ?? 1,
+    totalItems: meta?.totalItems ?? pageData?.totalItems ?? raw?.totalItems ?? list.length,
+  };
+}
+
 export default function MallManagement() {
   const [malls,         setMalls]         = useState([]);
+  const { sorted: sortedMalls, sortKey, sortDir, onSort } = useSortedData(malls, "name");
   const [totalPages,    setTotalPages]    = useState(1);
   const [totalElements, setTotalElements] = useState(1);
   const [fetchLoading,  setFetchLoading]  = useState(false);
@@ -47,11 +67,10 @@ export default function MallManagement() {
         ...(serviceNameFilter ? { "service-name": serviceNameFilter } : {}),
       };
       const res  = await mallsApi.getAll(params);
-      const data = res?.data || res?.content || [];
-      const list = Array.isArray(data) ? data : (data?.content || []);
+      const { list, totalPages, totalItems } = extractPaginatedResult(res);
       setMalls(list);
-      setTotalPages(data?.totalPages || 1);
-      setTotalElements(data?.totalElements || list.length);
+      setTotalPages(totalPages || 1);
+      setTotalElements(totalItems || list.length);
     } catch (e) {
       setFetchError(e.message || "فشل في جلب البيانات");
       setMalls([]);
@@ -187,9 +206,11 @@ export default function MallManagement() {
           <table className="w-full text-sm" style={{ minWidth: 640 }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--gray-a6)", background: "var(--gray-a2)", color: "var(--gray-11)" }}>
-                {["اسم المول", "الموقع / المدينة", "الخدمات", "الحالة", "الإجراءات"].map((h) => (
-                  <th key={h} className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">{h}</th>
-                ))}
+                <SortableTh label="اسم المول" sortKey="name" currentKey={sortKey} direction={sortDir} onSort={onSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+                <SortableTh label="الموقع / المدينة" sortKey="location" currentKey={sortKey} direction={sortDir} onSort={onSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+                <th className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">الخدمات</th>
+                <SortableTh label="الحالة" sortKey="status" currentKey={sortKey} direction={sortDir} onSort={onSort} className="px-5 py-3.5 font-semibold text-xs tracking-wide" />
+                <th className="px-5 py-3.5 text-right font-semibold text-xs tracking-wide">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -208,7 +229,7 @@ export default function MallManagement() {
                   </td>
                 </tr>
               ) : (
-                malls.map((mall, idx) => (
+                sortedMalls.map((mall, idx) => (
                   <tr key={mall.mallId}
                     style={{
                       borderTop:  idx === 0 ? "none" : "1px solid var(--gray-a5)",
@@ -222,8 +243,8 @@ export default function MallManagement() {
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl overflow-hidden flex-shrink-0"
                           style={{ background: "var(--gray-a3)", border: "1px solid var(--gray-a5)" }}>
-                          {mall.logoUrl
-                            ? <img src={mall.logoUrl} alt={mall.name} className="h-full w-full object-cover" />
+                          {(mall.logoImage?.mediumFileUrl || mall.logoImage?.originalFileUrl)
+                            ? <img src={mall.logoImage.mediumFileUrl || mall.logoImage.originalFileUrl} alt={mall.name} className="h-full w-full object-cover" onError={(e) => { e.currentTarget.style.display = "none"; }} />
                             : <div className="h-full w-full flex items-center justify-center text-lg">🏬</div>}
                         </div>
                         <div>

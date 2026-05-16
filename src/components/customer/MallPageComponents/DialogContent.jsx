@@ -1,197 +1,131 @@
-import React, { useState } from "react";
-import { IoClose } from "react-icons/io5";
+import React, { useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { IoClose } from "react-icons/io5";
+
+const TAB_ITEMS = [
+  { id: "about", label: "عن المول" },
+  { id: "services", label: "الخدمات" },
+  { id: "stores", label: "المتاجر" },
+];
 
 export default function DialogContent({ mall, stores }) {
   const [activeTab, setActiveTab] = useState("about");
 
+  const services = useMemo(() => {
+    const servicesObj = mall?.services || {};
+    const available = Object.values(servicesObj).filter((service) => service?.available);
+    if (available.length) {
+      return available.map((service) => ({
+        title: service.name,
+        description: service.description || "",
+      }));
+    }
+
+    return [
+      { title: "مواقف سيارات", description: "مواقف منظمة وواضحة الوصول لزوار المول." },
+      { title: "استعلامات", description: "خدمة استعلامات لمساعدة الزوار داخل المول." },
+      { title: "واي فاي", description: "اتصال متاح داخل مناطق متعددة من المول." },
+      { title: "أمن ونظافة", description: "مستوى خدمة يومي للمحافظة على راحة الزوار." },
+    ];
+  }, [mall]);
+
   return (
     <div className="relative">
-      {/* Close Button */}
-      <Dialog.Close
-        className="
-          absolute -top-3 -left-3 sm:-top-4 sm:-left-4
-          w-10 h-10 sm:w-12 sm:h-12
-          bg-white border border-black/10
-          flex items-center justify-center
-          hover:bg-black hover:text-white transition-all duration-300
-          outline-none
-          z-10
-        "
-      >
-        <IoClose className="text-xl sm:text-2xl" />
+      <Dialog.Close className="absolute left-0 top-0 grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600">
+        <IoClose className="text-xl" />
       </Dialog.Close>
 
-      {/* Header with Logo */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 mb-8 md:mb-10 pb-6 md:pb-8 border-b border-black/10">
-        {/* Logo */}
-        {mall?.logoUrl && (
-          <div className="flex-shrink-0">
-            <img
-              src={mall.logoUrl}
-              alt={mall?.name || "Mall logo"}
-              className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
-            />
-          </div>
-        )}
+      <div className="border-b border-slate-200 pb-6 pr-2 pl-14">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          {mall?.logoUrl ? (
+            <img src={mall.logoUrl} alt={mall?.name || "Mall logo"} className="h-20 w-20 rounded-3xl bg-slate-50 object-contain p-2" />
+          ) : null}
 
-        {/* Tabs Navigation - Scrollable on mobile */}
-        <div className="flex-1 w-full overflow-x-auto scrollbar-hide">
-          <div className="flex gap-2 sm:gap-3 min-w-max sm:min-w-0">
-            {[
-              { id: "about", label: "عن المول" },
-              { id: "services", label: "الخدمات" },
-              { id: "stores", label: "المتاجر" },
-              { id: "restaurants", label: "المطاعم" },
-              { id: "entertainment", label: "الترفيه" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={[
-                  "px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base font-semibold tracking-wide uppercase transition-all duration-300 whitespace-nowrap",
-                  activeTab === tab.id
-                    ? "bg-black text-white"
-                    : "bg-transparent text-black/70 hover:text-black hover:bg-black/5",
-                ].join(" ")}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="min-w-0 flex-1">
+            <h2 className="text-3xl font-extrabold text-slate-900">{mall?.name}</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-8 text-slate-500">
+              {mall?.description?.[0] || "تفاصيل أكثر عن المول والخدمات والمتاجر المتاحة داخله."}
+            </p>
           </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          {TAB_ITEMS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                activeTab === tab.id
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Tab Content */}
-      <div className="min-h-[300px] sm:min-h-[400px]">
-        {activeTab === "about" && <AboutTab mall={mall} />}
-        {activeTab === "services" && <ServicesTab mall={mall} />}
-        {activeTab === "stores" && <StoresTab mall={mall} stores={stores} />}
-        {activeTab === "restaurants" && <RestaurantsTab mall={mall} />}
-        {activeTab === "entertainment" && <EntertainmentTab mall={mall} />}
+      <div className="pt-6">
+        {activeTab === "about" ? <AboutTab mall={mall} /> : null}
+        {activeTab === "services" ? <ServicesTab services={services} /> : null}
+        {activeTab === "stores" ? <StoresTab stores={stores} /> : null}
       </div>
-
-      <style>{`
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { scrollbar-width: none; }
-      `}</style>
     </div>
   );
 }
 
-// About Tab Component
 function AboutTab({ mall }) {
   const aboutSections = mall?.aboutSections || [];
-  const mainImage =
-    mall?.images?.[2]?.image ||
-    "https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?w=800&q=80";
+  const textBlocks =
+    aboutSections.length > 0
+      ? aboutSections
+      : Array.isArray(mall?.description)
+      ? mall.description
+      : mall?.description
+      ? [mall.description]
+      : [];
+
+  const image = mall?.images?.[2]?.image || mall?.images?.[0]?.image || mall?.logoUrl || "";
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 md:gap-8 items-start">
-      {/* Image */}
-      <div className="w-full lg:w-[480px] flex-shrink-0">
-        <img
-          src={mainImage}
-          alt={mall?.name || "Mall Interior"}
-          className="w-full h-[300px] sm:h-[400px] lg:h-[500px] object-cover"
-        />
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[420px_minmax(0,1fr)]">
+      <div className="overflow-hidden rounded-[2rem] bg-slate-100">
+        {image ? (
+          <img src={image} alt={mall?.name || "Mall"} className="h-full min-h-[280px] w-full object-cover" />
+        ) : (
+          <div className="flex min-h-[280px] items-center justify-center text-slate-400">لا توجد صورة متاحة</div>
+        )}
       </div>
 
-      {/* Text Content */}
-      <div className="flex-1 space-y-4 md:space-y-6 text-right">
-        {aboutSections.length > 0 ? (
-          aboutSections.map((section, index) => (
-            <p
-              key={index}
-              className="text-sm sm:text-base md:text-lg font-semibold leading-relaxed text-black/80"
-            >
+      <div className="space-y-4 text-right">
+        {textBlocks.length ? (
+          textBlocks.map((section, index) => (
+            <p key={index} className="text-sm leading-8 text-slate-700">
               {section}
             </p>
           ))
-        ) : mall?.description ? (
-          <>
-            <p className="text-sm sm:text-base md:text-lg font-semibold leading-relaxed text-black/80">
-              {mall.description[0]}
-            </p>
-            <p className="text-sm sm:text-base md:text-lg font-semibold leading-relaxed text-black/80">
-              {mall.description[1]}
-            </p>
-            <p className="text-sm sm:text-base md:text-lg font-semibold leading-relaxed text-black/80">
-              {mall.description[2]}
-            </p>
-          </>
         ) : (
-          <p className="text-sm sm:text-base md:text-lg font-semibold leading-relaxed text-black/40">
-            لا توجد معلومات متاحة حالياً
-          </p>
+          <p className="text-sm leading-8 text-slate-500">لا توجد معلومات إضافية متاحة عن هذا المول حاليًا.</p>
         )}
       </div>
     </div>
   );
 }
 
-// Services Tab Component
-function ServicesTab({ mall }) {
-  const servicesObj = mall?.services || {};
-
-  const servicesArray = Object.entries(servicesObj)
-    .filter(([_, service]) => service.available)
-    .map(([key, service]) => ({
-      title: service.name,
-      description: service.description || "",
-      key,
-    }));
-
-  const defaultServices = [
-    {
-      title: "واي فاي",
-      description: "استمتع بخدمة واي فاي مجانية وسريعة في جميع أرجاء المول.",
-    },
-    {
-      title: "الأمن",
-      description: "نظام أمن متكامل يعمل على مدار الساعة لراحتك وسلامتك.",
-    },
-    {
-      title: "مواقف السيارات",
-      description: "مواقف واسعة وآمنة تمتد عبر 5 طوابق للوصول المريح.",
-    },
-    {
-      title: "الإعلانات",
-      description: "شاشات إعلانية في جميع الطوابق والمداخل.",
-    },
-  ];
-
-  const displayServices = servicesArray.length > 0 ? servicesArray : defaultServices;
-
+function ServicesTab({ services }) {
   return (
     <div>
-      {/* Header */}
-      <p className="text-sm sm:text-base md:text-lg text-black/80 font-semibold mb-6 md:mb-8 text-right leading-relaxed">
-        خدمات متكاملة لراحة زوارنا: مصليات مجهزة، أمن على مدار الساعة، استعلامات، حمامات نظيفة، واي فاي
-        مجاني، مساحات إعلانية، ومواقف سيارات واسعة.
+      <p className="mb-5 text-sm leading-8 text-slate-500">
+        هذه أبرز الخدمات المتوفرة داخل المول لتجربة زيارة أوضح وأكثر راحة.
       </p>
 
-      {/* Services Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-        {displayServices.map((service, index) => (
-          <div
-            key={service.key || index}
-            className="bg-neutral-50 border border-black/5 overflow-hidden text-right hover:bg-neutral-100 transition-all duration-300 p-4 md:p-6"
-          >
-            {/* Service Title */}
-            <h3 className="text-base sm:text-lg md:text-xl font-semibold text-black mb-2 md:mb-3 text-center">
-              {service.title}
-            </h3>
-
-            {/* Divider */}
-            <div className="w-8 h-px bg-black mx-auto mb-3 md:mb-4"></div>
-
-            {/* Service Description */}
-            {service.description && (
-              <p className="text-xs sm:text-sm md:text-base text-black/60 font-semibold leading-relaxed">
-                {service.description}
-              </p>
-            )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {services.map((service) => (
+          <div key={service.title} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+            <h3 className="text-lg font-extrabold text-slate-900">{service.title}</h3>
+            <p className="mt-3 text-sm leading-8 text-slate-600">{service.description || "لا توجد تفاصيل إضافية."}</p>
           </div>
         ))}
       </div>
@@ -200,77 +134,27 @@ function ServicesTab({ mall }) {
 }
 
 function StoresTab({ stores = [] }) {
-  if (stores.length === 0) {
-    return (
-      <div className="text-center py-12 text-black/40">
-        <p className="text-base sm:text-lg md:text-xl font-semibold">
-          لا توجد متاجر متاحة حالياً
-        </p>
-      </div>
-    );
+  if (!stores.length) {
+    return <p className="text-sm leading-8 text-slate-500">لا توجد متاجر متاحة للعرض حاليًا.</p>;
   }
 
   return (
-    <div>
-      {/* Header */}
-      <p className="text-sm sm:text-base md:text-lg text-black/80 font-semibold mb-6 md:mb-8 text-right leading-relaxed">
-        اكتشف مجموعة متنوعة من المتاجر العالمية والمحلية تحت سقف واحد
-      </p>
-
-      {/* Stores Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-        {stores.map((store) => (
-          <div
-            key={store.id}
-            className="bg-white border border-black/10 overflow-hidden hover:shadow-lg transition-all duration-300 group"
-          >
-            {/* Store Image */}
-            {store.logoUrl && (
-              <div className="w-full bg-neutral-50 flex items-center justify-center overflow-hidden">
-                <img
-                  src={store.logoUrl}
-                  alt={store.name}
-                  className="w-full h-24 sm:h-28 md:h-32 object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              </div>
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      {stores.map((store) => (
+        <div key={store.id} className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+          <div className="flex h-28 items-center justify-center bg-slate-50 p-4">
+            {store.logoUrl ? (
+              <img src={store.logoUrl} alt={store.name} className="max-h-full max-w-full object-contain" />
+            ) : (
+              <span className="text-lg font-bold text-slate-400">{store.name?.[0] || "؟"}</span>
             )}
-
-            {/* Store Info */}
-            <div className="p-3 sm:p-4 md:p-5 text-right border-t border-black/5">
-              <h3 className="text-xs sm:text-sm md:text-base font-semibold text-black mb-1 md:mb-2 line-clamp-1">
-                {store.name}
-              </h3>
-
-              {store.floor && (
-                <div className="flex items-center justify-end gap-1.5 text-[10px] sm:text-xs text-black/40 font-semibold">
-                  <span>الطابق {store.floor}</span>
-                  <span className="w-1 h-1 bg-black/20 rounded-full"></span>
-                </div>
-              )}
-            </div>
           </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function RestaurantsTab() {
-  return (
-    <div className="text-center py-12 text-black/40">
-      <p className="text-base sm:text-lg md:text-xl font-semibold">
-        قريباً - معلومات المطاعم
-      </p>
-    </div>
-  );
-}
-
-function EntertainmentTab() {
-  return (
-    <div className="text-center py-12 text-black/40">
-      <p className="text-base sm:text-lg md:text-xl font-semibold">
-        قريباً - معلومات الترفيه
-      </p>
+          <div className="border-t border-slate-200 p-4 text-right">
+            <h3 className="line-clamp-1 text-sm font-extrabold text-slate-900">{store.name}</h3>
+            {store.floor ? <p className="mt-1 text-xs text-slate-500">الطابق {store.floor}</p> : null}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

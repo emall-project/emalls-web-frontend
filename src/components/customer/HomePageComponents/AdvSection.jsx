@@ -1,95 +1,118 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 
-function AdvSection({ imgsUrl = [], intervalMs = 4000, href = "#" }) {
+function AdvSection({ imgsUrl = [], intervalMs = 4000 }) {
   const [index, setIndex] = useState(0);
 
+  const total = imgsUrl.length;
+
+  const next = useCallback(
+    () => setIndex((i) => (i + 1) % total),
+    [total]
+  );
+  const prev = useCallback(
+    () => setIndex((i) => (i - 1 + total) % total),
+    [total]
+  );
+
   useEffect(() => {
-    if (!imgsUrl?.length) return;
-    const id = setInterval(() => {
-      setIndex((i) => (i + 1) % imgsUrl.length);
-    }, intervalMs);
-
+    if (!total) return;
+    const id = setInterval(next, intervalMs);
     return () => clearInterval(id);
-  }, [imgsUrl?.length, intervalMs]);
+  }, [total, intervalMs, next]);
 
-  if (!imgsUrl?.length) return null;
+  if (!total) return null;
 
-  const currentImg = imgsUrl[index];
+  const current = imgsUrl[index];
 
   return (
     <section
-      className="relative w-full"
-    
-      style={{
-        height:
-          "calc(100svh - var(--app-header-h, 72px) - var(--app-catbar-h, 56px))",
-      }}
+      className="relative overflow-hidden w-full"
+      style={{ height: "clamp(300px, 58vh, 580px)" }}
     >
-      <a
-        href={href}
-        className="block relative overflow-hidden h-full w-full bg-white"
-        onClick={(e) => {
-          if (!href || href === "#") e.preventDefault();
-        }}
-      >
-        {/* image */}
-        <img
-          src={currentImg?.image}
-          alt={currentImg?.alt || "Ad"}
-          loading="lazy"
-          className="w-full h-full object-cover"
-        />
+      {/* ── Slide images ─────────────────────────────────────────────────── */}
+      {imgsUrl.map((slide, i) => (
+        <div
+          key={slide.id ?? i}
+          className="absolute inset-0 transition-opacity duration-700"
+          style={{ opacity: i === index ? 1 : 0, pointerEvents: i === index ? "auto" : "none" }}
+        >
+          <img
+            src={slide.image}
+            alt={slide.alt || ""}
+            className="h-full w-full object-cover"
+            loading={i === 0 ? "eager" : "lazy"}
+          />
+        </div>
+      ))}
 
-        {/* overlay (خليه z-10) */}
-        <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/25 via-transparent to-black/10" />
+      {/* ── Gradient overlay ─────────────────────────────────────────────── */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/15" />
 
-        {/* ✅ dots (لازم z-20) */}
-        <div className="absolute z-20 bottom-10 md:bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2">
+      {/* ── Slide text ───────────────────────────────────────────────────── */}
+      {(current?.title || current?.subtitle) && (
+        <div className="absolute bottom-16 right-0 px-6 text-right sm:px-10 md:right-auto md:px-16 md:max-w-xl">
+          {current.subtitle && (
+            <p className="mb-2 inline-block rounded-full border border-white/25 bg-white/15 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+              {current.subtitle}
+            </p>
+          )}
+          {current.title && (
+            <h2 className="text-2xl font-black leading-tight text-white drop-shadow-lg sm:text-3xl md:text-4xl">
+              {current.title}
+            </h2>
+          )}
+          {current.cta && (
+            <button
+              type="button"
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-[var(--customer-accent)] shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
+            >
+              {current.cta}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Navigation arrows ────────────────────────────────────────────── */}
+      {total > 1 && (
+        <>
+          <button
+            type="button"
+            aria-label="الشريحة السابقة"
+            onClick={prev}
+            className="absolute right-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition-all hover:bg-white/35 hover:scale-105 sm:right-5 sm:h-11 sm:w-11"
+          >
+            <IoIosArrowForward className="text-xl" />
+          </button>
+          <button
+            type="button"
+            aria-label="الشريحة التالية"
+            onClick={next}
+            className="absolute left-3 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition-all hover:bg-white/35 hover:scale-105 sm:left-5 sm:h-11 sm:w-11"
+          >
+            <IoIosArrowBack className="text-xl" />
+          </button>
+        </>
+      )}
+
+      {/* ── Slide dots ───────────────────────────────────────────────────── */}
+      {total > 1 && (
+        <div className="absolute bottom-5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5">
           {imgsUrl.map((_, i) => (
             <button
               key={i}
               type="button"
-              aria-label={`slide ${i + 1}`}
-              onClick={(e) => {
-                e.preventDefault();
-                setIndex(i);
-              }}
+              aria-label={`الشريحة ${i + 1}`}
+              onClick={() => setIndex(i)}
               className={[
-                "h-[3px] w-10 md:w-12 rounded-full transition-all",
-                i === index ? "bg-white/95" : "bg-white/35 hover:bg-white/70",
+                "h-[3px] rounded-full transition-all duration-300",
+                i === index ? "w-8 bg-white" : "w-3 bg-white/45 hover:bg-white/65",
               ].join(" ")}
             />
           ))}
         </div>
-
-        {/* ✅ counter (z-20) */}
-        <div className="absolute z-20 top-5 md:top-6 left-5 md:left-6 text-[10px] md:text-xs font-light text-white tracking-[0.25em] bg-black/25 backdrop-blur-md px-4 py-2">
-          {String(index + 1).padStart(2, "0")} /{" "}
-          {String(imgsUrl.length).padStart(2, "0")}
-        </div>
-
-        {/* ✅ scroll indicator (z-20) */}
-        <div className="absolute z-20 bottom-4 md:bottom-5 left-1/2 -translate-x-1/2 animate-bounce">
-          <div className="flex flex-col items-center gap-2 text-white/80">
-            <span className="text-[15px] uppercase tracking-[0.3em] font-light">
-              استكشف 
-            </span>
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 5v14m0 0l-7-7m7 7l7-7"
-              />
-            </svg>
-          </div>
-        </div>
-      </a>
+      )}
     </section>
   );
 }

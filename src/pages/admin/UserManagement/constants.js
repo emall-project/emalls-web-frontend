@@ -11,22 +11,23 @@ export const ROLE_LABELS = {
 };
 
 export const ROLE_COLORS = {
-  1: { bg: "var(--blue-a3)",   fg: "var(--blue-11)"   },
-  2: { bg: "var(--green-a3)",  fg: "var(--green-11)"  },
+  1: { bg: "var(--blue-a3)", fg: "var(--blue-11)" },
+  2: { bg: "var(--green-a3)", fg: "var(--green-11)" },
   3: { bg: "var(--yellow-a3)", fg: "var(--yellow-11)" },
 };
 
 export const ACTIVE_OPTIONS = [
-  { value: "true",  label: "نشط",      dot: "#16a34a" },
-  { value: "false", label: "غير نشط",  dot: "#ef4444" },
+  { value: "true", label: "نشط", dot: "#16a34a" },
+  { value: "false", label: "غير نشط", dot: "#ef4444" },
 ];
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 export function getErrorMessage(error) {
+  const firstError = Array.isArray(error?.errorCodes) ? error.errorCodes[0] : null;
   return (
+    (typeof firstError === "string" ? firstError : firstError?.message) ||
     error?.response?.data?.message ||
-    error?.response?.data?.status  ||
-    error?.message                  ||
+    error?.response?.data?.status ||
+    error?.message ||
     "حدث خطأ غير متوقع"
   );
 }
@@ -57,7 +58,7 @@ export function formatPhone(user) {
 
 export function buildUpdatePayload(user, overrides = {}) {
   return {
-    userId:   user?.userId,
+    userId: user?.userId,
     fullName: overrides.fullName ?? user?.fullName ?? "",
     phone: {
       prefix: overrides.prefix ?? getPhonePrefix(user),
@@ -68,19 +69,20 @@ export function buildUpdatePayload(user, overrides = {}) {
 }
 
 export function extractUsersResponse(res) {
-  const raw  = res?.data ?? res ?? {};
+  const raw = res?.data ?? res ?? {};
   const data = raw?.data ?? raw;
+  const meta = data?.meta ?? raw?.meta ?? {};
 
   const list =
     (Array.isArray(data?.content) && data.content) ||
-    (Array.isArray(raw?.content)  && raw.content)  ||
-    (Array.isArray(data)          && data)          ||
-    (Array.isArray(raw)           && raw)           ||
+    (Array.isArray(raw?.content) && raw.content) ||
+    (Array.isArray(data) && data) ||
+    (Array.isArray(raw) && raw) ||
     [];
 
   return {
     list,
-    totalPages:    data?.totalPages    ?? raw?.totalPages    ?? 1,
-    totalElements: data?.totalElements ?? raw?.totalElements ?? list.length,
+    totalPages: meta?.totalPages ?? data?.totalPages ?? raw?.totalPages ?? 1,
+    totalElements: meta?.totalItems ?? data?.totalItems ?? raw?.totalItems ?? list.length,
   };
 }

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\BonBon\\\\catalog\\\\src\" -Recurse -Directory)",
+      "Bash(node_modules/.bin/vite build *)"
+    ]
+  }
+}

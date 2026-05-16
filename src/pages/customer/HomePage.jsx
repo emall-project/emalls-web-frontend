@@ -1,62 +1,164 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { FiAlertCircle, FiRefreshCw, FiShoppingBag } from "react-icons/fi";
+
 import Header from "../../components/customer/HomePageComponents/Header";
-import { normalizeCategories } from "../../utils/tmpCategories";
-import rawMalls from "../../assets/malls.json";
-import rawStores from "../../assets/stores.json";
-import rawCategories from "../../assets/categories.json";
-import rawProducts from "../../assets/products.json";
 import CategoryBar from "../../components/customer/HomePageComponents/CategoryBar";
-import { normalizeMalls, normalizeStores } from "../../utils/tmpMallsAndStores";
-import AdvSection from "../../components/customer/HomePageComponents/AdvSection";
 import CategoriesBanner from "../../components/customer/HomePageComponents/CategoriesBanner";
 import ProductCard from "../../components/customer/HomePageComponents/ProductCard";
 import SectionHeader from "../../components/customer/HomePageComponents/SectionHeader";
-import { normalizeProducts, isDiscount } from "../../utils/tmpProducts";
 import ProductsRow from "../../components/customer/HomePageComponents/ProductsRow";
+import BrandsShowcase from "../../components/customer/HomePageComponents/BrandsShowcase";
+import MallsSection from "../../components/customer/HomePageComponents/MallsSection";
+import StoresShowcase from "../../components/customer/HomePageComponents/StoresShowcase";
+import HomeHero from "../../components/customer/HomePageComponents/HomeHero";
 import Footer from "../../components/customer/HomePageComponents/Footer";
+import { customerApi } from "../../api/customerApi";
 
-const imgsUrl = [
-  { id: 1, image: "/video.gif", alt: "adv1" },
-  {
-    id: 2,
-    image: "https://template.canva.com/EAFdkOY1eMU/1/0/1600w-ewRm6zuOTts.jpg",
-    alt: "adv2",
-  },
-  {
-    id: 3,
-    image: "https://template.canva.com/EAFygIBpY9A/1/0/1280w-OJGt1T4cr94.jpg",
-    alt: "adv3",
-  },
-];
+function ProductSkeleton() {
+  return (
+    <div className="animate-pulse overflow-hidden rounded-[28px] border border-[var(--customer-border)] bg-white shadow-[var(--customer-shadow-soft)]">
+      <div className="aspect-[0.95] bg-[var(--customer-surface-muted)]" />
+      <div className="space-y-3 p-4">
+        <div className="h-4 w-4/5 rounded-full bg-[var(--customer-surface-muted)]" />
+        <div className="h-3 w-2/3 rounded-full bg-[var(--customer-surface-muted)]" />
+        <div className="h-4 w-1/3 rounded-full bg-[var(--customer-surface-muted)]" />
+      </div>
+    </div>
+  );
+}
+
+function PageErrorState({ onRetry, partial = false }) {
+  return (
+    <section className="customer-shell px-4 py-8 sm:px-6 md:px-10">
+      <div className="customer-panel-strong rounded-[32px] px-6 py-10 text-center sm:px-8">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-[rgba(239,68,68,0.08)] text-[var(--customer-deal)]">
+          <FiAlertCircle className="text-3xl" />
+        </div>
+        <h2 className="mt-5 text-2xl font-black text-[var(--customer-text)]">
+          {partial ? "تم تحميل الصفحة بشكل جزئي" : "تعذر تحميل الصفحة الرئيسية"}
+        </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-8 text-[var(--customer-muted)]">
+          {partial
+            ? "بعض الأقسام لم تُحمّل من الخادم بشكل كامل. يمكنك المتابعة أو إعادة المحاولة لتحديث جميع البيانات."
+            : "حدثت مشكلة أثناء جلب بيانات الصفحة من الخادم. أعد المحاولة لاستعادة الأقسام والمنتجات والمولات."}
+        </p>
+        <button type="button" onClick={onRetry} className="customer-primary-btn mt-6 rounded-[20px] px-5">
+          <FiRefreshCw className="text-sm" />
+          إعادة التحميل
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function EmptyState({ onRetry }) {
+  return (
+    <section className="customer-shell px-4 py-8 sm:px-6 md:px-10">
+      <div className="customer-panel-strong rounded-[32px] px-6 py-12 text-center sm:px-8">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-[var(--customer-accent-soft)] text-[var(--customer-accent)]">
+          <FiShoppingBag className="text-3xl" />
+        </div>
+        <h2 className="mt-5 text-2xl font-black text-[var(--customer-text)]">لا توجد بيانات للعرض بعد</h2>
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-8 text-[var(--customer-muted)]">
+          لم تصل منتجات أو مولات أو فئات كافية من الخادم لعرض الصفحة الرئيسية بشكل كامل. يمكنك إعادة المحاولة لاحقًا.
+        </p>
+        <button type="button" onClick={onRetry} className="customer-secondary-btn mt-6 rounded-[20px] px-5">
+          <FiRefreshCw className="text-sm" />
+          تحديث الصفحة
+        </button>
+      </div>
+    </section>
+  );
+}
 
 function HomePage() {
-  const categories = useMemo(() => normalizeCategories(rawCategories), []);
-  const malls = useMemo(() => normalizeMalls(rawMalls), []);
-  const stores = useMemo(() => normalizeStores(rawStores), []);
-  const products = useMemo(() => normalizeProducts(rawProducts), []);
+  const navigate = useNavigate();
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [malls, setMalls] = useState([]);
+  const [stores, setStores] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [partialError, setPartialError] = useState(false);
+
   const [selectedMallId, setSelectedMallId] = useState(null);
   const [selectedStoreId, setSelectedStoreId] = useState(null);
 
-  const deals = useMemo(() => products.filter(isDiscount).slice(0, 3), [products]);
+  const loadHomePage = useCallback(async () => {
+    setLoading(true);
+    setPageError("");
+    setPartialError(false);
 
-  const featured = useMemo(
-    () => products.filter((p) => (p.status || "").includes("وصل حديثاً")).slice(0, 3),
-    [products]
+    const [categoriesRes, brandsRes, mallsRes, storesRes, productsRes] = await Promise.allSettled([
+      customerApi.getCategories(),
+      customerApi.getBrands(),
+      customerApi.getAllMalls(),
+      customerApi.getAllShops({ status: "ACTIVE" }),
+      customerApi.getProducts({}, 0, 30),
+    ]);
+
+    const nextCategories = categoriesRes.status === "fulfilled" ? categoriesRes.value : [];
+    const nextBrands = brandsRes.status === "fulfilled" ? brandsRes.value : [];
+    const nextMalls = mallsRes.status === "fulfilled" ? mallsRes.value : [];
+    const nextStores = storesRes.status === "fulfilled" ? storesRes.value : [];
+    const nextProducts = productsRes.status === "fulfilled" ? productsRes.value?.products ?? [] : [];
+
+    setCategories(nextCategories);
+    setBrands(nextBrands);
+    setMalls(nextMalls);
+    setStores(nextStores);
+    setProducts(nextProducts);
+
+    const failedCount = [categoriesRes, brandsRes, mallsRes, storesRes, productsRes].filter(
+      (result) => result.status === "rejected"
+    ).length;
+
+    if (failedCount === 5) {
+      setPageError("تعذر تحميل الصفحة الرئيسية.");
+    } else if (failedCount > 0) {
+      setPartialError(true);
+    }
+
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadHomePage();
+  }, [loadHomePage]);
+
+  const featuredBrands = useMemo(() => brands.slice(0, 12), [brands]);
+  const deals = useMemo(() => products.filter((product) => product.oldPrice !== null).slice(0, 8), [products]);
+  const salePicks = useMemo(() => products.filter((product) => product.oldPrice !== null).slice(0, 12), [products]);
+  const featured = useMemo(() => products.slice(0, 10), [products]);
+  const forYou = useMemo(() => products.slice(0, 10), [products]);
+  const moreToExplore = useMemo(() => products.slice(10, 25), [products]);
+
+  const hasAnyContent = Boolean(
+    categories.length || brands.length || malls.length || stores.length || products.length
   );
 
-  const bestSellers = useMemo(() => products.slice(0, 10), [products]);
-  const forYou = useMemo(() => products.slice(10, 20), [products]);
+  const handleCategorySelect = useCallback(
+    (categoryId) => {
+      if (categoryId == null || categoryId === "") {
+        navigate("/products");
+      } else {
+        navigate(`/products?categoryId=${categoryId}`);
+      }
+    },
+    [navigate]
+  );
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="customer-page">
       <Header />
 
       <CategoryBar
         categories={categories}
-        selectedCategoryId={selectedCategoryId}
-        onSelectCategory={setSelectedCategoryId}
+        selectedCategoryId={null}
+        onSelectCategory={handleCategorySelect}
         malls={malls}
         stores={stores}
         selectedStoreId={selectedStoreId}
@@ -65,94 +167,92 @@ function HomePage() {
         onSelectStore={setSelectedStoreId}
       />
 
-      {/* Hero Section */}
-      <AdvSection imgsUrl={imgsUrl} intervalMs={5000} page="home" />
+      <HomeHero
+        loading={loading}
+        categories={categories}
+        malls={malls}
+        stores={stores}
+        products={products}
+        brands={brands}
+      />
 
-      {/* Categories Banner */}
-      <CategoriesBanner categories={categories} onSelectCategory={setSelectedCategoryId} />
+      {pageError ? (
+        <PageErrorState onRetry={loadHomePage} />
+      ) : !loading && !hasAnyContent ? (
+        <EmptyState onRetry={loadHomePage} />
+      ) : (
+        <>
+          {partialError ? <PageErrorState onRetry={loadHomePage} partial /> : null}
 
-      {/* Featured */}
-      <section className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 py-8 sm:py-10 md:py-14">
-        <SectionHeader title="أبرز المنتجات" onViewAll={() => {}} />
-        <div className="mt-5 sm:mt-6 md:mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-          {featured.map((p) => (
-            <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
-          ))}
-        </div>
-      </section>
+          <CategoriesBanner categories={categories} onSelectCategory={handleCategorySelect} />
 
-      {/* Deals */}
-      <section className="w-full">
-        {/* Banner header */}
-        <div
-          className="relative w-full overflow-hidden py-10 sm:py-12 md:py-16"
-          style={{ background: "linear-gradient(135deg, #0a0a0a 0%, #1c1c1c 60%, #111111 100%)" }}
-        >
-          {/* Gold shine sweep */}
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ background: "linear-gradient(120deg, transparent 30%, rgba(212,175,55,0.08) 50%, transparent 70%)" }} />
-          {/* Subtle top gold line */}
-          <div className="absolute top-0 inset-x-0 h-px"
-            style={{ background: "linear-gradient(to right, transparent, rgba(212,175,55,0.6), transparent)" }} />
-          {/* Subtle bottom gold line */}
-          <div className="absolute bottom-0 inset-x-0 h-px"
-            style={{ background: "linear-gradient(to right, transparent, rgba(212,175,55,0.4), transparent)" }} />
+          <section className="customer-shell px-4 py-6 sm:px-6 md:px-10 md:py-10">
+            <SectionHeader
+              eyebrow="منتجات مميزة"
+              title="اختيارات بارزة من المتاجر النشطة"
+              subtitle="شبكة منتجات تمنح العميل بداية واضحة للتصفح، مع رؤية أسرع للسعر والصورة والمنتجات التي تستحق الواجهة الأولى."
+              onViewAll={() => navigate("/products")}
+            />
 
-          <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12 relative z-10">
-            <div className="flex items-center justify-between">
-              <div>
-                <span
-                  className="inline-block text-[9px] sm:text-[10px] font-semibold tracking-[0.3em] uppercase px-3 py-1 mb-3 border"
-                  style={{ color: "#d4af37", borderColor: "rgba(212,175,55,0.5)" }}
-                >
-                  EXCLUSIVE SALE
-                </span>
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-light text-white tracking-[0.12em]">
-                  عروض رائعة
-                </h2>
-                <p className="mt-2 text-white/40 text-[10px] sm:text-xs font-light tracking-[0.25em] uppercase">
-                  أسعار استثنائية — لفترة محدودة
-                </p>
+            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {loading
+                ? Array.from({ length: 10 }).map((_, index) => <ProductSkeleton key={index} />)
+                : featured.map((product) => <ProductCard key={product.id} p={product} onAddToCart={() => {}} />)}
+            </div>
+          </section>
+
+          {(loading || deals.length > 0) ? (
+            <section className="customer-shell px-4 py-6 sm:px-6 md:px-10 md:py-10">
+              <div className="overflow-hidden rounded-[34px] border border-[#112b66] bg-[linear-gradient(135deg,#0f172a_0%,#112b66_46%,#1d4ed8_100%)] px-5 py-6 text-white shadow-[0_28px_70px_rgba(15,23,42,0.26)] sm:px-6 md:px-8">
+                <SectionHeader
+                  eyebrow="عروض اليوم"
+                  title="أسعار مخفّضة تستحق الواجهة الأولى"
+                  subtitle="هذه المنتجات عليها خصومات حقيقية قادمة من الـ backend، لذلك هذا القسم يمثل العروض الفعلية المتاحة الآن."
+                  onViewAll={() => navigate("/products")}
+                  actionLabel="كل العروض"
+                />
+
+                <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
+                  {loading
+                    ? Array.from({ length: 4 }).map((_, index) => <ProductSkeleton key={index} />)
+                    : deals.map((product) => <ProductCard key={product.id} p={product} onAddToCart={() => {}} />)}
+                </div>
               </div>
+            </section>
+          ) : null}
 
-              <button
-                className="shrink-0 text-[10px] sm:text-xs tracking-[0.25em] uppercase font-light px-5 sm:px-6 py-2.5 sm:py-3 border transition-all duration-300"
-                style={{ color: "#d4af37", borderColor: "rgba(212,175,55,0.5)" }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "#d4af37"; e.currentTarget.style.color = "#0a0a0a"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#d4af37"; }}
-              >
-                عرض الكل
-              </button>
-            </div>
-          </div>
-        </div>
+          {loading || salePicks.length > 0 ? (
+            <ProductsRow
+              title="التخفيضات"
+              subtitle="قسم مخصص للمنتجات التي عليها خصم فعلي الآن، مع الاعتماد على `hasDiscount` و`discountedPrice` القادمة من الخادم."
+              products={salePicks}
+              onViewAll={() => navigate("/products")}
+              onAddToCart={() => {}}
+            />
+          ) : null}
 
-        {/* Products */}
-        <div className="w-full bg-white border-b border-black/5 py-8 sm:py-10 md:py-12">
-          <div className="max-w-400 2xl:max-w-[1920px] mx-auto px-4 sm:px-6 md:px-12">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-              {deals.map((p) => (
-                <ProductCard key={p.id} p={p} onAddToCart={() => {}} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+          <StoresShowcase stores={stores} loading={loading} />
+          <MallsSection malls={malls} loading={loading} />
 
-      {/* Products Rows */}
-      <ProductsRow
-        title="الأكثر ملائمة لك"
-        products={forYou}
-        onViewAll={() => {}}
-        onAddToCart={() => {}}
-      />
+          <ProductsRow
+            title="مقترحات تناسبك"
+            subtitle="تشكيلة سهلة التصفح تمنحك مدخلًا أسرع إلى المنتجات الشائعة داخل المنصة."
+            products={forYou}
+            onViewAll={() => navigate("/products")}
+            onAddToCart={() => {}}
+          />
 
-      <ProductsRow
-        title="الأكثر مبيعًا"
-        products={bestSellers}
-        onViewAll={() => {}}
-        onAddToCart={() => {}}
-      />
+          <ProductsRow
+            title="اكتشف المزيد"
+            subtitle="هذه ليست قائمة أكثر طلبًا من الطلبات الحقيقية؛ إنها مجموعة إضافية من نفس المنتجات العامة إلى حين توفير ترتيب مبيعات أو طلبات من الـ backend."
+            products={moreToExplore}
+            onViewAll={() => navigate("/products")}
+            onAddToCart={() => {}}
+          />
+
+          <BrandsShowcase brands={featuredBrands} loading={loading} />
+        </>
+      )}
 
       <Footer />
     </div>
