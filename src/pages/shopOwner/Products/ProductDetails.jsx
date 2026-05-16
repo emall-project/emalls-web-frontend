@@ -448,7 +448,7 @@ export default function ProductDetails() {
                   معرض الصور
                 </h3>
                 <p className="mt-1 text-xs leading-6" style={{ color: "var(--gray-9)" }}>
-                  هذه الصور قادمة من وسائط المتغيرات في backend، ويمكنك التنقل بينها لمراجعة المنتج كما سيظهر.
+                  هذه الصور قادمة من وسائط المتغيرات، ويمكنك التنقل بينها لمراجعة المنتج كما سيظهر.
                 </p>
               </div>
 

@@ -41,7 +41,7 @@ function MallCard({ mall, featured = false }) {
                 <p className="line-clamp-2 text-sm leading-7 text-[var(--customer-muted)]">
                   {mall.description || "استكشف المتاجر والخدمات والمنتجات الموجودة داخل هذا المول."}
                 </p>
-                <div className="flex items-center justify-between gap-3 pt-2">
+                <div className="flex flex-col items-start gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
                   <span className="inline-flex items-center gap-2 rounded-full bg-[var(--customer-accent-soft)] px-3 py-1.5 text-[11px] font-bold text-[var(--customer-accent)]">
                     <FiShoppingBag className="text-[11px]" />
                     {mall.status === "ACTIVE" ? "نشط الآن" : mall.status || "متاح"}
@@ -59,7 +59,7 @@ function MallCard({ mall, featured = false }) {
                 <FiShoppingBag className="text-xs" />
                 مول مميز
               </div>
-              <h3 className="mt-4 text-[2rem] font-black leading-tight">{mall.name}</h3>
+              <h3 className="mt-4 text-[1.6rem] font-black leading-tight sm:text-[2rem]">{mall.name}</h3>
               <p className="mt-4 text-sm leading-8 text-white/78">
                 {mall.description || "اكتشف المتاجر النشطة، المنتجات المتنوعة، والعروض داخل هذا المول من مكان واحد."}
               </p>

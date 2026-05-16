@@ -9,8 +9,11 @@ import {
 import { FiAlertCircle, FiChevronLeft, FiLoader, FiRotateCcw } from "react-icons/fi";
 
 import Header from "../../components/customer/HomePageComponents/Header";
+import CustomerAdSlot from "../../components/customer/HomePageComponents/CustomerAdSlot";
 import Footer from "../../components/customer/HomePageComponents/Footer";
+import { customerApi } from "../../api/customerApi";
 import { cartApi } from "../../api/cartApi";
+import { CUSTOMER_ORDERS_TOP_AD_POSITION } from "../../data/adSlots";
 
 const STATUS_LABEL = {
   NEW: { text: "طلب جديد", cls: "bg-blue-50 text-blue-600 border-blue-200" },
@@ -120,6 +123,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [activeAds, setActiveAds] = useState([]);
 
   const load = useCallback(async (nextPage = 0, append = false) => {
     if (nextPage === 0) setLoading(true);
@@ -144,6 +148,29 @@ export default function OrdersPage() {
   useEffect(() => {
     load(0);
   }, [load]);
+
+  useEffect(() => {
+    let active = true;
+
+    customerApi
+      .getActiveDisplayedAds()
+      .then((data) => {
+        if (!active) return;
+        setActiveAds(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (!active) return;
+        setActiveAds([]);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const hasOrdersTopAd = activeAds.some(
+    (ad) => String(ad?.position) === CUSTOMER_ORDERS_TOP_AD_POSITION
+  );
 
   return (
     <div dir="rtl" className="customer-page">
@@ -175,6 +202,12 @@ export default function OrdersPage() {
         </div>
 
         <div className="customer-divider my-8" />
+
+        {hasOrdersTopAd ? (
+          <div className="mx-auto max-w-3xl pb-6">
+            <CustomerAdSlot ads={activeAds} position={CUSTOMER_ORDERS_TOP_AD_POSITION} compact />
+          </div>
+        ) : null}
 
         {loading ? (
           <div className="flex items-center justify-center py-24 text-slate-400">

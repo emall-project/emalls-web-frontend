@@ -350,7 +350,7 @@ export default function BrandCreateDialog({ open, onOpenChange, onCreated }) {
                     {imageName || "لم تُرفع صورة بعد"}
                   </p>
                   <p className="mt-1 text-xs" style={{ color: "var(--gray-9)" }}>
-                    سيُرسل النظام imageId الحقيقي فقط إلى الـ backend.
+                    سيُرسل النظام المعرّف الحقيقي للصورة فقط.
                   </p>
                 </div>
               </div>
@@ -365,7 +365,7 @@ export default function BrandCreateDialog({ open, onOpenChange, onCreated }) {
                   حالة الماركة
                 </p>
                 <p className="mt-1 text-xs" style={{ color: "var(--gray-9)" }}>
-                  تُرسل القيمة كما يتوقعها BrandDto في الـ backend.
+                  تُرسل القيمة بالشكل المطلوب.
                 </p>
               </div>
 

@@ -114,7 +114,7 @@ export default function AddProductHeader({ onBack, onRefresh, onCancel }) {
 
             <div className="flex flex-wrap items-center gap-2">
               <HeaderBadge tone="blue">5 خطوات واضحة</HeaderBadge>
-              <HeaderBadge tone="gray">متوافق مع قواعد backend</HeaderBadge>
+              <HeaderBadge tone="gray">متوافق مع القواعد المطلوبة</HeaderBadge>
             </div>
           </div>
         </div>

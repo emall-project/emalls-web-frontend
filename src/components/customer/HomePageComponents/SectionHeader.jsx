@@ -10,7 +10,7 @@ export default function SectionHeader({
   compact = false,
 }) {
   return (
-    <div className={`flex items-end justify-between gap-4 ${compact ? "" : "md:gap-6"}`}>
+    <div className={`flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end ${compact ? "" : "md:gap-6"}`}>
       <div className="min-w-0">
         {eyebrow ? (
           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[rgba(27,79,240,0.12)] bg-white/80 px-3 py-1 text-[11px] font-extrabold text-[var(--customer-accent)] shadow-[var(--customer-shadow-soft)]">
@@ -33,7 +33,7 @@ export default function SectionHeader({
         <button
           type="button"
           onClick={onViewAll}
-          className="group inline-flex shrink-0 items-center gap-2 rounded-full border border-[var(--customer-border)] bg-white/90 px-4 py-2 text-sm font-bold text-[var(--customer-text)] shadow-[var(--customer-shadow-soft)] hover:border-[rgba(27,79,240,0.18)] hover:text-[var(--customer-accent)]"
+          className="group inline-flex w-full items-center justify-center gap-2 rounded-full border border-[var(--customer-border)] bg-white/90 px-4 py-2 text-sm font-bold text-[var(--customer-text)] shadow-[var(--customer-shadow-soft)] hover:border-[rgba(27,79,240,0.18)] hover:text-[var(--customer-accent)] sm:w-auto sm:shrink-0"
         >
           {actionLabel}
           <FiArrowLeft className="text-sm transition-transform group-hover:-translate-x-0.5" />

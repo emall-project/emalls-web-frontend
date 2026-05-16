@@ -3,14 +3,27 @@ import * as NavigationMenu from "@radix-ui/react-navigation-menu";
 import { IoIosArrowDown } from "react-icons/io";
 import { IoGridOutline, IoSparklesOutline } from "react-icons/io5";
 
-function AllCategoriesMenu({ categories = [], selectedCategoryId, onSelectCategory }) {
+function AllCategoriesMenu({
+  categories = [],
+  selectedCategoryId,
+  onSelectCategory,
+  rootClassName = "",
+  triggerClassName = "",
+}) {
   const [value, setValue] = useState("");
 
   return (
-    <NavigationMenu.Root dir="rtl" value={value} onValueChange={setValue} className="relative">
-      <NavigationMenu.List className="flex items-center">
-        <NavigationMenu.Item value="all" className="relative">
-          <NavigationMenu.Trigger className="customer-catbar-trigger group">
+    <NavigationMenu.Root
+      dir="rtl"
+      value={value}
+      onValueChange={setValue}
+      className={["relative", rootClassName].filter(Boolean).join(" ")}
+    >
+      <NavigationMenu.List className="flex w-full items-center">
+        <NavigationMenu.Item value="all" className="relative w-full md:w-auto">
+          <NavigationMenu.Trigger
+            className={["customer-catbar-trigger group", triggerClassName].filter(Boolean).join(" ")}
+          >
             <span className="grid h-9 w-9 place-items-center rounded-full bg-[var(--customer-accent-soft)] text-[var(--customer-accent)]">
               <IoGridOutline className="text-base" />
             </span>

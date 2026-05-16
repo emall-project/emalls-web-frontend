@@ -1,3 +1,4 @@
+import { getAdPositionLabel } from "../../../data/adSlots";
 import { calculateBillableHours, calculateEstimatedTotal, formatDateTime, formatUsd, getFileUrl } from "./adsUtils";
 
 export default function AdPreviewStep({ template, draft, fileMeta, shopName }) {
@@ -40,7 +41,7 @@ export default function AdPreviewStep({ template, draft, fileMeta, shopName }) {
 
           <div className="grid gap-4 md:grid-cols-2">
             <PreviewItem label="القالب"          value={template?.name || "—"} />
-            <PreviewItem label="مكان الظهور"     value={template?.position || "—"} />
+            <PreviewItem label="مكان الظهور"     value={getAdPositionLabel(template?.position)} />
             <PreviewItem label="نسبة الصورة"     value={template?.imageRatio || "—"} />
             <PreviewItem label="المتجر"           value={shopName || "المتجر الحالي"} />
             <PreviewItem label="تاريخ البداية"   value={formatDateTime(draft.startDate)} />

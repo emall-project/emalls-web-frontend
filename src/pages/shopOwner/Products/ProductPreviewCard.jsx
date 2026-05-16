@@ -168,7 +168,7 @@ export default function ProductPreviewCard({ form, categories, brands }) {
                 مراجعة نهائية
               </h3>
               <p className="text-xs" style={{ color: "var(--gray-9)" }}>
-                نفس البيانات التي سترسل إلى الـ backend.
+                نفس البيانات التي سترسل عند الحفظ.
               </p>
             </div>
           </div>

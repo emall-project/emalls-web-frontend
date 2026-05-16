@@ -1762,7 +1762,7 @@ function OfferFormDialog({ open, mode, offer, products, loadingProducts, onOpenC
                     ? isActiveEdit
                       ? "العرض النشط يسمح بتعديل العنوان والوصف وتاريخ الانتهاء والحد الأقصى فقط."
                       : "يمكن تعديل بيانات العرض طالما أنه غير منتهي."
-                    : "أنشئ العرض وفق الحقول التي يدعمها الـ backend، ثم فعّله عند الجاهزية."}
+                    : "أنشئ العرض وفق الحقول المدعومة، ثم فعّله عند الجاهزية."}
                 </p>
               </div>
               <Dialog.Close asChild>
@@ -1847,7 +1847,7 @@ function OfferFormDialog({ open, mode, offer, products, loadingProducts, onOpenC
                   error={fieldErrors.discountValue}
                   hint={
                     values.discountType === "PERCENT"
-                      ? "يقبل الـ backend نسبة بين 1 و99 فقط."
+                      ? "يُقبل إدخال نسبة بين 1 و99 فقط."
                       : "يُخصم هذا المبلغ من كل متغير في المنتج."
                   }
                 >
@@ -1930,7 +1930,7 @@ function OfferFormDialog({ open, mode, offer, products, loadingProducts, onOpenC
               <p className="text-xs" style={{ color: "var(--gray-8)" }}>
                 {isEdit
                   ? "سيتم إرسال الحقول المدعومة فقط حسب حالة العرض الحالية."
-                  : "سيتم إرسال الحقول الحقيقية المطلوبة من الـ backend فقط."}
+                  : "سيتم إرسال الحقول المطلوبة فقط."}
               </p>
               <div className="flex items-center gap-2">
                 <Dialog.Close asChild>
@@ -2161,7 +2161,7 @@ function OfferDetailsDialog({
                           منتجات العرض
                         </h4>
                         <p className="mt-1 text-xs" style={{ color: "var(--gray-9)" }}>
-                          الخصم يطبق على المنتج كاملًا، وتفاصيل المتغيرات تظهر كما يعيدها الـ backend.
+                          الخصم يطبق على المنتج كاملًا، وتفاصيل المتغيرات تظهر كما تم حفظها.
                         </p>
                       </div>
                     </div>
@@ -2729,7 +2729,7 @@ export default function Offers() {
         title="حذف العرض"
         message={
           deleteState.offer
-            ? `سيتم حذف العرض "${deleteState.offer.title}" نهائيًا. لا تستخدم هذا الإجراء مع العروض النشطة لأن الـ backend يمنعه.`
+            ? `سيتم حذف العرض "${deleteState.offer.title}" نهائيًا. لا تستخدم هذا الإجراء مع العروض النشطة لأنه غير مسموح حاليًا.`
             : ""
         }
         loading={deleteState.loading}

@@ -202,7 +202,7 @@ export default function CustomerSignup() {
               <span className="customer-kicker">العملاء</span>
               <h1 className="mt-4 text-2xl font-extrabold text-slate-900">إنشاء حساب</h1>
               <p className="mt-2 text-sm leading-7 text-slate-500">
-                املأ بياناتك الأساسية لإنشاء حساب عميل مرتبط بقواعد الـ backend الحالية.
+                املأ بياناتك الأساسية لإنشاء حساب عميل وفق المتطلبات الحالية.
               </p>
 
               {serverError ? (

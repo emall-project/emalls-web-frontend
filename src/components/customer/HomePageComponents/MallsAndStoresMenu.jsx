@@ -18,6 +18,8 @@ function MallsAndStoresMenu({
   selectedStoreId,
   onSelectStore,
   onSelectMall,
+  rootClassName = "",
+  triggerClassName = "",
 }) {
   const navigate = useNavigate();
   const [value, setValue] = useState("");
@@ -60,10 +62,17 @@ function MallsAndStoresMenu({
   };
 
   return (
-    <NavigationMenu.Root dir="rtl" value={value} onValueChange={setValue} className="relative">
-      <NavigationMenu.List className="flex items-center">
-        <NavigationMenu.Item value="malls" className="relative">
-          <NavigationMenu.Trigger className="customer-catbar-trigger group">
+    <NavigationMenu.Root
+      dir="rtl"
+      value={value}
+      onValueChange={setValue}
+      className={["relative", rootClassName].filter(Boolean).join(" ")}
+    >
+      <NavigationMenu.List className="flex w-full items-center">
+        <NavigationMenu.Item value="malls" className="relative w-full md:w-auto">
+          <NavigationMenu.Trigger
+            className={["customer-catbar-trigger group", triggerClassName].filter(Boolean).join(" ")}
+          >
             <span className="grid h-9 w-9 place-items-center rounded-full bg-[var(--customer-accent-soft)] text-[var(--customer-accent)]">
               <IoBusinessOutline className="text-base" />
             </span>

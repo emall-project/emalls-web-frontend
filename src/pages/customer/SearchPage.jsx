@@ -147,8 +147,8 @@ export default function SearchPage() {
     let active = true;
 
     Promise.all([
-      customerApi.getAllMalls().catch(() => []),
-      customerApi.getAllShops({ status: "ACTIVE" }).catch(() => []),
+      customerApi.getActiveMalls().catch(() => []),
+      customerApi.getActiveShops().catch(() => []),
     ]).then(([mallList, shopList]) => {
       if (!active) return;
       setAllMalls(mallList);

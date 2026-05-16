@@ -87,6 +87,45 @@ function parsePositiveNumber(value) {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
+function collectCategoryAndDescendantIds(categories, rootCategoryId) {
+  const rootId = Number(rootCategoryId);
+  if (!Number.isFinite(rootId)) return [];
+
+  const childrenByParentId = new Map();
+
+  categories.forEach((category) => {
+    const parentId = Number(category?.parentId);
+    const categoryNumericId = Number(category?.id);
+
+    if (!Number.isFinite(parentId) || !Number.isFinite(categoryNumericId)) return;
+
+    if (!childrenByParentId.has(parentId)) {
+      childrenByParentId.set(parentId, []);
+    }
+
+    childrenByParentId.get(parentId).push(categoryNumericId);
+  });
+
+  const collected = [];
+  const queue = [rootId];
+  const visited = new Set();
+
+  while (queue.length) {
+    const currentId = queue.shift();
+    if (!Number.isFinite(currentId) || visited.has(currentId)) continue;
+
+    visited.add(currentId);
+    collected.push(currentId);
+
+    const childIds = childrenByParentId.get(currentId) ?? [];
+    childIds.forEach((childId) => {
+      if (!visited.has(childId)) queue.push(childId);
+    });
+  }
+
+  return collected;
+}
+
 function formatPrice(value) {
   const numeric = Number(value ?? 0);
   return numeric.toLocaleString("en-US", {
@@ -269,9 +308,6 @@ function FilterPanel({
   stores,
   brands,
   attributes,
-  tags,
-  selectedTagIds,
-  onTagToggle,
   filters,
   selectedCategoryName,
   priceRange,
@@ -428,33 +464,6 @@ function FilterPanel({
         </div>
       ) : null}
 
-      {tags?.length ? (
-        <div className="customer-panel p-5 shadow-none">
-          <div className="mb-3 text-right">
-            <h3 className="text-sm font-black text-slate-950">الوسوم</h3>
-            <p className="mt-1 text-[11px] text-slate-500">اختر وسماً أو أكثر لتصفية المنتجات</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((tag) => {
-              const selected = selectedTagIds.includes(tag.id);
-              return (
-                <button
-                  key={tag.id}
-                  type="button"
-                  onClick={() => onTagToggle(tag.id)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                    selected
-                      ? "border-[rgba(27,79,240,0.3)] bg-[var(--customer-accent)] text-white"
-                      : "border-[var(--customer-border)] bg-white text-slate-700 hover:border-[rgba(27,79,240,0.2)] hover:text-[var(--customer-accent)]"
-                  }`}
-                >
-                  {tag.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -498,7 +507,6 @@ export default function CustomerProductsPage() {
   const [categories, setCategories] = useState([]);
   const [malls, setMalls] = useState([]);
   const [stores, setStores] = useState([]);
-  const [tags, setTags] = useState([]);
   const [productsState, setProductsState] = useState({ products: [], totalPages: 0, total: 0, page: 0 });
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -514,10 +522,6 @@ export default function CustomerProductsPage() {
   const mallId = searchParams.get("mallId") || "";
   const storeId = searchParams.get("storeId") || "";
   const brandId = searchParams.get("brandId") || "";
-  const selectedTagIds = useMemo(() => {
-    const raw = searchParams.get("tags") || "";
-    return raw ? raw.split(",").map(Number).filter(Boolean) : [];
-  }, [searchParams]);
   const targetedAudience = searchParams.get("targetedAudience") || "";
   const ageGroup = searchParams.get("ageGroup") || "";
   const parsedPage = Number(searchParams.get("page") || 1);
@@ -536,15 +540,13 @@ export default function CustomerProductsPage() {
 
     Promise.all([
       customerApi.getCategories().catch(() => []),
-      customerApi.getAllMalls().catch(() => []),
-      customerApi.getAllShops({ status: "ACTIVE" }).catch(() => []),
-      customerApi.getTags().catch(() => []),
-    ]).then(([categoryList, mallList, shopList, tagList]) => {
+      customerApi.getActiveMalls().catch(() => []),
+      customerApi.getActiveShops().catch(() => []),
+    ]).then(([categoryList, mallList, shopList]) => {
       if (!active) return;
       setCategories(categoryList);
-      setMalls(categoryList ? mallList : []);
+      setMalls(mallList);
       setStores(shopList);
-      setTags(tagList);
     });
 
     return () => {
@@ -557,11 +559,16 @@ export default function CustomerProductsPage() {
     [categories, categoryId]
   );
 
+  const selectedCategoryIds = useMemo(
+    () => collectCategoryAndDescendantIds(categories, categoryId),
+    [categories, categoryId]
+  );
+
   const backendFilter = useMemo(() => {
     const filter = {};
     const q = (searchParams.get("q") || "").trim();
     if (q) filter.q = q;
-    if (categoryId) filter.categoryId = Number(categoryId);
+    if (selectedCategoryIds.length) filter.categoryIds = selectedCategoryIds;
     if (brandId) filter.brandId = Number(brandId);
     if (mallId) filter.mallId = Number(mallId);
     if (storeId) filter.storeId = Number(storeId);
@@ -577,10 +584,8 @@ export default function CustomerProductsPage() {
       filter.selectedOptionsByAttribute = selectedOptionsByAttribute;
     }
 
-    if (selectedTagIds.length) filter.tagIds = selectedTagIds;
-
     return filter;
-  }, [searchParams, categoryId, brandId, mallId, storeId, targetedAudience, ageGroup, selectedOptionsByAttribute, selectedTagIds]);
+  }, [searchParams, selectedCategoryIds, brandId, mallId, storeId, targetedAudience, ageGroup, selectedOptionsByAttribute]);
 
   const selectedSort = SORT_OPTIONS.find((option) => option.value === sortKey) ?? SORT_OPTIONS[0];
 
@@ -745,24 +750,6 @@ export default function CustomerProductsPage() {
     setSearchParams(next);
   };
 
-  const handleTagToggle = (tagId) => {
-    const next = new URLSearchParams(searchParams);
-    const current = selectedTagIds.includes(tagId)
-      ? selectedTagIds.filter((id) => id !== tagId)
-      : [...selectedTagIds, tagId];
-    if (current.length) next.set("tags", current.join(","));
-    else next.delete("tags");
-    next.set("page", "1");
-    setSearchParams(next);
-  };
-
-  const clearTagFilters = () => {
-    const next = new URLSearchParams(searchParams);
-    next.delete("tags");
-    next.set("page", "1");
-    setSearchParams(next);
-  };
-
   const totalPages = productsState.totalPages || 0;
   const totalProducts = summary?.totalProducts ?? productsState.total ?? 0;
   const brandOptions = summary?.brands ?? [];
@@ -846,14 +833,6 @@ export default function CustomerProductsPage() {
       });
     }
 
-    if (selectedTagIds.length) {
-      list.push({
-        key: "tags",
-        label: `وسوم: ${selectedTagIds.length}`,
-        onRemove: clearTagFilters,
-      });
-    }
-
     return list;
   }, [
     searchParams,
@@ -863,7 +842,6 @@ export default function CustomerProductsPage() {
     selectedAudienceLabel,
     selectedAgeGroupLabel,
     attributeFiltersCount,
-    selectedTagIds,
   ]);
 
   const filterPanel = (
@@ -872,9 +850,6 @@ export default function CustomerProductsPage() {
       stores={filteredStores}
       brands={brandOptions}
       attributes={attributeOptions}
-      tags={tags}
-      selectedTagIds={selectedTagIds}
-      onTagToggle={handleTagToggle}
       filters={filtersState}
       selectedCategoryName={currentCategory?.name}
       priceRange={priceRange}

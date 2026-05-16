@@ -279,7 +279,7 @@ export default function ProductFeedbackSection({ productId }) {
             style={{ background: "var(--gray-a3)", color: "var(--gray-11)" }}
           >
             <FiShield size={12} />
-            هذا القسم للعرض فقط. الردود أو الحذف أو الإخفاء غير مدعومة لصاحب المتجر في الـ backend الحالي.
+            هذا القسم للعرض فقط. الردود أو الحذف أو الإخفاء غير مدعومة لصاحب المتجر حاليًا.
           </div>
         </div>
 

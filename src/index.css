@@ -176,6 +176,19 @@ select.dark-select option {
   color: var(--customer-muted);
 }
 
+@media (max-width: 640px) {
+  .customer-page-header {
+    flex-direction: column;
+    gap: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .customer-page-subtitle {
+    font-size: 0.9rem;
+    line-height: 1.7;
+  }
+}
+
 .customer-primary-btn {
   display: inline-flex;
   align-items: center;
@@ -242,6 +255,13 @@ select.dark-select option {
   transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.customer-catbar-trigger > span:nth-of-type(2) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .customer-catbar-trigger:hover,
 .customer-catbar-trigger[data-state="open"] {
   border-color: rgba(27, 79, 240, 0.2);
@@ -283,4 +303,24 @@ select.dark-select option {
   background: rgba(255, 255, 255, 0.99);
   box-shadow: 0 34px 90px rgba(15, 23, 42, 0.16);
   backdrop-filter: blur(24px);
+}
+
+@media (max-width: 767px) {
+  .customer-catbar-surface {
+    border-radius: 28px;
+    padding: 0.7rem;
+  }
+
+  .customer-catbar-trigger {
+    min-height: 3.1rem;
+    gap: 0.55rem;
+    padding-inline: 0.8rem;
+    font-size: 0.82rem;
+  }
+
+  .customer-catbar-chip {
+    min-height: 2.55rem;
+    padding-inline: 0.85rem;
+    font-size: 0.83rem;
+  }
 }

@@ -24,6 +24,15 @@ function calcHours(startDate, endDate) {
   return (e - s) / (1000 * 60 * 60);
 }
 
+function getRequestImageUrl(request) {
+  return (
+    request?.adRequestImage?.smallFileUrl ||
+    request?.adRequestImage?.mediumFileUrl ||
+    request?.adRequestImage?.originalFileUrl ||
+    ""
+  );
+}
+
 function useThemeContainer() {
   const [c, setC] = React.useState(null);
   React.useEffect(() => { setC(document.querySelector(".radix-themes") || document.body); }, []);
@@ -452,13 +461,31 @@ function RequestsTab({ showToast, addOpen, setAddOpen }) {
                 const pmtColor = PAYMENT_STATUS_COLORS[r.paymentStatus] || { bg: "var(--gray-a3)", fg: "var(--gray-10)" };
                 const hours     = calcHours(r.startDate, r.endDate);
                 const total     = r.totalPrice ?? (hours > 0 && r.template?.pricePerHour ? r.template.pricePerHour * hours : null);
+                const imageUrl = getRequestImageUrl(r);
                 return (
                   <tr key={r.adRequestId}
                     style={{ borderTop: idx === 0 ? "none" : "1px solid var(--gray-a4)", color: "var(--gray-12)", background: "transparent" }}
                     className="transition hover:bg-black/[.015]">
                     <td className="px-5 py-4">
-                      <div className="font-semibold text-sm">{r.title}</div>
-                      <div className="text-xs mt-0.5" style={{ color: "var(--gray-11)" }}>#{r.adRequestId}</div>
+                      <div className="flex items-start gap-3">
+                        <div
+                          className="flex h-16 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border"
+                          style={{ borderColor: "var(--gray-a5)", background: "var(--gray-a2)" }}
+                        >
+                          {imageUrl ? (
+                            <img src={imageUrl} alt={r.title} className="h-full w-full object-cover" />
+                          ) : (
+                            <span className="text-[10px] font-bold" style={{ color: "var(--gray-9)" }}>
+                              بدون صورة
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="font-semibold text-sm">{r.title}</div>
+                          <div className="text-xs mt-0.5" style={{ color: "var(--gray-11)" }}>#{r.adRequestId}</div>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-5 py-4">
                       <div className="text-sm font-medium">{r.shop?.name || `Shop #${r.shopId}`}</div>

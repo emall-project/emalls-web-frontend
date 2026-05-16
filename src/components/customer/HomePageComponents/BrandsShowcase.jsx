@@ -66,7 +66,7 @@ export default function BrandsShowcase({ brands = [], loading = false }) {
           subtitle="عرض أنظف للعلامات التجارية المتاحة، مع إبراز الجمهور المناسب والفئة العمرية عندما تكون موجودة في البيانات."
         />
 
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        <div className="mt-6 grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {loading
             ? Array.from({ length: 6 }).map((_, index) => <BrandSkeleton key={index} />)
             : brands.map((brand) => <BrandCard key={brand.id} brand={brand} />)}

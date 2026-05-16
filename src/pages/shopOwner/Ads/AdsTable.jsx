@@ -1,3 +1,4 @@
+import { getAdPositionLabel } from "../../../data/adSlots";
 import AdStatusBadge from "./AdStatusBadge";
 import AdActionsMenu from "./AdActionsMenu";
 import PaymentStatusBadge from "./PaymentStatusBadge";
@@ -84,7 +85,7 @@ export default function AdsTable({
                     </div>
                   </td>
                   <td className="px-5 py-4" style={{ color: "var(--gray-10)" }}>
-                    {request.template?.position || "—"}
+                    {getAdPositionLabel(request.template?.position)}
                   </td>
                   <td className="px-5 py-4">
                     <div className="space-y-1 text-xs" style={{ color: "var(--gray-9)" }}>

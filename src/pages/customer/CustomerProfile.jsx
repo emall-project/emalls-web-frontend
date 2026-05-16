@@ -288,7 +288,7 @@ export default function CustomerProfile() {
             </form>
           </SectionCard>
 
-          <SectionCard title="تغيير كلمة المرور" subtitle="أدخل كلمة المرور الحالية ثم اختر كلمة جديدة متوافقة مع شروط الأمان في الـ backend.">
+          <SectionCard title="تغيير كلمة المرور" subtitle="أدخل كلمة المرور الحالية ثم اختر كلمة جديدة متوافقة مع شروط الأمان المطلوبة.">
             <Alert type={passMsg.type} message={passMsg.text} />
             <form onSubmit={handlePassSubmit} className="space-y-4">
               <FormField label="كلمة المرور الحالية" error={passErrors.current}>

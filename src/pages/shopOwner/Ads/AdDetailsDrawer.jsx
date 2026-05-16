@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { FiAlertTriangle, FiClock, FiCreditCard, FiEdit2, FiEye, FiImage, FiLoader, FiSlash, FiX } from "react-icons/fi";
 
+import { getAdPositionLabel } from "../../../data/adSlots";
 import { adsApi } from "./api";
 import AdStatusBadge from "./AdStatusBadge";
 import PaymentStatusBadge from "./PaymentStatusBadge";
@@ -157,7 +158,7 @@ export default function AdDetailsDrawer({
                   <SectionTitle icon={<FiEye size={16} />} title="معلومات القالب" />
                   <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <InfoCard label="اسم القالب" value={current.template?.name || "—"} />
-                    <InfoCard label="مكان الظهور" value={current.template?.position || "—"} />
+                    <InfoCard label="مكان الظهور" value={getAdPositionLabel(current.template?.position)} />
                     <InfoCard label="نسبة الصورة" value={current.template?.imageRatio || "—"} />
                     <InfoCard label="سعر الساعة" value={formatUsd(current.template?.pricePerHour)} />
                   </div>

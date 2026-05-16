@@ -2,6 +2,8 @@ import { auth } from "./auth";
 
 const ACCOUNTS = "/accounts/api";
 const CATALOG = "/catalog";
+const CAMPAIGNS = "/campaigns/api";
+const ORDER_HUB = "/order-hub";
 
 const SHOP_CATEGORY_LABELS = {
   CLOTHING: "ملابس",
@@ -36,12 +38,36 @@ const AGE_GROUP_LABELS = {
   ALL: "كل الأعمار",
 };
 
-async function apiFetch(url, options = {}) {
-  const authHeaders = auth.getUser() ? auth.getHeaders() : {};
-  const res = await fetch(url, {
-    headers: { "Content-Type": "application/json", ...authHeaders, ...(options.headers || {}) },
+function buildRequestOptions(options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  const shouldSendEmptyJsonBody =
+    ["POST", "PUT", "PATCH"].includes(method) && options.body == null;
+  const authHeaders = auth.getToken() ? auth.getHeaders() : {};
+
+  return {
     ...options,
-  });
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+      ...(options.headers || {}),
+    },
+    ...(shouldSendEmptyJsonBody ? { body: "{}" } : {}),
+  };
+}
+
+async function apiFetch(url, options = {}, allowRetry = true) {
+  const res = await fetch(url, buildRequestOptions(options));
+
+  if (res.status === 401 && allowRetry && auth.getRefresh()) {
+    const previousToken = auth.getToken();
+    await auth.refresh();
+    const nextToken = auth.getToken();
+
+    if (nextToken && nextToken !== previousToken) {
+      return apiFetch(url, options, false);
+    }
+  }
 
   const json = await res.json().catch(() => null);
   if (!res.ok) throw new Error(json?.message || "حدث خطأ في الطلب");
@@ -74,7 +100,7 @@ function buildPageQuery(page = 0, size = 20, sort = []) {
 }
 
 function toJsonBody(payload) {
-  return JSON.stringify(payload == null ? {} : payload);
+  return JSON.stringify(payload ?? {});
 }
 
 function extractFileUrl(file) {
@@ -231,10 +257,41 @@ export function normalizeProduct(product) {
     name: product.name ?? "",
     slug: product.slug ?? "",
     shortDescription: product.shortDescription ?? "",
+    brandName: product.brandName ?? "",
+    categoryName: product.categoryName ?? "",
     price: hasDiscount ? Number(product.discountedPrice ?? 0) : Number(product.basePrice ?? 0),
     oldPrice: hasDiscount ? Number(product.basePrice ?? 0) : null,
     imageUrl: resolveProductImageUrl(product),
+    hasDiscount,
+    isActive: product.isActive ?? true,
   };
+}
+
+function normalizePublicAd(ad) {
+  if (!ad) return null;
+
+  return {
+    id: String(ad.adRequestId ?? ""),
+    title: ad.title ?? "",
+    imageUrl: extractFileUrl(ad.adRequestImage),
+    position: ad.template?.position ?? "",
+    positionLabel: ad.template?.position ?? "",
+    imageRatio: String(ad.template?.imageRatio ?? "16:9"),
+    templateName: ad.template?.name ?? "",
+    shopId: ad.shop?.shopId ?? ad.shopId ?? null,
+    shopName: ad.shop?.name ?? "",
+    startDate: ad.startDate ?? null,
+    endDate: ad.endDate ?? null,
+    isDisplayed: Boolean(ad.isDisplayed),
+  };
+}
+
+function normalizeNumericIds(values = []) {
+  return [...new Set(
+    (Array.isArray(values) ? values : [])
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value) && value > 0)
+  )];
 }
 
 export const customerApi = {
@@ -269,6 +326,12 @@ export const customerApi = {
       .map(normalizeMall);
   },
 
+  getActiveMalls: async () => {
+    const data = await apiFetch(`${ACCOUNTS}/malls/status/ACTIVE`);
+    const list = Array.isArray(data) ? data : [];
+    return list.map(normalizeMall);
+  },
+
   getMallById: async (id) => {
     const data = await apiFetch(`${ACCOUNTS}/malls/${id}`);
     return normalizeMall(data);
@@ -282,6 +345,12 @@ export const customerApi = {
 
   getAllShops: async (filters = {}) => {
     const data = await apiFetch(`${ACCOUNTS}/shops/all${buildQuery(filters)}`);
+    const list = Array.isArray(data) ? data : [];
+    return list.map(normalizeShop);
+  },
+
+  getActiveShops: async () => {
+    const data = await apiFetch(`${ACCOUNTS}/shops/active`);
     const list = Array.isArray(data) ? data : [];
     return list.map(normalizeShop);
   },
@@ -301,6 +370,30 @@ export const customerApi = {
       total: meta.totalItems ?? content.length,
       page: meta.page ?? page,
     };
+  },
+
+  getProductsByIds: async (productIds = []) => {
+    const ids = normalizeNumericIds(productIds);
+    if (!ids.length) return [];
+
+    const data = await apiFetch(`${CATALOG}/products/by-ids`, {
+      method: "POST",
+      body: toJsonBody({ productIds: ids }),
+    });
+
+    const list = Array.isArray(data) ? data : [];
+    const normalized = await resolveMissingProductImages(list.map(normalizeProduct));
+    const byId = new Map(normalized.map((product) => [String(product.id), product]));
+
+    return ids
+      .map((id) => byId.get(String(id)))
+      .filter(Boolean);
+  },
+
+  getRandomProducts: async (limit = 10) => {
+    const data = await apiFetch(`${CATALOG}/products/random?limit=${limit}`);
+    const list = Array.isArray(data) ? data : [];
+    return resolveMissingProductImages(list.map(normalizeProduct));
   },
 
   getProductSummary: async (filter = {}) => {
@@ -332,6 +425,48 @@ export const customerApi = {
     const data = await apiFetch(`${CATALOG}/products/${id}/similar?topK=${topK}`);
     const list = Array.isArray(data) ? data : [];
     return resolveMissingProductImages(list.map(normalizeProduct));
+  },
+
+  getPublicMostOrderedProducts: async (limit = 10) => {
+    const data = await apiFetch(`${ORDER_HUB}/dashboard/products/most-ordered/public?limit=${limit}`);
+    const ranks = Array.isArray(data) ? data : [];
+    const ids = normalizeNumericIds(ranks.map((entry) => entry?.productId));
+    const orderedMap = new Map(
+      ranks.map((entry) => [String(entry?.productId), Number(entry?.orderedQuantity ?? 0)])
+    );
+
+    const products = await customerApi.getProductsByIds(ids);
+    return products.map((product) => ({
+      ...product,
+      orderedQuantity: orderedMap.get(String(product.id)) ?? 0,
+    }));
+  },
+
+  getPublicActiveSaleProducts: async (limit = 10) => {
+    const data = await apiFetch(`${CAMPAIGNS}/offers/products/active/public?limit=${limit}`);
+    const saleEntries = Array.isArray(data) ? data : [];
+    const ids = normalizeNumericIds(saleEntries.map((entry) => entry?.productId));
+    const saleMap = new Map(saleEntries.map((entry) => [String(entry?.productId), entry]));
+
+    const products = await customerApi.getProductsByIds(ids);
+    return products.map((product) => ({
+      ...product,
+      offerId: saleMap.get(String(product.id))?.offerId ?? null,
+      discountType: saleMap.get(String(product.id))?.discountType ?? null,
+      discountValue: saleMap.get(String(product.id))?.discountValue ?? null,
+    }));
+  },
+
+  getCustomerDashboard: async () => {
+    return apiFetch(`${ORDER_HUB}/dashboard/customer`);
+  },
+
+  getActiveDisplayedAds: async () => {
+    const data = await apiFetch(`${CAMPAIGNS}/ad-requests/active/displayed`);
+    const list = Array.isArray(data) ? data : [];
+    return list
+      .map(normalizePublicAd)
+      .filter((ad) => ad?.imageUrl);
   },
 
   hydrateFavoritesWithImages: async (favorites = []) => {

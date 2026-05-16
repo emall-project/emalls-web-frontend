@@ -102,7 +102,7 @@ export default function HomeHero({
               منصة تسوق متعددة المولات
             </div>
 
-            <h1 className="mt-5 max-w-3xl text-[2rem] font-black leading-[1.15] tracking-tight text-[var(--customer-text)] sm:text-[2.4rem] lg:text-[3.3rem]">
+            <h1 className="mt-5 max-w-3xl text-[1.72rem] font-black leading-[1.18] tracking-tight text-[var(--customer-text)] sm:text-[2.4rem] lg:text-[3.3rem]">
               اكتشف المتاجر والمنتجات والعروض
               <span className="block text-[var(--customer-accent)]">في تجربة تسوّق واحدة أنيقة وواضحة</span>
             </h1>
@@ -112,12 +112,12 @@ export default function HomeHero({
               بدون فوضى بصرية أو خطوات مشتتة.
             </p>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={() => navigate("/products")} className="customer-primary-btn rounded-2xl px-5">
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <button type="button" onClick={() => navigate("/products")} className="customer-primary-btn w-full rounded-2xl px-5 sm:w-auto">
                 ابدأ التصفّح
                 <FiArrowLeft className="text-base" />
               </button>
-              <button type="button" onClick={() => featuredMall && navigate(`/malls/${featuredMall.id}`)} className="customer-secondary-btn rounded-2xl px-5">
+              <button type="button" onClick={() => featuredMall && navigate(`/malls/${featuredMall.id}`)} className="customer-secondary-btn w-full rounded-2xl px-5 sm:w-auto">
                 <FiMapPin className="text-base" />
                 {featuredMall ? `استكشف ${featuredMall.name}` : "استكشف المولات"}
               </button>
@@ -156,7 +156,7 @@ export default function HomeHero({
                         <FiStar className="text-xs" />
                         وجهة مميزة اليوم
                       </div>
-                      <h2 className="mt-4 text-2xl font-black leading-snug">
+                      <h2 className="mt-4 text-[1.55rem] font-black leading-snug sm:text-2xl">
                         {featuredMall?.name || "تجربة تسوق حديثة"}
                       </h2>
                       <p className="mt-3 text-sm leading-7 text-white/76">

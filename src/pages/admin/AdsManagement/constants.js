@@ -1,3 +1,5 @@
+import { AD_POSITIONS, POSITION_LABELS } from "../../../data/adSlots";
+
 // ── Template ──────────────────────────────────────────────────────────────────
 export const TEMPLATE_STATUSES = ["ACTIVE", "RESERVED", "ARCHIVED"];
 
@@ -13,14 +15,8 @@ export const TEMPLATE_STATUS_COLORS = {
   ARCHIVED: { bg: "var(--gray-a3)",   fg: "var(--gray-11)",   dot: "var(--gray-9)"   },
 };
 
-export const POSITIONS = ["HOME_TOP", "SIDEBAR_LEFT", "SIDEBAR_RIGHT", "FOOTER"];
-
-export const POSITION_LABELS = {
-  HOME_TOP:      "أعلى الصفحة",
-  SIDEBAR_LEFT:  "الشريط الجانبي الأيسر",
-  SIDEBAR_RIGHT: "الشريط الجانبي الأيمن",
-  FOOTER:        "أسفل الصفحة",
-};
+export const POSITIONS = AD_POSITIONS;
+export { POSITION_LABELS };
 
 export const IMAGE_RATIOS = ["16:9", "9:16", "1:1", "4:3", "3:4"];
 

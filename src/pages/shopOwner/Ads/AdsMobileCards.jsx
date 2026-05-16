@@ -1,5 +1,6 @@
 import { FiClock } from "react-icons/fi";
 
+import { getAdPositionLabel } from "../../../data/adSlots";
 import AdStatusBadge from "./AdStatusBadge";
 import AdActionsMenu from "./AdActionsMenu";
 import PaymentStatusBadge from "./PaymentStatusBadge";
@@ -75,7 +76,7 @@ export default function AdsMobileCards({
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3">
-              <Stat label="مكان الظهور" value={request.template?.position || "—"} />
+              <Stat label="مكان الظهور" value={getAdPositionLabel(request.template?.position)} />
               <Stat label="الإجمالي" value={formatUsd(request.totalPrice)} />
               <Stat label="الحالة" value={<AdStatusBadge status={request.status} />} />
               <Stat label="الدفع" value={<PaymentStatusBadge status={request.paymentStatus} />} />

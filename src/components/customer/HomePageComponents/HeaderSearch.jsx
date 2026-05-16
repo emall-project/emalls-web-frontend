@@ -36,8 +36,8 @@ export default function HeaderSearch() {
   useEffect(() => {
     let active = true;
     Promise.all([
-      customerApi.getAllMalls().catch(() => []),
-      customerApi.getAllShops({ status: "ACTIVE" }).catch(() => []),
+      customerApi.getActiveMalls().catch(() => []),
+      customerApi.getActiveShops().catch(() => []),
     ]).then(([mallList, shopList]) => {
       if (!active) return;
       setMalls(mallList);

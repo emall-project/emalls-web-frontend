@@ -29,20 +29,20 @@ export default function ProductCard({ p, onAddToCart }) {
   };
 
   return (
-    <article className="group customer-product-card relative flex h-full w-full flex-col overflow-hidden rounded-[28px] border border-[var(--customer-border)] bg-white shadow-[var(--customer-shadow-soft)] transition duration-300 hover:-translate-y-1 hover:border-[rgba(27,79,240,0.16)] hover:shadow-[var(--customer-shadow-md)]">
+    <article className="group customer-product-card relative flex h-full w-full flex-col overflow-hidden rounded-[24px] border border-[var(--customer-border)] bg-white shadow-[var(--customer-shadow-soft)] transition duration-300 hover:-translate-y-1 hover:border-[rgba(27,79,240,0.16)] hover:shadow-[var(--customer-shadow-md)]">
       <div className="relative overflow-hidden border-b border-[var(--customer-border)] bg-[linear-gradient(180deg,#ffffff_0%,#f4f7fb_100%)]">
         {discount ? (
-          <div className="absolute right-3 top-3 z-10 rounded-full bg-[var(--customer-deal)] px-3 py-1 text-[11px] font-black text-white shadow-sm">
+          <div className="absolute right-3 top-3 z-10 rounded-full bg-[var(--customer-deal)] px-2.5 py-1 text-[10px] font-black text-white shadow-sm">
             وفّر ₪{formatPrice(save)}
           </div>
         ) : null}
 
         {p?.id ? (
           <div className="absolute left-3 top-3 z-10">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/50 bg-white/90 shadow-[var(--customer-shadow-soft)] backdrop-blur-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-white/50 bg-white/90 shadow-[var(--customer-shadow-soft)] backdrop-blur-sm">
               <FavoriteButton
                 productId={p.id}
-                size="text-[1.35rem]"
+                size="text-[1.2rem]"
                 activeClassName="text-rose-500"
                 inactiveClassName="text-[var(--customer-muted)] hover:text-[var(--customer-text)]"
               />
@@ -63,40 +63,40 @@ export default function ProductCard({ p, onAddToCart }) {
             <img
               src={p.imageUrl}
               alt={p.name}
-              className="aspect-[0.95] w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+              className="aspect-[1.08] w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
               loading="lazy"
             />
           ) : (
-            <div className="flex aspect-[0.95] w-full items-center justify-center bg-[linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] text-5xl text-[var(--customer-muted-soft)]">
+            <div className="flex aspect-[1.08] w-full items-center justify-center bg-[linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] text-5xl text-[var(--customer-muted-soft)]">
               +
             </div>
           )}
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col p-4 text-right sm:p-5">
-        <div className="min-h-[7.75rem] space-y-2">
+      <div className="flex flex-1 flex-col p-3.5 text-right sm:p-4">
+        <div className="min-h-[5.4rem] space-y-1">
           <button
             type="button"
             onClick={goToProduct}
-            className="line-clamp-2 text-right text-[0.98rem] font-black leading-7 text-[var(--customer-text)] hover:text-[var(--customer-accent)]"
+            className="line-clamp-2 text-right text-[0.93rem] font-black leading-6 text-[var(--customer-text)] hover:text-[var(--customer-accent)]"
           >
             {p.name}
           </button>
 
           {p.shortDescription ? (
-            <p className="line-clamp-2 text-xs leading-6 text-[var(--customer-muted)] sm:text-[13px]">
+            <p className="line-clamp-2 text-[11px] leading-5 text-[var(--customer-muted)] sm:text-xs">
               {p.shortDescription}
             </p>
           ) : (
-            <div className="min-h-[3rem]" />
+            <div className="min-h-[0.4rem]" />
           )}
 
-          <div className="min-h-[1.75rem]">
+          <div className="min-h-[1.25rem]">
             {p.brandName || p.storeName || p.mallName ? (
-              <div className="flex min-h-[1.75rem] flex-wrap items-center gap-2 text-[11px] font-semibold text-[var(--customer-muted)]">
+              <div className="flex min-h-[1.25rem] flex-wrap items-center gap-1.5 text-[10px] font-semibold text-[var(--customer-muted)]">
                 {p.brandName ? (
-                  <span className="rounded-full bg-[var(--customer-accent-soft)] px-2.5 py-1 text-[var(--customer-accent)]">
+                  <span className="rounded-full bg-[var(--customer-accent-soft)] px-2 py-0.5 text-[var(--customer-accent)]">
                     {p.brandName}
                   </span>
                 ) : null}
@@ -107,14 +107,14 @@ export default function ProductCard({ p, onAddToCart }) {
           </div>
         </div>
 
-        <div className="mt-auto flex items-end justify-between gap-3 pt-4">
+        <div className="mt-auto flex items-end justify-between gap-2.5 pt-3">
           <div className="text-right">
             <div className="flex items-end justify-end gap-2">
-              <span className="text-xl font-black tracking-tight text-[var(--customer-text)] sm:text-[1.35rem]">
+              <span className="text-[1.1rem] font-black tracking-tight text-[var(--customer-text)] sm:text-[1.25rem]">
                 ₪{formatPrice(p.price)}
               </span>
               {discount ? (
-                <span className="pb-0.5 text-xs font-semibold text-[var(--customer-muted-soft)] line-through">
+                <span className="pb-0.5 text-[11px] font-semibold text-[var(--customer-muted-soft)] line-through">
                   ₪{formatPrice(p.oldPrice)}
                 </span>
               ) : null}
@@ -134,14 +134,14 @@ export default function ProductCard({ p, onAddToCart }) {
                   disabled={out}
                   onClick={handleQuickAction}
                   className={[
-                    "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border shadow-[var(--customer-shadow-soft)]",
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-[18px] border shadow-[var(--customer-shadow-soft)]",
                     out
                       ? "cursor-not-allowed border-[var(--customer-border)] bg-white/60 opacity-50"
                       : "border-[rgba(27,79,240,0.16)] bg-[var(--customer-accent-soft)] text-[var(--customer-accent)] hover:-translate-y-0.5 hover:border-[rgba(27,79,240,0.24)] hover:bg-[rgba(27,79,240,0.14)]",
                   ].join(" ")}
                   aria-label="إجراء سريع"
                 >
-                  <FiShoppingCart className="text-lg" />
+                  <FiShoppingCart className="text-base" />
                 </button>
               </Tooltip.Trigger>
 
@@ -162,7 +162,7 @@ export default function ProductCard({ p, onAddToCart }) {
         <button
           type="button"
           onClick={goToProduct}
-          className="customer-secondary-btn mt-4 w-full rounded-[18px]"
+          className="customer-secondary-btn mt-3 w-full rounded-2xl py-2.5 text-sm"
         >
           عرض التفاصيل
           <FiArrowLeft className="text-sm" />

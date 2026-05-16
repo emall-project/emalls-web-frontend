@@ -142,7 +142,7 @@ export const productsApi = {
       });
     } catch (error) {
       if (error?.status === 500) {
-        console.error("[productsApi.updateStatus] backend 500 payload:", payload);
+        console.error("[productsApi.updateStatus] 500 payload:", payload);
       }
       throw error;
     }

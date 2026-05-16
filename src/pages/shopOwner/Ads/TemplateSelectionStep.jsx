@@ -1,4 +1,5 @@
 import { FiCheckCircle, FiImage, FiLayers, FiMapPin } from "react-icons/fi";
+import { getAdPositionLabel } from "../../../data/adSlots";
 import { formatUsd } from "./adsUtils";
 
 export default function TemplateSelectionStep({ templates, selectedTemplateId, onSelect, loading = false }) {
@@ -70,7 +71,7 @@ export default function TemplateSelectionStep({ templates, selectedTemplateId, o
               </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Meta icon={<FiMapPin size={13} />} label="مكان الظهور" value={template.position} />
+                <Meta icon={<FiMapPin size={13} />} label="مكان الظهور" value={getAdPositionLabel(template.position)} />
                 <Meta icon={<FiImage size={13} />}  label="نسبة الصورة" value={template.imageRatio} />
               </div>
 

@@ -2,6 +2,91 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from "@tailwindcss/vite";
 
+function postOnlyApiGuard() {
+  const postOnlyPaths = new Set([
+    '/catalog/products/all',
+    '/catalog/products/summary',
+    '/catalog/products/by-ids',
+  ]);
+
+  const sortMap = {
+    'createdAt,desc': 'newest',
+    'createdAt,asc': 'oldest',
+    'name,asc': 'name-asc',
+    'name,desc': 'name-desc',
+  };
+
+  return {
+    name: 'post-only-api-guard',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const method = (req.method || 'GET').toUpperCase();
+        const rawUrl = req.url || '';
+        const path = rawUrl.split('?')[0];
+
+        if (method === 'GET' && postOnlyPaths.has(path)) {
+          const accept = String(req.headers.accept || '');
+
+          if (path === '/catalog/products/all' && accept.includes('text/html')) {
+            const currentUrl = new URL(rawUrl, 'http://localhost');
+            const sourceParams = currentUrl.searchParams;
+            const nextParams = new URLSearchParams();
+
+            const pageValue = Number(sourceParams.get('page'));
+            if (Number.isFinite(pageValue) && pageValue >= 0) {
+              nextParams.set('page', String(pageValue + 1));
+            }
+
+            const mappedSort = sortMap[sourceParams.get('sort') || ''];
+            if (mappedSort) {
+              nextParams.set('sort', mappedSort);
+            }
+
+            [
+              'q',
+              'slug',
+              'categoryId',
+              'brandId',
+              'mallId',
+              'storeId',
+              'targetedAudience',
+              'ageGroup',
+              'minPrice',
+              'maxPrice',
+              'tags',
+            ].forEach((key) => {
+              const value = sourceParams.get(key);
+              if (value != null && value !== '') {
+                nextParams.set(key, value);
+              }
+            });
+
+            const redirectTarget = `/products${nextParams.toString() ? `?${nextParams.toString()}` : ''}`;
+            res.statusCode = 302;
+            res.setHeader('Location', redirectTarget);
+            res.end();
+            return;
+          }
+
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json; charset=utf-8');
+          res.end(JSON.stringify({
+            status: 405,
+            error: 'Method Not Allowed',
+            message: `Open this endpoint with POST, not GET. Opening ${path} in the browser address bar sends GET and cannot include the JSON body this API expects.`,
+            expectedMethod: 'POST',
+            expectedBodyType: 'application/json',
+            note: 'The frontend already calls this endpoint correctly through fetch; use the app pages or Postman for manual testing.',
+          }));
+          return;
+        }
+
+        next();
+      });
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
@@ -40,7 +125,7 @@ export default defineConfig(({ mode }) => {
   }
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [postOnlyApiGuard(), react(), tailwindcss()],
     server: {
       host: true,
       allowedHosts: ['e-mall.store'],

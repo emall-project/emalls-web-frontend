@@ -73,7 +73,7 @@ function StoreCard({ store }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="line-clamp-2 text-sm leading-7 text-[var(--customer-muted)]">
             {store.description || "تصفح منتجات هذا المتجر واكتشف تشكيلته الحالية."}
           </p>
