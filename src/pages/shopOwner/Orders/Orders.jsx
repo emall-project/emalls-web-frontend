@@ -38,10 +38,8 @@ const ORDER_STATUS_MAP = {
 };
 
 const ADVANCE_LABEL = {
-  NEW:              "بدء التحضير",
-  PREPARING:        "جاهز للاستلام",
-  READY_FOR_PICKUP: "بدء التوصيل",
-  OUT_FOR_DELIVERY: "تم التسليم",
+  NEW:       "بدء التحضير",
+  PREPARING: "جاهز للاستلام",
 };
 
 const TERMINAL = new Set(["DELIVERED", "CUSTOMER_REJECTED", "NO_RESPONSE"]);
@@ -243,7 +241,7 @@ export default function Orders() {
                 {sortedOrders.map((order) => {
                   const isExpanded  = expanded === order.shopOrderId;
                   const isAdvancing = advancing === order.shopOrderId;
-                  const canAdvance  = !TERMINAL.has(order.status);
+                  const canAdvance  = order.status in ADVANCE_LABEL;
                   return (
                     <Fragment key={order.shopOrderId}>
                       <tr

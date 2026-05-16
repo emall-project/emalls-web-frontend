@@ -195,6 +195,42 @@ function getDiscountMeta(variant) {
   };
 }
 
+function mergeListPricingIntoProduct(productData, summaryProduct) {
+  if (!productData || !summaryProduct) return productData;
+
+  const hasDiscount = Boolean(summaryProduct.hasDiscount);
+  const variants = Array.isArray(productData.variants) ? productData.variants : [];
+
+  const mergedProduct = {
+    ...productData,
+    hasDiscount,
+    discountedPrice: hasDiscount ? Number(summaryProduct.price ?? 0) : null,
+    basePrice: hasDiscount
+      ? Number(summaryProduct.oldPrice ?? summaryProduct.price ?? 0)
+      : Number(summaryProduct.price ?? 0),
+  };
+
+  if (!hasDiscount || variants.length !== 1) return mergedProduct;
+
+  const [singleVariant] = variants;
+  return {
+    ...mergedProduct,
+    variants: [
+      {
+        ...singleVariant,
+        hasDiscount: true,
+        discountedPrice: Number(summaryProduct.price ?? 0),
+        basePrice: Number(
+          singleVariant.basePrice ??
+            summaryProduct.oldPrice ??
+            summaryProduct.price ??
+            0
+        ),
+      },
+    ],
+  };
+}
+
 export default function ProductPage() {
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -231,14 +267,19 @@ export default function ProductPage() {
       customerApi.getProductById(productId),
       customerApi.getProductInfo(productId),
       customerApi.getAttributes().catch(() => []),
+      customerApi.getProductListEntry({ id: productId }).catch(() => null),
     ])
-      .then(([productData, infoData, attrsData]) => {
-        setProduct(productData);
+      .then(([productData, infoData, attrsData, summaryProduct]) => {
+        const hydratedProduct = mergeListPricingIntoProduct(productData, summaryProduct);
+
+        setProduct(hydratedProduct);
         setInfo(infoData);
         setAllAttributes(Array.isArray(attrsData) ? attrsData : []);
         // Initialize selectedOptions from the default variant's attributes
         const defaultVariant =
-          productData.variants?.find((v) => v.isDefault) ?? productData.variants?.[0] ?? null;
+          hydratedProduct.variants?.find((v) => v.isDefault) ??
+          hydratedProduct.variants?.[0] ??
+          null;
         if (defaultVariant) {
           const opts = {};
           (defaultVariant.attributes || []).forEach((a) => {
@@ -388,14 +429,31 @@ export default function ProductPage() {
     );
   }, [variantExplicitlySelected, selectedVariant, product]);
 
-  const price = selectedVariant
-    ? selectedVariant.hasDiscount
-      ? Number(selectedVariant.discountedPrice ?? 0)
-      : Number(selectedVariant.basePrice ?? 0)
+  const pricedVariant = useMemo(() => {
+    if (!selectedVariant) return null;
+    if (selectedVariant.hasDiscount) return selectedVariant;
+
+    const variantsCount = Array.isArray(product?.variants) ? product.variants.length : 0;
+    if (!product?.hasDiscount || variantsCount !== 1) return selectedVariant;
+
+    return {
+      ...selectedVariant,
+      hasDiscount: true,
+      discountedPrice: Number(product.discountedPrice ?? selectedVariant.basePrice ?? 0),
+      basePrice: Number(product.basePrice ?? selectedVariant.basePrice ?? 0),
+      discountType: product.discountType ?? null,
+      discountValue: product.discountValue ?? null,
+    };
+  }, [product, selectedVariant]);
+
+  const price = pricedVariant
+    ? pricedVariant.hasDiscount
+      ? Number(pricedVariant.discountedPrice ?? 0)
+      : Number(pricedVariant.basePrice ?? 0)
     : null;
 
-  const oldPrice = selectedVariant?.hasDiscount ? Number(selectedVariant.basePrice ?? 0) : null;
-  const discountMeta = useMemo(() => getDiscountMeta(selectedVariant), [selectedVariant]);
+  const oldPrice = pricedVariant?.hasDiscount ? Number(pricedVariant.basePrice ?? 0) : null;
+  const discountMeta = useMemo(() => getDiscountMeta(pricedVariant), [pricedVariant]);
 
   if (!loading && error) {
     return (
@@ -485,7 +543,7 @@ export default function ProductPage() {
                     <div className="flex flex-wrap items-end gap-3">
                       <span className="text-3xl font-extrabold text-slate-900 md:text-4xl">₪{price}</span>
                       {oldPrice != null ? <span className="text-lg text-slate-400 line-through">₪{oldPrice}</span> : null}
-                      {selectedVariant?.hasDiscount ? (
+                      {pricedVariant?.hasDiscount ? (
                         <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
                           خصم
                         </span>

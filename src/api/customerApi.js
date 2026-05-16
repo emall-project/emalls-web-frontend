@@ -421,6 +421,20 @@ export const customerApi = {
     return apiFetch(`${CATALOG}/products/${id}/info`);
   },
 
+  getProductListEntry: async ({ id, slug } = {}) => {
+    if (slug) {
+      const result = await customerApi.getProducts({ slug }, 0, 1);
+      return result?.products?.[0] ?? null;
+    }
+
+    if (id) {
+      const products = await customerApi.getProductsByIds([id]);
+      return products?.[0] ?? null;
+    }
+
+    return null;
+  },
+
   getSimilarProducts: async (id, topK = 8) => {
     const data = await apiFetch(`${CATALOG}/products/${id}/similar?topK=${topK}`);
     const list = Array.isArray(data) ? data : [];
