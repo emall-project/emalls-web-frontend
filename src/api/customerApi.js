@@ -137,6 +137,17 @@ function extractFileUrl(file) {
   );
 }
 
+function extractOriginalFileUrl(file) {
+  return (
+    file?.originalFileUrl ??
+    file?.mediumFileUrl ??
+    file?.smallFileUrl ??
+    file?.url ??
+    file?.imageUrl ??
+    ""
+  );
+}
+
 function extractVariantImageUrl(product) {
   const variants = Array.isArray(product?.variants) ? product.variants : [];
   const selectedVariant =
@@ -296,7 +307,7 @@ function normalizePublicAd(ad) {
   return {
     id: String(ad.adRequestId ?? ""),
     title: ad.title ?? "",
-    imageUrl: extractFileUrl(ad.adRequestImage),
+    imageUrl: extractOriginalFileUrl(ad.adRequestImage),
     position: ad.template?.position ?? "",
     positionLabel: ad.template?.position ?? "",
     imageRatio: String(ad.template?.imageRatio ?? "16:9"),
