@@ -24,10 +24,8 @@ import { customerApi } from "../../api/customerApi";
 const PAGE_SIZE = 24;
 
 const SORT_OPTIONS = [
-  { value: "newest", label: "الأحدث", backend: ["createdAt,desc"] },
-  { value: "oldest", label: "الأقدم", backend: ["createdAt,asc"] },
-  { value: "name-asc", label: "الاسم: أ - ي", backend: ["name,asc"] },
-  { value: "name-desc", label: "الاسم: ي - أ", backend: ["name,desc"] },
+  { value: "newest", label: "الأحدث", backend: ["id,desc"] },
+  { value: "oldest", label: "الأقدم", backend: ["id,asc"] },
 ];
 
 const TARGETED_AUDIENCE_OPTIONS = [

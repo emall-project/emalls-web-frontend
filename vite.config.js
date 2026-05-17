@@ -12,8 +12,8 @@ function postOnlyApiGuard() {
   const sortMap = {
     'createdAt,desc': 'newest',
     'createdAt,asc': 'oldest',
-    'name,asc': 'name-asc',
-    'name,desc': 'name-desc',
+    'id,desc': 'newest',
+    'id,asc': 'oldest',
   };
 
   return {
