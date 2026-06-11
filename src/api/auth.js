@@ -18,6 +18,28 @@ function decodePayload(token) {
   }
 }
 
+function stripBearer(value) {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  return trimmed.startsWith("Bearer ") ? trimmed.slice(7).trim() : trimmed;
+}
+
+function authPayload(json) {
+  return json?.data ?? json ?? {};
+}
+
+function readAuthTokens(res, json) {
+  const body = authPayload(json);
+  const headerToken = stripBearer(res.headers.get("Authorization") || "");
+  const bodyToken = stripBearer(body.accessToken || body.authorization || body.Authorization || body.token || "");
+  const refresh = body.refreshToken || body.refresh || res.headers.get("X-Refresh-Token");
+
+  return {
+    token: bodyToken || headerToken,
+    refresh,
+  };
+}
+
 export const auth = {
   getToken:   () => localStorage.getItem(TOKEN_KEY),
   getRefresh: () => localStorage.getItem(REFRESH_KEY),
@@ -87,9 +109,8 @@ export const auth = {
       const json = await res.json().catch(() => null);
       throw new Error(json?.message || "اسم المستخدم أو كلمة المرور غير صحيحة");
     }
-    const raw   = res.headers.get("Authorization") || "";
-    const token = raw.startsWith("Bearer ") ? raw.slice(7) : raw;
-    const refresh = res.headers.get("X-Refresh-Token");
+    const json = await res.json().catch(() => null);
+    const { token, refresh } = readAuthTokens(res, json);
     if (!token) throw new Error("لم يتم استلام رمز المصادقة من الخادم");
     auth.setTokens(token, refresh);
     return decodePayload(token);
@@ -204,9 +225,8 @@ export const auth = {
       headers: { "X-Refresh-Token": refreshToken },
     });
     if (!res.ok) { auth.clear(); return; }
-    const raw     = res.headers.get("Authorization") || "";
-    const token   = raw.startsWith("Bearer ") ? raw.slice(7) : raw;
-    const refresh = res.headers.get("X-Refresh-Token");
+    const json = await res.json().catch(() => null);
+    const { token, refresh } = readAuthTokens(res, json);
     if (token) auth.setTokens(token, refresh);
   },
 };
